@@ -4,6 +4,7 @@ import { ThemeContext } from "../../context/ThemeContext";
 import Logo from "../../assets/logo.svg";
 import DashedImage from "../../assets/nav-dashed.svg";
 import PlusIcon from "../../assets/plus-icon.svg";
+import { Link } from "react-router-dom";
 
 const PrimaryNav = ({ title }: { title: string }) => {
   // Context
@@ -36,10 +37,12 @@ const PrimaryNav = ({ title }: { title: string }) => {
 
       {/* Right */}
       <div className="pr-7">
-        <button className="bg-newOrderBtnBg py-1.5 px-themePadding rounded-[30px] text-white flex items-center gap-2">
-          <img src={PlusIcon} alt="plus-icon" />
-          New order
-        </button>
+        <Link to={"/create-order"}>
+          <button className="bg-newOrderBtnBg py-1.5 px-themePadding rounded-[30px] text-white flex items-center gap-2">
+            <img src={PlusIcon} alt="plus-icon" />
+            New order
+          </button>
+        </Link>
       </div>
     </nav>
   );

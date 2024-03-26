@@ -19,6 +19,12 @@ const StatusBtn = ({ type }: { type: string }) => {
           ? deliveredStyle
           : type === "returned"
           ? cancelledStyle
+          : type === "ongoing"
+          ? processingStyle
+          : type === "received"
+          ? deliveredStyle
+          : type === "failed"
+          ? cancelledStyle
           : ""
       }`}
     >
@@ -32,6 +38,12 @@ const StatusBtn = ({ type }: { type: string }) => {
         ? "Delivered"
         : type === "returned"
         ? "Returned"
+        : type === "ongoing"
+        ? "Ongoing"
+        : type === "received"
+        ? "Received"
+        : type === "failed"
+        ? "Failed"
         : null}
     </div>
   );

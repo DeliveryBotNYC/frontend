@@ -4,12 +4,15 @@ export default {
   theme: {
     extend: {
       colors: {
+        themeLightOrange: "#F6DBBC",
         themeOrange: "#EEB678",
+        themeLightOrangeTwo: "#E68A00",
         themeDarkGray: "#676767",
         themeLightBlack: "#1D1B20",
         themeLighterBlack: "rgba(0, 0, 0, 0.38)",
         themeLightGray: "#EFF2F6",
         themeRed: "#E00000",
+        themeDarkRed: "#F03F3F",
         themeGreen: "#B2D235",
         themeDarkGreen: "#657A14",
         themeGray: "#808080",
@@ -19,8 +22,10 @@ export default {
         themeSecondaryGray: "#6E6E6E",
         themeDarkOrange: "#BA772B",
         themeBlue: "#176FAD",
+        themeDarkBlue: "#74C2F8",
         themeLightRed: "#B41E1E",
-
+        themeLightPurple: "#344054",
+        paymentMethodText: "#5E6368",
         primaryBorder: "rgba(0, 0, 0, 0.42)",
       },
       backgroundColor: {

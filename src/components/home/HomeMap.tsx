@@ -90,7 +90,13 @@ const HomeMap = () => {
 
   return (
     <div className="w-full">
-      <MapContainer center={[51.505, -0.06]} zoom={15}>
+      <MapContainer
+        style={{
+          height: "55vh",
+        }}
+        center={[51.505, -0.06]}
+        zoom={15}
+      >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png"

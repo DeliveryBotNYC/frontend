@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useContext } from "react";
 import { ThemeContext } from "../../context/ThemeContext";
+import { NavLink } from "react-router-dom";
 
 // Images
 import HomeIcon from "../../assets/sidebar/home.svg";
@@ -13,7 +14,6 @@ import AutomationIcon from "../../assets/sidebar/automation.svg";
 import AutomationActiveIcon from "../../assets/sidebar/automation-active.svg";
 import SettingsIcon from "../../assets/sidebar/settings.svg";
 import SettingsActiveIcon from "../../assets/sidebar/settings-active.svg";
-import { NavLink } from "react-router-dom";
 
 const Sidebar = () => {
   // Context
@@ -47,14 +47,14 @@ const Sidebar = () => {
       initialIcon: AutomationIcon,
       activeIcon: AutomationActiveIcon,
       title: "Automation",
-      target: "/automation",
+      target: "/automations",
     },
     {
       id: 5,
       initialIcon: SettingsIcon,
       activeIcon: SettingsActiveIcon,
       title: "Account",
-      target: "/account",
+      target: "/accounts",
     },
   ];
 

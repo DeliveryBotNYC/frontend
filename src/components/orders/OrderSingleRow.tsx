@@ -1,32 +1,32 @@
-import StatusBtn from '../reusable/StatusBtn'
-import OrderDropdown from './OrderDropdown'
+import StatusBtn from "../reusable/StatusBtn";
+import OrderDropdown from "./OrderDropdown";
 
-import DotIcon from '../../assets/dot.svg'
-import CloseIcon from '../../assets/closeIcon.svg'
-import useClickOutside from '../../hooks/useHandleOutsideClick'
-import { useNavigate } from 'react-router-dom'
+import DotIcon from "../../assets/dot.svg";
+import CloseIcon from "../../assets/closeIcon.svg";
+import useClickOutside from "../../hooks/useHandleOutsideClick";
+import { useNavigate } from "react-router-dom";
 
 interface OrderItem {
-  id: number
-  orderId: string
-  status: string
+  id: number;
+  orderId: string;
+  status: string;
   pickup: {
-    road: string
-    state: string
-  }
+    road: string;
+    state: string;
+  };
   delivery: {
-    road: string
-    state: string
-  }
-  deliveryDate: string
-  deliveryTime: string
-  lastUpdate: string
+    road: string;
+    state: string;
+  };
+  deliveryDate: string;
+  deliveryTime: string;
+  lastUpdate: string;
 }
 
 const OrderSingleRow = ({ item }: { item: OrderItem }) => {
   // Toggle Dropdown by custom hook
   const { isOpen, setIsOpen, dropdownRef, dotRef } =
-    useClickOutside<HTMLDivElement>(false)
+    useClickOutside<HTMLDivElement>(false);
 
   // Destructuring The Objects Data
   const {
@@ -37,16 +37,18 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
     orderId,
     pickup,
     status,
-  } = item
+  } = item;
 
   // Naviagte to other page
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const redirectToTracking = () => {
     navigate(`tracking/${orderId}`, {
       state: item,
-    })
-  }
+    });
+  };
+
+  console.log(item);
 
   return (
     <tr className="bg-white hover:bg-contentBg cursor-pointer duration-200">
@@ -144,7 +146,7 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
         ) : null}
       </td>
     </tr>
-  )
-}
+  );
+};
 
-export default OrderSingleRow
+export default OrderSingleRow;

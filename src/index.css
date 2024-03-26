@@ -92,6 +92,10 @@ input[type="number"] {
   display: none;
 }
 
+.account-sidebar a.active div {
+  background-color: rgba(238, 182, 120, 0.3);
+}
+
 .leaflet-container {
   /* height: 55vh; */
   border-radius: 16px;
@@ -127,4 +131,8 @@ input[type="number"] {
 .tracking-orders::-webkit-scrollbar-track {
   background-color: rgba(0, 0, 0, 0.26);
   border-radius: 3px;
+}
+
+.dv-star-rating-star {
+  font-size: 50px;
 }

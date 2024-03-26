@@ -6,6 +6,14 @@ import ForgotPassword from "../pages/ForgotPassword";
 import SetupCompany from "../pages/SetupCompany";
 import Orders from "../pages/Orders";
 import OrderTracking from "../pages/OrderTracking";
+import CreateOrder from "../pages/CreateOrder";
+import Invoices from "../pages/Invoices";
+import SingleInvoice from "../pages/SingleInvoice";
+import Automations from "../pages/Automations";
+import Accounts from "../pages/Accounts";
+import AccountsGeneral from "../pages/AccountsGeneral";
+import AccountsDefault from "../pages/AccountsDefault";
+import AccountsBilling from "../pages/AccountsBilling";
 
 const Router = () => {
   // Routes Data
@@ -41,9 +49,29 @@ const Router = () => {
       component: <Orders />,
     },
     {
-      id: 6,
+      id: 7,
       path: "/orders/tracking/:id",
       component: <OrderTracking />,
+    },
+    {
+      id: 8,
+      path: "/create-order",
+      component: <CreateOrder />,
+    },
+    {
+      id: 9,
+      path: "/invoices",
+      component: <Invoices />,
+    },
+    {
+      id: 10,
+      path: "/invoices/:id",
+      component: <SingleInvoice />,
+    },
+    {
+      id: 11,
+      path: "/automations",
+      component: <Automations />,
     },
   ];
 
@@ -54,6 +82,12 @@ const Router = () => {
         {allRoutes.map(({ component, id, path }) => (
           <Route key={id} path={path} element={component} />
         ))}
+        {/* Account Routes */}
+        <Route path="/accounts" element={<Accounts />}>
+          <Route path="general" element={<AccountsGeneral />} />
+          <Route path="defaults" element={<AccountsDefault />} />
+          <Route path="billing" element={<AccountsBilling />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
