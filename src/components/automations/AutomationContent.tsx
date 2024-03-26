@@ -9,7 +9,7 @@ import SearchIcon from "../../assets/search.svg";
 const AutomationContent = () => {
   return (
     <ContentBox>
-      <div className="w-full custom-height bg-white rounded-2xl px-themePadding py-5 relative">
+      <div className="w-full h-screen  3xl:h-[90vh] bg-white rounded-2xl px-themePadding py-5 relative">
         {/* Heading */}
         <div className="text-center py-5">
           <h2 className="text-black text-lg font-semibold">

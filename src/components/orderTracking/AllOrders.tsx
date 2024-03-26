@@ -36,7 +36,7 @@ const AllOrders = () => {
       </div>
 
       {/* Orders Card Container */}
-      <div className="h-[80vh] overflow-auto tracking-orders">
+      <div className="2xl:h-[100vh] 3xl:h-[80vh] overflow-auto tracking-orders">
         {OrdersData.map((item) => (
           <TrackingOrderCard key={item.id} item={item} />
         ))}

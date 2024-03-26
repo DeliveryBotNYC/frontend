@@ -45,6 +45,9 @@ export default {
       padding: {
         themePadding: "30px",
       },
+      screens: {
+        "3xl": "1800px",
+      },
     },
   },
   plugins: [],

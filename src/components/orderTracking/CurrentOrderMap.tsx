@@ -65,9 +65,7 @@ const CurrentOrderMap = () => {
   return (
     <div className="w-full">
       <MapContainer
-        style={{
-          height: "95vh",
-        }}
+        className="order-tracking-map"
         center={[51.505, -0.06]}
         zoom={15}
       >

@@ -136,3 +136,13 @@ input[type="number"] {
 .dv-star-rating-star {
   font-size: 50px;
 }
+
+.order-tracking-map {
+  height: 115vh;
+}
+
+@media screen and (min-width: 1800px) {
+  .order-tracking-map {
+    height: 96vh;
+  }
+}
