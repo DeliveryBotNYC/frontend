@@ -6,7 +6,7 @@ const Accounts = () => {
   return (
     <div className="w-full">
       {/* navbar */}
-      <PrimaryNav title="Orders" />
+      <PrimaryNav title="Accounts" />
 
       {/* Content Box */}
       <div className="bg-themeOrange relative z-40">
