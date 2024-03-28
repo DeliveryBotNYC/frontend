@@ -74,7 +74,7 @@ const Overview = () => {
           <p className="text-3xl font-extrabold mt-2.5 heading">3484</p>
 
           {/* desc */}
-          <p className="text-xs text-secondaryBtnBorder mt-3 pl-4">
+          <p className="text-xs text-secondaryBtnBorder mt-2 pl-4">
             Total orders
           </p>
         </div>

@@ -1,8 +1,8 @@
 const OrderProcessing = () => {
   return (
-    <div className="relative">
+    <div className="relative w-full">
       {/* Processing Box */}
-      <div className="flex items-end justify-between gap-2.5 pt-5">
+      <div className="flex items-end justify-between gap-2 pt-2.5">
         {/* Left Side */}
         <div className="flex items-center gap-2.5">
           {/* Dot */}
@@ -23,7 +23,7 @@ const OrderProcessing = () => {
       </div>
 
       {/* Router Assigned Box */}
-      <div className="flex items-end justify-between gap-2.5 pt-5">
+      <div className="flex items-end justify-between gap-2 pt-2.5">
         {/* Left Side */}
         <div className="flex items-center gap-2.5">
           {/* Dot */}

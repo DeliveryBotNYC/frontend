@@ -46,7 +46,7 @@ const OrderDelivered = ({ isCompleted }: { isCompleted: boolean }) => {
       </div>
 
       {/* Router Assigned Box */}
-      <div className="flex items-end justify-between gap-2.5 pt-5">
+      <div className="flex items-end justify-between gap-2.5 pt-2.5">
         {/* Left Side */}
         <div className="flex items-center gap-2.5">
           {/* Dot */}
@@ -74,7 +74,7 @@ const OrderDelivered = ({ isCompleted }: { isCompleted: boolean }) => {
 
       {/* Recipents images */}
       {isCompleted === true ? (
-        <div className="flex justify-between gap-2.5 py-3 pl-5">
+        <div className="flex justify-between gap-2.5 pt-2.5 pb-4 pl-5">
           <div className="w-full h-28">
             <img
               src={ParcelImage}
@@ -107,8 +107,8 @@ const OrderDelivered = ({ isCompleted }: { isCompleted: boolean }) => {
 
       {/* Line */}
       <div
-        className={`w-full h-[80%] border-l-2 border-l-themeOrange ${
-          isCompleted === true ? "border-solid" : "border-dashed"
+        className={`w-full border-l-2 border-l-themeOrange ${
+          isCompleted === true ? "border-solid h-full" : "border-dashed h-[80%]"
         } absolute left-1.5 bottom-0 -z-10`}
       ></div>
     </div>

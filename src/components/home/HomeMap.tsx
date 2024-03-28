@@ -89,14 +89,13 @@ const HomeMap = () => {
   });
 
   return (
-    <div className="w-full">
-      <MapContainer
-        style={{
-          height: "55vh",
-        }}
-        center={[51.505, -0.06]}
-        zoom={15}
-      >
+    <div
+      className="w-full mt-5 3xl:pb-0 xl:pb-4"
+      style={{
+        height: "calc(50% - 20px)",
+      }}
+    >
+      <MapContainer className="h-full" center={[51.505, -0.06]} zoom={15}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"

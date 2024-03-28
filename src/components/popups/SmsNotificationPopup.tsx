@@ -14,7 +14,7 @@ const SmsNotificationPopup = () => {
 
   return (
     <div
-      className={`w-[90%] max-w-[400px] bg-white rounded-xl p-6 absolute left-1/2 ${
+      className={`w-[90%] max-w-[400px] bg-white rounded-xl p-6 fixed left-1/2 top-1/2 ${
         contextValue?.showSmsPopup === true
           ? contextValue?.showPopupStyles
           : contextValue?.hidePopupStyles
@@ -31,7 +31,7 @@ const SmsNotificationPopup = () => {
       </div>
 
       {/* Documentation */}
-      <div className="w-full mt-4">
+      <div className="w-full mt-3">
         <h3 className="text-black font-semibold text-lg">SMS</h3>
         <p className="text-sm text-themeDarkGray mt-1">
           Sent a custom SMS notification to customer or yourself depending on
@@ -40,7 +40,7 @@ const SmsNotificationPopup = () => {
       </div>
 
       {/* Trigger when */}
-      <div className="mt-4 pb-1 border-b border-b-contentBg">
+      <div className="mt-3 pb-1 border-b border-b-contentBg">
         {/* Label */}
         <p className="text-xs text-themeDarkGray pl-1">
           Trigger when <span className="text-themeRed">*</span>
@@ -56,7 +56,7 @@ const SmsNotificationPopup = () => {
       </div>
 
       {/* Sent to */}
-      <div className="mt-4 pb-1 border-b border-b-contentBg">
+      <div className="mt-3 pb-1 border-b border-b-contentBg">
         {/* Label */}
         <p className="text-xs text-themeDarkGray pl-1">
           Sent to <span className="text-themeRed">*</span>
@@ -72,7 +72,7 @@ const SmsNotificationPopup = () => {
       </div>
 
       {/* When store equals */}
-      <div className="mt-4 pb-1 border-b border-b-contentBg">
+      <div className="mt-3 pb-1 border-b border-b-contentBg">
         {/* Label */}
         <p className="text-xs text-themeDarkGray pl-1">
           When store equals <span className="text-themeRed">*</span>
@@ -88,7 +88,7 @@ const SmsNotificationPopup = () => {
       </div>
 
       {/* Insert tag */}
-      <div className="mt-4 pb-1 border-b border-b-contentBg">
+      <div className="mt-3 pb-1 border-b border-b-contentBg">
         {/* Label */}
         <p className="text-xs text-themeDarkGray pl-1">&nbsp;</p>
 
@@ -102,7 +102,7 @@ const SmsNotificationPopup = () => {
       </div>
 
       {/* Message */}
-      <div className="mt-4 pb-1 border-b border-b-contentBg">
+      <div className="mt-3 pb-1 border-b border-b-contentBg">
         {/* Label */}
         <p className="text-xs text-themeDarkGray pl-1">&nbsp;</p>
 
@@ -115,7 +115,7 @@ const SmsNotificationPopup = () => {
       </div>
 
       {/* Preview */}
-      <div className="mt-4 pb-1 border-b border-b-contentBg">
+      <div className="mt-3 pb-1 border-b border-b-contentBg">
         {/* Label */}
         <p className="text-xs text-themeDarkGray pl-1">&nbsp;</p>
 
@@ -128,7 +128,7 @@ const SmsNotificationPopup = () => {
       </div>
 
       {/* Checkbox */}
-      <div className="flex items-center gap-2.5 mt-4">
+      <div className="flex items-center gap-2.5 mt-3">
         <input
           type="checkbox"
           id="permission-text-contact"

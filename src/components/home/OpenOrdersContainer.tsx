@@ -3,7 +3,7 @@ import OpenOrdersCard from "./OpenOrdersCard";
 
 const OpenOrdersContainer = () => {
   return (
-    <div className="my-2.5 pt-[15px] bg-white rounded-primaryRadius">
+    <div className="mt-3 pt-[15px] bg-white rounded-primaryRadius">
       {/* header */}
       <div className="px-12 pb-2.5">
         <p className="text-lg font-semibold">Open Orders</p>
@@ -32,7 +32,7 @@ const OpenOrdersContainer = () => {
       </div>
 
       {/*  Data Card Container */}
-      <div className="w-full">
+      <div className="w-full h-[150px] overflow-auto">
         {/* Pass props to this component for dynamic data */}
         {Array.from({ length: 4 }).map((_, idx) => (
           <OpenOrdersCard key={idx} />

@@ -57,7 +57,7 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
         onClick={redirectToTracking}
         className="border-b border-b-themeLightGray min-w-[170px] xl:min-w-[auto]"
       >
-        <div className="pl-[30px] py-5">
+        <div className="pl-[30px] py-4">
           <p>
             <span className="text-themeOrange">DBX</span>
             {orderId}

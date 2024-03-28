@@ -7,7 +7,7 @@ const OrdersContent = () => {
   return (
     <ContentBox>
       {/* Orders Content */}
-      <div className="w-full ">
+      <div className="w-full h-full">
         {/* Searchbar */}
         <OrderTableSearchBox />
 

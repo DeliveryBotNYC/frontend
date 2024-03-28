@@ -11,7 +11,7 @@ const PrimaryNav = ({ title }: { title: string }) => {
   const contextValue = useContext(ThemeContext);
 
   return (
-    <nav className="h-20 bg-themeOrange flex items-center justify-between gap-4 px-4 relative isolate">
+    <nav className="w-full bg-themeOrange h-16 flex items-center justify-between gap-4 px-4 fixed top-0 left-0 z-[99]">
       {/* left */}
       <div className="flex items-center gap-10">
         {/* Image */}

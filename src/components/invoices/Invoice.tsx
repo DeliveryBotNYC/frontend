@@ -7,7 +7,7 @@ import InvoiceImage from "../../assets/invoice.svg";
 const Invoice = () => {
   return (
     <ContentBox>
-      <div className="w-full min-h-screen bg-white rounded-2xl p-5">
+      <div className="w-full h-full bg-white rounded-2xl p-5">
         {/* Header */}
         <div className="w-full flex items-center justify-end gap-5">
           {/* Download Icon */}
@@ -23,7 +23,7 @@ const Invoice = () => {
 
         {/* Invoice Image */}
         <div className="w-full flex items-center justify-center mt-5">
-          <img src={InvoiceImage} alt="invoice" />
+          <img src={InvoiceImage} alt="invoice" className="w-[50%]" />
         </div>
       </div>
     </ContentBox>

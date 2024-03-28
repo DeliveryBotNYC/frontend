@@ -11,26 +11,34 @@ const OrdersTable = () => {
   const contextValue = useContext(ThemeContext);
 
   return (
-    <div className="table-container min-h-[80vh] overflow-auto">
-      <table className="w-full">
-        {/* Table Header */}
-        <OrdersTableHeader />
+    <>
+      <div
+        className="table-container overflow-auto bg-white"
+        style={{
+          height: "calc(100% - 129px)",
+        }}
+      >
+        <table className="w-full">
+          {/* Table Header */}
+          <OrdersTableHeader />
 
-        {/* Table Content */}
-        <tbody className="">
-          {OrdersData.filter((order) =>
-            order.orderId
-              .toLowerCase()
-              .includes(contextValue?.searchInput?.toLowerCase() || "")
-          ).map((item) => (
-            <OrderSingleRow item={item} key={item.id} />
-          ))}
-        </tbody>
-      </table>
-
+          {/* Table Content */}
+          <tbody>
+            {OrdersData.filter((order) =>
+              order.orderId
+                .toLowerCase()
+                .includes(contextValue?.searchInput?.toLowerCase() || "")
+            ).map((item) => (
+              <OrderSingleRow item={item} key={item.id} />
+            ))}
+          </tbody>
+        </table>
+      </div>
       {/* Pagination */}
-      <OrdersTablePagination />
-    </div>
+      <div>
+        <OrdersTablePagination />
+      </div>
+    </>
   );
 };
 

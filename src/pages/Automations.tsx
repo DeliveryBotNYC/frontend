@@ -4,12 +4,12 @@ import Sidebar from "../components/primary/Sidebar";
 
 const Automations = () => {
   return (
-    <div className="w-full">
+    <div className="w-full relative bg-themeOrange">
       {/* navbar */}
-      <PrimaryNav title="Dashboard" />
+      <PrimaryNav title="Automations" />
 
       {/* Content Box */}
-      <div className="bg-themeOrange relative z-40">
+      <div>
         {/* Sidebar */}
         <Sidebar />
 

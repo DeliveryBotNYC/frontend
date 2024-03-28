@@ -63,12 +63,8 @@ const CurrentOrderMap = () => {
   const AssignedOptions = { color: "#EEB678" };
 
   return (
-    <div className="w-full">
-      <MapContainer
-        className="order-tracking-map"
-        center={[51.505, -0.06]}
-        zoom={15}
-      >
+    <div className="w-full h-full">
+      <MapContainer className="h-full" center={[51.505, -0.06]} zoom={15}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"

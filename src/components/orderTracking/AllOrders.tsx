@@ -10,10 +10,10 @@ const AllOrders = () => {
   const contextValue = useContext(ThemeContext);
 
   return (
-    <div className="min-w-[336px] bg-white rounded-2xl">
+    <div className="min-w-[336px] h-full bg-white rounded-2xl">
       {/* SearchBox */}
-      <div className="w-full px-2.5 py-5 bg-white rounded-tr-2xl rounded-tl-2xl">
-        <div className="w-full border-b border-b-primaryBorder flex items-center gap-2 pb-2">
+      <div className="w-full h-[110px]  py-5 bg-white rounded-tr-2xl rounded-tl-2xl">
+        <div className="w-full border-b border-b-primaryBorder flex items-center gap-2 pb-2 px-2.5">
           <img src={SearchIcon} alt="searchbox" />
 
           {/* Search Input */}
@@ -28,15 +28,20 @@ const AllOrders = () => {
             }
           />
         </div>
-      </div>
 
-      {/* Heading */}
-      <div className="bg-contentBg px-7 py-2.5 text-center">
-        <p className="text-lg font-semibold text-black">Order</p>
+        {/* Heading */}
+        <div className="bg-contentBg px-7 py-2.5 text-center">
+          <p className="text-lg font-semibold text-black">Order</p>
+        </div>
       </div>
 
       {/* Orders Card Container */}
-      <div className="2xl:h-[100vh] 3xl:h-[80vh] overflow-auto tracking-orders">
+      <div
+        style={{
+          height: "calc(100% - 110px)",
+        }}
+        className="overflow-auto tracking-orders"
+      >
         {OrdersData.map((item) => (
           <TrackingOrderCard key={item.id} item={item} />
         ))}

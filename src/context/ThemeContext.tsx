@@ -41,6 +41,9 @@ interface ThemeContextValue {
   Autofill: boolean;
   setAutofill: React.Dispatch<React.SetStateAction<boolean>>;
 
+  showImageUploaderPopup: boolean;
+  setShowImageUploaderPopup: React.Dispatch<React.SetStateAction<boolean>>;
+
   showPopupStyles: string;
   hidePopupStyles: string;
 }
@@ -85,6 +88,9 @@ export const ThemeProvider: React.FC<ThemeContextProps> = ({ children }) => {
   // AutoFil Switch
   const [Autofill, setAutofill] = useState<boolean>(true);
 
+  const [showImageUploaderPopup, setShowImageUploaderPopup] =
+    useState<boolean>(false);
+
   // show popup styles
   const showPopupStyles = "left-1/2 visible opacity-100";
   const hidePopupStyles = "left-[55%] invisible opacity-0";
@@ -116,6 +122,8 @@ export const ThemeProvider: React.FC<ThemeContextProps> = ({ children }) => {
     setCleanCloudUpdate,
     Autofill,
     setAutofill,
+    showImageUploaderPopup,
+    setShowImageUploaderPopup,
   };
 
   return (

@@ -23,12 +23,12 @@ const OrderTrackingContent = () => {
 
   return (
     <ContentBox>
-      <div className="flex justify-between gap-2.5">
+      <div className="flex h-full justify-between gap-2.5">
         {/* All Orders (Sidebar) */}
         <AllOrders />
 
         {/* Content Box */}
-        <div className="w-full bg-white rounded-2xl relative overflow-hidden">
+        <div className="w-full h-full bg-white rounded-2xl relative overflow-hidden">
           {/* Map */}
           <CurrentOrderMap />
 

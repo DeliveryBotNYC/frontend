@@ -4,7 +4,7 @@ import Sidebar from "../components/primary/Sidebar";
 
 const Home = () => {
   return (
-    <div className="w-full">
+    <div className="w-full relative">
       {/* navbar */}
       <PrimaryNav title="Dashboard" />
 

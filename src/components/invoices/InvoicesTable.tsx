@@ -19,7 +19,12 @@ const InvoicesTable = () => {
 
   return (
     <>
-      <div className="table-container h-[80vh] bg-white overflow-auto">
+      <div
+        style={{
+          height: "calc(100% - 129px)",
+        }}
+        className="table-container bg-white overflow-auto"
+      >
         <table className="w-full">
           {/* Table Header */}
           <thead className="w-full bg-contentBg px-themePadding">

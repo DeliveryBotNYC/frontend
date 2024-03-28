@@ -6,12 +6,14 @@ import ContentBox from "../reusable/ContentBox";
 
 const HomeContext = () => {
   return (
-    <ContentBox>
-      {/* Overview */}
-      <Overview />
+    <ContentBox isHomePage={true}>
+      <div className="3xl:h-1/2">
+        {/* Overview */}
+        <Overview />
 
-      {/* Open Orders */}
-      <OpenOrdersContainer />
+        {/* Open Orders */}
+        <OpenOrdersContainer />
+      </div>
 
       {/* Map */}
       <HomeMap />

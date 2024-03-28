@@ -16,7 +16,7 @@ const CleanCloudUpdatePopup = () => {
 
   return (
     <div
-      className={`w-[90%] max-w-[400px] bg-white rounded-xl p-6 absolute left-1/2 ${
+      className={`w-[90%] max-w-[400px] bg-white rounded-xl p-6 fixed left-1/2 top-1/2 ${
         contextValue?.cleanCloudUpdate === true
           ? contextValue?.showPopupStyles
           : contextValue?.hidePopupStyles

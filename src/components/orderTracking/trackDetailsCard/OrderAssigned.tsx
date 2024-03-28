@@ -2,7 +2,7 @@ const OrderAssigned = ({ isCompleted }: { isCompleted: boolean }) => {
   return (
     <div className="relative isolate">
       {/* Processing Box */}
-      <div className="flex items-end justify-between gap-2.5 pt-5">
+      <div className="flex items-end justify-between gap-2.5 pt-2.5">
         {/* Left Side */}
         <div className="flex items-center gap-2.5">
           {/* Dot */}
@@ -31,7 +31,7 @@ const OrderAssigned = ({ isCompleted }: { isCompleted: boolean }) => {
       </div>
 
       {/* Router Assigned Box */}
-      <div className="flex items-end justify-between gap-2.5 pt-5">
+      <div className="flex items-end justify-between gap-2.5 pt-2.5">
         {/* Left Side */}
         <div className="flex items-center gap-2.5">
           {/* Dot */}

@@ -61,7 +61,7 @@ const Sidebar = () => {
   return (
     <AnimatePresence>
       <div
-        className={`bg-themeOrange h-full absolute left-0 top-0 z-50 pt-20 pl-[28px] parent ${
+        className={`bg-themeOrange h-full fixed left-0 top-16 z-50 pt-20 pl-[28px] parent ${
           contextValue?.expandSidebarWidth === true ? "active" : ""
         }`}
         onMouseOver={() => {

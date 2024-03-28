@@ -92,12 +92,12 @@ const DashboardAreaChart = () => {
   };
 
   return (
-    <div className="h-[80px] overflow-hidden">
+    <div className="overflow-hidden">
       <ReactApexChart
         options={options2 as any}
         series={series}
         type="area"
-        height={70}
+        height={60}
       />
     </div>
   );

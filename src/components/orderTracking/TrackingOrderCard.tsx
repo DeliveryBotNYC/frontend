@@ -25,7 +25,7 @@ const TrackingOrderCard = ({ item }: { item: OrderItem }) => {
       <div
         className={`${
           orderId === item.orderId ? "bg-contentBg" : "bg-white"
-        } py-2.5 px-themePadding border-b-2 border-b-themeLightGray cursor-pointer`}
+        } py-1.5 px-themePadding border-b-2 border-b-themeLightGray cursor-pointer`}
       >
         {/* Top  */}
         <div className="flex items-center justify-between gap-2.5">

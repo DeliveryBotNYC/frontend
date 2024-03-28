@@ -5,7 +5,7 @@ import { Outlet } from "react-router-dom";
 const AccountsMainContent = () => {
   return (
     <ContentBox>
-      <div className="custom-height flex items-start gap-2.5">
+      <div className="h-full flex items-start gap-2.5">
         {/* Sidebar */}
         <AccountSidebar />
 
