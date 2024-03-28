@@ -14,6 +14,7 @@ import AutomationIcon from "../../assets/sidebar/automation.svg";
 import AutomationActiveIcon from "../../assets/sidebar/automation-active.svg";
 import SettingsIcon from "../../assets/sidebar/settings.svg";
 import SettingsActiveIcon from "../../assets/sidebar/settings-active.svg";
+import LogoutIcon from "../../assets/logout.svg";
 
 const Sidebar = () => {
   // Context
@@ -61,7 +62,7 @@ const Sidebar = () => {
   return (
     <AnimatePresence>
       <div
-        className={`bg-themeOrange h-full fixed left-0 top-16 z-50 pt-20 pl-[28px] parent ${
+        className={`bg-themeOrange h-full fixed left-0 top-16 z-50 pt-20  flex flex-col justify-between parent ${
           contextValue?.expandSidebarWidth === true ? "active" : ""
         }`}
         onMouseOver={() => {
@@ -73,35 +74,68 @@ const Sidebar = () => {
           contextValue?.setExpSidebarandWidth(false);
         }}
       >
-        {sidebarLinksData?.map(
-          ({ activeIcon, id, initialIcon, title, target }) => (
-            <NavLink to={target} key={id}>
-              <div className="flex items-center gap-6 mb-[52px]">
-                {/* initial Icon */}
-                <img src={initialIcon} alt="initial-icon" className="i-icon" />
+        <div className="pl-[28px]">
+          {sidebarLinksData?.map(
+            ({ activeIcon, id, initialIcon, title, target }) => (
+              <NavLink to={target} key={id}>
+                <div className="flex items-center gap-6 mb-[52px]">
+                  {/* initial Icon */}
+                  <img
+                    src={initialIcon}
+                    alt="initial-icon"
+                    className="i-icon"
+                  />
 
-                {/* Active Icon */}
-                <img src={activeIcon} alt="active-icon" className="a-icon" />
+                  {/* Active Icon */}
+                  <img src={activeIcon} alt="active-icon" className="a-icon" />
 
-                {/* Text */}
-                <motion.p
-                  initial={{
-                    opacity: 0,
-                  }}
-                  animate={{
-                    opacity: contextValue?.expandSidebarWidth === true ? 1 : 0,
-                  }}
-                  exit={{
-                    opacity: 0,
-                  }}
-                  className="text-sm font-normal text-newOrderBtnBg link-text"
-                >
-                  {title}
-                </motion.p>
-              </div>
-            </NavLink>
-          )
-        )}
+                  {/* Text */}
+                  <motion.p
+                    initial={{
+                      opacity: 0,
+                    }}
+                    animate={{
+                      opacity:
+                        contextValue?.expandSidebarWidth === true ? 1 : 0,
+                    }}
+                    exit={{
+                      opacity: 0,
+                    }}
+                    className="text-sm font-normal text-newOrderBtnBg link-text"
+                  >
+                    {title}
+                  </motion.p>
+                </div>
+              </NavLink>
+            )
+          )}
+        </div>
+
+        <motion.div
+          className="pb-20"
+          initial={{
+            opacity: 0,
+          }}
+          animate={{
+            opacity: contextValue?.expandSidebarWidth === true ? 1 : 0,
+          }}
+          exit={{
+            opacity: 0,
+          }}
+        >
+          {/* Logout Btn */}
+          <NavLink to="/login">
+            <div className="flex items-center justify-center gap-4 mb-7">
+              {/* Icon */}
+              <img src={LogoutIcon} alt="logout-icon" />
+
+              <p className="text-sm text-newOrderBtnBg">Logout</p>
+            </div>
+          </NavLink>
+
+          {/* version */}
+          <p className="text-xs text-newOrderBtnBg text-center">3.0</p>
+        </motion.div>
       </div>
     </AnimatePresence>
   );
