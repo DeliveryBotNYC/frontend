@@ -113,7 +113,6 @@ input[type="number"] {
 
 .leaflet-container {
   /* height: 55vh; */
-  border-radius: 16px;
   z-index: 1;
   border: transparent;
 }

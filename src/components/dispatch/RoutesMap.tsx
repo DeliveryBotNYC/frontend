@@ -1,12 +1,17 @@
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
-import { Icon } from "leaflet";
+import {
+  MapContainer,
+  Marker,
+  Polyline,
+  Popup,
+  TileLayer,
+} from "react-leaflet";
+import { Icon, LatLngExpression } from "leaflet";
 
 import DeliveredIcon from "../../assets/delivered.svg";
-import ShopIcon from "../../assets/pickup.svg";
 import CRIcon from "../../assets/current-loc.svg";
 import MultiDelIcon from "../../assets/multi-Del.svg";
 
-const HomeMap = () => {
+const CurrentOrderMap = () => {
   // Delivered Markers
   const DeliveredMarkers = [
     {
@@ -14,43 +19,14 @@ const HomeMap = () => {
       geoCode: [51.505, -0.06],
       pContent: "Order Delivered",
     },
-    {
-      id: 2,
-      geoCode: [51.507, -0.061],
-      pContent: "Order Delivered",
-    },
-    {
-      id: 3,
-      geoCode: [51.509, -0.062],
-      pContent: "Order Delivered",
-    },
-  ];
-
-  // Delivered Markers
-  const StoreMarkers = [
-    {
-      id: 1,
-      geoCode: [51.501, -0.08],
-      pContent: "Order Picked Up",
-    },
-    {
-      id: 2,
-      geoCode: [51.505, -0.04],
-      pContent: "Order Picked Up",
-    },
   ];
 
   // Location Markers
   const LocationMarkers = [
     {
       id: 1,
-      geoCode: [51.503, -0.062],
+      geoCode: [51.5, -0.07],
       pContent: "Delivery man at 20 min away",
-    },
-    {
-      id: 2,
-      geoCode: [51.501, -0.069],
-      pContent: "Delivery man at 50 min away",
     },
   ];
 
@@ -58,12 +34,7 @@ const HomeMap = () => {
   const MultiDelMarkers = [
     {
       id: 1,
-      geoCode: [51.508, -0.061],
-      pContent: "Multiple Delivery will be delievered Here",
-    },
-    {
-      id: 2,
-      geoCode: [51.506, -0.07],
+      geoCode: [51.496, -0.07],
       pContent: "Multiple Delivery will be delievered Here",
     },
   ];
@@ -71,11 +42,6 @@ const HomeMap = () => {
   const customDeliveredIcon = new Icon({
     iconUrl: DeliveredIcon,
     iconSize: [38, 48],
-  });
-
-  const customStoreIcon = new Icon({
-    iconUrl: ShopIcon,
-    iconSize: [36, 41],
   });
 
   const currentLocationIcon = new Icon({
@@ -88,13 +54,16 @@ const HomeMap = () => {
     iconSize: [38, 48],
   });
 
+  const polyline = [
+    [51.505, -0.06],
+    [51.506, -0.07],
+    [51.496, -0.07],
+  ];
+
+  const AssignedOptions = { color: "#EEB678" };
+
   return (
-    <div
-      className="w-full mt-5 3xl:pb-0 xl:pb-4"
-      style={{
-        height: "calc(50% - 20px)",
-      }}
-    >
+    <div className="w-full h-full">
       <MapContainer
         className="h-full"
         center={[40.7540497, -73.9843973]}
@@ -105,7 +74,10 @@ const HomeMap = () => {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png"
         />
-
+        <Polyline
+          pathOptions={AssignedOptions}
+          positions={polyline as LatLngExpression[]}
+        />
         {/* Delivered Markers */}
         {DeliveredMarkers?.map(({ geoCode, id, pContent }) => {
           const convertedGeoCode: [number, number] = [geoCode[0], geoCode[1]];
@@ -122,20 +94,6 @@ const HomeMap = () => {
             </Marker>
           );
         })}
-
-        {/* Store Markers */}
-        {StoreMarkers?.map(({ geoCode, id, pContent }) => {
-          const convertedGeoCode: [number, number] = [geoCode[0], geoCode[1]];
-
-          return (
-            <Marker key={id} icon={customStoreIcon} position={convertedGeoCode}>
-              <Popup>
-                <p className="text-themeOrange text-sm">{pContent}</p>
-              </Popup>
-            </Marker>
-          );
-        })}
-
         {/* Current Location Markers */}
         {LocationMarkers?.map(({ geoCode, id, pContent }) => {
           const convertedGeoCode: [number, number] = [geoCode[0], geoCode[1]];
@@ -152,7 +110,6 @@ const HomeMap = () => {
             </Marker>
           );
         })}
-
         {/* Multiple Delivery Markers */}
         {MultiDelMarkers?.map(({ geoCode, id, pContent }) => {
           const convertedGeoCode: [number, number] = [geoCode[0], geoCode[1]];
@@ -174,4 +131,4 @@ const HomeMap = () => {
   );
 };
 
-export default HomeMap;
+export default CurrentOrderMap;

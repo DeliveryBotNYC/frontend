@@ -14,6 +14,10 @@ import Accounts from "../pages/Accounts";
 import AccountsGeneral from "../pages/AccountsGeneral";
 import AccountsDefault from "../pages/AccountsDefault";
 import AccountsBilling from "../pages/AccountsBilling";
+import Dispatch from "../pages/Dispatch";
+import DispatchRoutes from "../pages/DispatchRoutes";
+import DispatchStops from "../pages/DispatchStops";
+import DispatchOrders from "../pages/DispatchOrders";
 
 const Router = () => {
   // Routes Data
@@ -73,6 +77,11 @@ const Router = () => {
       path: "/automations",
       component: <Automations />,
     },
+    {
+      id: 11,
+      path: "/dispatch",
+      component: <Dispatch />,
+    },
   ];
 
   return (
@@ -87,6 +96,11 @@ const Router = () => {
           <Route path="general" element={<AccountsGeneral />} />
           <Route path="defaults" element={<AccountsDefault />} />
           <Route path="billing" element={<AccountsBilling />} />
+        </Route>
+        <Route path="/dispatch" element={<Dispatch />}>
+          <Route path="" element={<DispatchRoutes />} />
+          <Route path="route/:id" element={<DispatchStops />} />
+          <Route path="route/:id/order/:id" element={<DispatchOrders />} />
         </Route>
       </Routes>
     </BrowserRouter>
