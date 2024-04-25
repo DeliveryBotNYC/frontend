@@ -6,6 +6,12 @@ import EyeIcon from "../../assets/eye-icon.svg";
 import { FaEyeSlash } from "react-icons/fa";
 import FormBtn from "../reusable/FormBtn";
 
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from '@tanstack/react-query'
+
 const LoginForm = () => {
   // State to change the password type to text
   const [changePasswordType, setChangePasswordType] = useState<boolean>(false);
@@ -19,6 +25,7 @@ const LoginForm = () => {
   // submit handler
   const formSubmitHandler = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    console.log(loginFormValues);
   };
 
   return (

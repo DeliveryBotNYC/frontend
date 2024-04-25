@@ -8,7 +8,7 @@ const RouteBar = ({ type, text }: { type: string; text: string }) => {
 
   return (
     <div
-      className={`w-full h-full text-xs rounded-[5px] flex items-center justify-center ${
+      className={`w-full h-7 text-xs rounded-[5px] flex items-center justify-center ${
         type === "created"
           ? assignedStyle
           : type === "assigned"

@@ -16,18 +16,9 @@ interface OrderItem {
   status: string;
 }
 const OrderCard = ({ item }: { item: OrderItem }) => {
-  // Getting the pathname from URL bar
-  const { pathname } = useLocation();
-  const pathSegments = pathname.split("/");
-  const address_id = pathSegments[pathSegments.length - 1];
-
   return (
     <Link to={`/dispatch/route/3/order/${item.address_id}`}>
-      <div
-        className={`${
-          address_id === item.address_id ? "bg-contentBg" : "bg-white"
-        } py-3.5 px-themePadding border-b-2 border-b-themeLightGray cursor-pointer flex gap-2.5`}
-      >
+      <div className="bg-white py-3.5 px-themePadding border-b-2 border-b-themeLightGray cursor-pointer flex gap-2.5">
         <div className="m-auto">
           <img src={DeliveredIcon} alt="delivered-icon" />
         </div>

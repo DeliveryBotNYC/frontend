@@ -30,7 +30,7 @@ const RoutesControl = () => {
 
   return (
     <div className="h-200px items-center w-full flex justify-between gap-10 bg-white p-5">
-      <div className="w-1/3 h-full flex justify-between">
+      <div className="w-1/3 h-full flex justify-between gap-2.5">
         {/* Service area */}
         <select className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none">
           <option value="box">Manhattan</option>
@@ -39,14 +39,14 @@ const RoutesControl = () => {
         </select>
         {/* Date */}
         <div className="border-b border-b-contentBg pb-[2px] w-full">
-          <input type="date" className="w-full" />
+          <input type="date" className="w-full" defaultValue="2024-04-25" />
         </div>
       </div>
       <div className="w-1/3 h-full flex justify-between py-2.5">
         {routeStats.map((item) => (
           <div className="w-full">
             <div className="flex gap-2.5">
-              <p className="text-3xl font-extrabold heading">{item.value}</p>
+              <p className="text-2xl font-semibold heading">{item.value}</p>
               <img src={ForwardIcon} alt="forward-icon" />
             </div>
             <p className="text-xs text-secondaryBtnBorder">{item.title}</p>
@@ -57,7 +57,7 @@ const RoutesControl = () => {
         {routeStats.map((item) => (
           <div className="w-full">
             <div className="flex gap-2.5">
-              <p className="text-3xl font-extrabold heading">{item.value}</p>
+              <p className="text-2xl font-semibold heading">{item.value}</p>
               <img src={ForwardIcon} alt="forward-icon" />
             </div>
             <p className="text-xs text-secondaryBtnBorder">{item.title}</p>

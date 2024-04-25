@@ -15,6 +15,8 @@ import AutomationActiveIcon from "../../assets/sidebar/automation-active.svg";
 import SettingsIcon from "../../assets/sidebar/settings.svg";
 import SettingsActiveIcon from "../../assets/sidebar/settings-active.svg";
 import LogoutIcon from "../../assets/logout.svg";
+import DispatchIcon from "../../assets/sidebar/dispatch.svg";
+import DispatchActiveIcon from "../../assets/sidebar/dispatch-active.svg";
 
 const Sidebar = () => {
   // Context
@@ -31,27 +33,34 @@ const Sidebar = () => {
     },
     {
       id: 2,
+      initialIcon: DispatchIcon,
+      activeIcon: DispatchActiveIcon,
+      title: "Dispatch",
+      target: "/dispatch",
+    },
+    {
+      id: 3,
       initialIcon: OrdersIcon,
       activeIcon: OrdersActiveIcon,
       title: "Orders",
       target: "/orders",
     },
     {
-      id: 3,
+      id: 4,
       initialIcon: InvoicesIcon,
       activeIcon: InvoicesActiveIcon,
       title: "Invoices",
       target: "/invoices",
     },
     {
-      id: 4,
+      id: 5,
       initialIcon: AutomationIcon,
       activeIcon: AutomationActiveIcon,
       title: "Automation",
       target: "/automations",
     },
     {
-      id: 5,
+      id: 6,
       initialIcon: SettingsIcon,
       activeIcon: SettingsActiveIcon,
       title: "Account",
