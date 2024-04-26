@@ -7,10 +7,12 @@ import { FaEyeSlash } from "react-icons/fa";
 import FormBtn from "../reusable/FormBtn";
 
 import {
-  QueryClient,
+  useMutation,
   QueryClientProvider,
   useQuery,
-} from '@tanstack/react-query'
+} from "@tanstack/react-query";
+
+import axios from "axios";
 
 const LoginForm = () => {
   // State to change the password type to text
@@ -25,7 +27,9 @@ const LoginForm = () => {
   // submit handler
   const formSubmitHandler = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log(loginFormValues);
+    console.log(
+      axios.post("https://api.dbx.delivery/retail/login", loginFormValues)
+    );
   };
 
   return (

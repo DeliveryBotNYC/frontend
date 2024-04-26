@@ -64,12 +64,16 @@ const CurrentOrderMap = () => {
 
   return (
     <div className="w-full h-full">
-      <MapContainer className="h-full" center={[51.505, -0.06]} zoom={15}>
+      <MapContainer
+        className="h-full"
+        center={[40.7540497, -73.9843973]}
+        zoom={13}
+        zoomControl={false}
+      >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          url="https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png"
         />
-        const convertedGeoCode: [number, number] = [geoCode[0], geoCode[1]];
         <Polyline
           pathOptions={AssignedOptions}
           positions={polyline as LatLngExpression[]}

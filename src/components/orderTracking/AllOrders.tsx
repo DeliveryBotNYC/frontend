@@ -2,12 +2,32 @@ import { useContext } from "react";
 import { ThemeContext } from "../../context/ThemeContext";
 import TrackingOrderCard from "./TrackingOrderCard";
 import OrdersData from "../../data/OrdersData.json";
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 
 import SearchIcon from "../../assets/search.svg";
 
 const AllOrders = () => {
   // Context to grab the search input state
   const contextValue = useContext(ThemeContext);
+
+  //temp bearer
+  let config = {
+    headers: {
+      Authorization:
+        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
+    },
+  };
+
+  // Get orders data
+  const { isLoading, data, error } = useQuery({
+    queryKey: ["orders"],
+    queryFn: () => {
+      return axios
+        .get("https://api.dbx.delivery/orders", config)
+        .then((res) => res.data);
+    },
+  });
 
   return (
     <div className="min-w-[336px] h-full bg-white rounded-2xl">
@@ -42,8 +62,8 @@ const AllOrders = () => {
         }}
         className="overflow-auto tracking-orders"
       >
-        {OrdersData.map((item) => (
-          <TrackingOrderCard key={item.id} item={item} />
+        {data?.map((item) => (
+          <TrackingOrderCard key={item.order_id} item={item} />
         ))}
       </div>
     </div>

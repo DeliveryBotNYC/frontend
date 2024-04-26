@@ -5,50 +5,48 @@ import DotIcon from "../../assets/dot.svg";
 import CloseIcon from "../../assets/closeIcon.svg";
 import useClickOutside from "../../hooks/useHandleOutsideClick";
 import { useNavigate } from "react-router-dom";
+import moment from "moment";
 
 interface OrderItem {
-  id: number;
-  orderId: string;
+  order_id: string;
   status: string;
   pickup: {
-    road: string;
-    state: string;
+    name: string;
+    location: {
+      street_address_1: string;
+      state: string;
+    };
   };
   delivery: {
-    road: string;
-    state: string;
+    name: string;
+    location: {
+      street_address_1: string;
+      state: string;
+    };
   };
-  deliveryDate: string;
-  deliveryTime: string;
-  lastUpdate: string;
+  timeframe: {
+    start_time: string;
+    end_time: string;
+  };
+  last_updated: string;
 }
 
 const OrderSingleRow = ({ item }: { item: OrderItem }) => {
+  console.log(item);
   // Toggle Dropdown by custom hook
   const { isOpen, setIsOpen, dropdownRef, dotRef } =
     useClickOutside<HTMLDivElement>(false);
 
   // Destructuring The Objects Data
-  const {
-    delivery,
-    deliveryDate,
-    deliveryTime,
-    lastUpdate,
-    orderId,
-    pickup,
-    status,
-  } = item;
-
+  const { delivery, timeframe, last_updated, order_id, pickup, status } = item;
   // Naviagte to other page
   const navigate = useNavigate();
 
   const redirectToTracking = () => {
-    navigate(`tracking/${orderId}`, {
+    navigate(`tracking/${order_id}`, {
       state: item,
     });
   };
-
-  console.log(item);
 
   return (
     <tr className="bg-white hover:bg-contentBg cursor-pointer duration-200">
@@ -60,7 +58,7 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
         <div className="pl-[30px] py-4">
           <p>
             <span className="text-themeOrange">DBX</span>
-            {orderId}
+            {order_id}
           </p>
         </div>
       </td>
@@ -81,8 +79,8 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
         className="border-b border-b-themeLightGray min-w-[170px] xl:min-w-[auto]"
       >
         <div className="px-2.5">
-          <p className="text-xs">{pickup.road}</p>
-          <p className="leading-none mt-1">{pickup.state}</p>
+          <p className="text-xs">{pickup.location.street_address_1}</p>
+          <p className="leading-none mt-1">{pickup.name}</p>
         </div>
       </td>
 
@@ -92,8 +90,8 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
         className="border-b border-b-themeLightGray min-w-[170px] xl:min-w-[auto]"
       >
         <div className="px-2.5">
-          <p className="text-xs">{delivery.road}</p>
-          <p className="leading-none mt-1">{delivery.state}</p>
+          <p className="text-xs">{delivery.location.street_address_1}</p>
+          <p className="leading-none mt-1">{delivery.name}</p>
         </div>
       </td>
 
@@ -103,15 +101,22 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
         className="border-b border-b-themeLightGray min-w-[170px] xl:min-w-[auto]"
       >
         <div className="px-2.5">
-          <p className="text-xs">{deliveryDate}</p>
-          <p className="leading-none mt-1">{deliveryTime}</p>
+          <p className="text-xs">
+            {moment(timeframe.start_time).format("MM/DD/YY")}
+          </p>
+          <p className="leading-none mt-1">
+            {moment(timeframe.start_time).format("h:mm a")}-
+            {moment(timeframe.end_time).format("h:mm a")}
+          </p>
         </div>
       </td>
 
       {/* last update */}
       <td className="border-b border-b-themeLightGray min-w-[300px] xl:min-w-[auto] relative">
         <div onClick={redirectToTracking} className="pl-2.5">
-          <p className="leading-none mt-1">{lastUpdate}</p>
+          <p className="leading-none mt-1">
+            {moment(last_updated).format("MM/DD/YY h:mm a")}
+          </p>
         </div>
 
         {/* Dot and close icon*/}
@@ -140,7 +145,7 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
         {isOpen === true ? (
           <OrderDropdown
             closeDropdown={() => setIsOpen(false)}
-            orderId={item.orderId}
+            orderId={order_id}
             dropdownRef={dropdownRef}
           />
         ) : null}

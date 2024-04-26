@@ -4,15 +4,15 @@ import { ThemeContext } from "../../context/ThemeContext";
 import OrdersData from "../../data/OrdersData.json";
 import StatusBtn from "../reusable/StatusBtn";
 import Progressbar from "../reusable/Progressbar";
-import ProcessingInfo from "./ProcessingInfo";
-import AssignedInfo from "./AssignedInfo";
-import PickedUpInfo from "./PickedUpInfo";
-import DeliveredInfo from "./DeliveredInfo";
+import InfoDetails from "./InfoDetails";
 import ShowTrackingSwitch from "./ShowTrackingSwitch";
 
 import CloseIcon from "../../assets/close-orange.svg";
 import WarningIcon from "../../assets/warning.svg";
 import UseGetOrderId from "../../hooks/UseGetOrderId";
+
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 
 const OrderTrackingInfo = () => {
   // Context to grab the search input state
@@ -21,13 +21,26 @@ const OrderTrackingInfo = () => {
   // Grab the order id from addressbar
   const orderId = UseGetOrderId();
 
-  // Finding the current order
-  const currentTrackedOrder = OrdersData.find(
-    (item) => item.orderId === orderId
-  );
-
+  //temp bearer
+  let config = {
+    headers: {
+      Authorization:
+        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
+    },
+  };
+  // Get orders data
+  const { isLoading, data, error, refetch } = useQuery({
+    queryKey: ["order"],
+    queryFn: () => {
+      return axios
+        .get("https://api.dbx.delivery/orders?order_id=" + orderId, config)
+        .then((res) => res.data);
+    },
+  });
+  //refetch if theres already data
+  data ? refetch() : null;
   // Current Order Status
-  const currentStatus = currentTrackedOrder?.status;
+  const currentStatus = data?.status;
 
   return (
     <div className="w-[366px] absolute h-full top-1/2 -translate-y-1/2 right-5 z-[9999] rounded-2xl py-3">
@@ -60,20 +73,20 @@ const OrderTrackingInfo = () => {
               {/* Pickup */}
               <div>
                 <p className="text-xs text-themeDarkGray">
-                  {currentTrackedOrder?.pickup?.road}
+                  {data?.pickup?.location.street_address_1}
                 </p>
                 <p className="text-xs text-themeDarkGray">
-                  {currentTrackedOrder?.pickup?.state}
+                  {data?.pickup?.name}
                 </p>
               </div>
 
               {/* delivery */}
               <div>
                 <p className="text-xs text-themeDarkGray">
-                  {currentTrackedOrder?.delivery?.road}
+                  {data?.delivery?.location.street_address_1}
                 </p>
                 <p className="text-xs text-themeDarkGray">
-                  {currentTrackedOrder?.delivery?.state}
+                  {data?.delivery?.name}
                 </p>
               </div>
             </div>
@@ -91,15 +104,7 @@ const OrderTrackingInfo = () => {
 
                 {/* Delivery tracking */}
                 <div className="w-full">
-                  {currentStatus === "processing" ? (
-                    <ProcessingInfo />
-                  ) : currentStatus === "assigned" ? (
-                    <AssignedInfo />
-                  ) : currentStatus === "picked" ? (
-                    <PickedUpInfo />
-                  ) : currentStatus === "delivered" ? (
-                    <DeliveredInfo />
-                  ) : null}
+                  <InfoDetails items={data?.logs} />
                 </div>
               </>
             ) : null}

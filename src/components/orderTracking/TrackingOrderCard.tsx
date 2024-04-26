@@ -2,16 +2,27 @@ import { Link, useLocation } from "react-router-dom";
 import StatusBtn from "../reusable/StatusBtn";
 
 interface OrderItem {
-  orderId: string;
+  order_id: string;
   status: string;
   pickup: {
-    road: string;
-    state: string;
+    name: string;
+    location: {
+      street_address_1: string;
+      state: string;
+    };
   };
   delivery: {
-    road: string;
-    state: string;
+    name: string;
+    location: {
+      street_address_1: string;
+      state: string;
+    };
   };
+  timeframe: {
+    start_time: string;
+    end_time: string;
+  };
+  last_updated: string;
 }
 
 const TrackingOrderCard = ({ item }: { item: OrderItem }) => {
@@ -21,10 +32,10 @@ const TrackingOrderCard = ({ item }: { item: OrderItem }) => {
   const orderId = pathSegments[pathSegments.length - 1];
 
   return (
-    <Link to={`/orders/tracking/${item.orderId}`}>
+    <Link to={`/orders/tracking/${item.order_id}`}>
       <div
         className={`${
-          orderId === item.orderId ? "bg-contentBg" : "bg-white"
+          orderId === item.order_id ? "bg-contentBg" : "bg-white"
         } py-1.5 px-themePadding border-b-2 border-b-themeLightGray cursor-pointer`}
       >
         {/* Top  */}
@@ -33,7 +44,7 @@ const TrackingOrderCard = ({ item }: { item: OrderItem }) => {
           <div>
             <p>
               <span className="text-themeOrange">DBX</span>
-              {item.orderId}
+              {item.order_id}
             </p>
           </div>
 
@@ -47,16 +58,18 @@ const TrackingOrderCard = ({ item }: { item: OrderItem }) => {
         <div className="flex items-center justify-between gap-2.5 mt-2.5">
           {/* Pickup */}
           <div>
-            <p className="text-xs text-themeDarkGray">{item?.pickup?.road}</p>
-            <p className="text-xs text-themeDarkGray">{item?.pickup?.state}</p>
+            <p className="text-xs text-themeDarkGray">
+              {item?.pickup?.location.street_address_1}
+            </p>
+            <p className="text-xs text-themeDarkGray">{item?.pickup?.name}</p>
           </div>
 
           {/* delivery */}
           <div>
-            <p className="text-xs text-themeDarkGray">{item?.delivery?.road}</p>
             <p className="text-xs text-themeDarkGray">
-              {item?.delivery?.state}
+              {item?.delivery.location.street_address_1}
             </p>
+            <p className="text-xs text-themeDarkGray">{item?.delivery?.name}</p>
           </div>
         </div>
       </div>

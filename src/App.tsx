@@ -1,11 +1,15 @@
 import { Toaster } from "react-hot-toast";
 import Router from "./router/Router";
+import { QueryClientProvider, QueryClient } from "@tanstack/react-query";
 
+const queryClient = new QueryClient();
 function App() {
   return (
     <>
-      <Router />
-      <Toaster position="top-center" />
+      <QueryClientProvider client={queryClient}>
+        <Router />
+        <Toaster position="top-center" />
+      </QueryClientProvider>
     </>
   );
 }

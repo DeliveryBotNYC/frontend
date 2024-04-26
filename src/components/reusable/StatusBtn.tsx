@@ -13,11 +13,13 @@ const StatusBtn = ({ type }: { type: string }) => {
           ? processingStyle
           : type === "assigned"
           ? assignedStyle
-          : type === "picked"
+          : type === "picked_up"
           ? pickedStyle
           : type === "delivered"
           ? deliveredStyle
           : type === "returned"
+          ? cancelledStyle
+          : type === "canceled"
           ? cancelledStyle
           : type === "ongoing"
           ? processingStyle
@@ -32,12 +34,14 @@ const StatusBtn = ({ type }: { type: string }) => {
         ? "Processing"
         : type === "assigned"
         ? "Assigned"
-        : type === "picked"
+        : type === "picked_up"
         ? "Picked-up"
         : type === "delivered"
         ? "Delivered"
         : type === "returned"
         ? "Returned"
+        : type === "canceled"
+        ? "Canceled"
         : type === "ongoing"
         ? "Ongoing"
         : type === "received"

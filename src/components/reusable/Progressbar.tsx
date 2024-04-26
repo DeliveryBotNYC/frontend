@@ -12,6 +12,21 @@ const Progressbar = ({ status, value }: { status: string; value: string }) => {
   const pickedValueBg = "bg-black";
   const deliveredValueBg = "bg-themeDarkGreen";
   const cancelledValueBg = "bg-themeLightRed";
+  {
+    status === "processing"
+      ? (value = "0%")
+      : status === "assigned"
+      ? (value = "25%")
+      : status === "picked_up"
+      ? (value = "50%")
+      : status === "delivered"
+      ? (value = "100%")
+      : status === "returned"
+      ? (value = "100%")
+      : status === "canceled"
+      ? (value = "100%")
+      : null;
+  }
 
   return (
     <div
@@ -20,16 +35,19 @@ const Progressbar = ({ status, value }: { status: string; value: string }) => {
           ? processingBg
           : status === "assigned"
           ? assignedBg
-          : status === "picked"
+          : status === "picked_up"
           ? pickedBg
           : status === "delivered"
           ? deliveredBg
           : status === "returned"
           ? cancelledBg
+          : status === "canceled"
+          ? cancelledBg
           : null
       } rounded-full relative mb-2.5`}
     >
       {/* Value of the progressbar */}
+
       <div
         style={{
           width: value,
@@ -39,11 +57,13 @@ const Progressbar = ({ status, value }: { status: string; value: string }) => {
             ? processingValueBg
             : status === "assigned"
             ? assignedValueBg
-            : status === "picked"
+            : status === "picked_up"
             ? pickedValueBg
             : status === "delivered"
             ? deliveredValueBg
             : status === "returned"
+            ? cancelledValueBg
+            : status === "canceled"
             ? cancelledValueBg
             : null
         } rounded-full`}

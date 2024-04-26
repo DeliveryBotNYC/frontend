@@ -4,12 +4,30 @@ import OrdersTableHeader from "./OrdersTableHeader";
 import OrdersTablePagination from "./OrdersTablePagination";
 import { ThemeContext } from "../../context/ThemeContext";
 
-import OrdersData from "../../data/OrdersData.json";
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 
 const OrdersTable = () => {
   // Context to grab the search input state
   const contextValue = useContext(ThemeContext);
 
+  //temp bearer
+  let config = {
+    headers: {
+      Authorization:
+        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
+    },
+  };
+
+  // Get orders data
+  const { isLoading, data, error } = useQuery({
+    queryKey: ["orders"],
+    queryFn: () => {
+      return axios
+        .get("https://api.dbx.delivery/orders", config)
+        .then((res) => res.data);
+    },
+  });
   return (
     <>
       <div
@@ -24,12 +42,8 @@ const OrdersTable = () => {
 
           {/* Table Content */}
           <tbody>
-            {OrdersData.filter((order) =>
-              order.orderId
-                .toLowerCase()
-                .includes(contextValue?.searchInput?.toLowerCase() || "")
-            ).map((item) => (
-              <OrderSingleRow item={item} key={item.id} />
+            {data?.map((item) => (
+              <OrderSingleRow item={item} key={item.order_id} />
             ))}
           </tbody>
         </table>
