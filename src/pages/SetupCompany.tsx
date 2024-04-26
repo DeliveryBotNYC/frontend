@@ -3,12 +3,6 @@ import SecondaryNav from "../components/primary/SecondaryNav";
 import CompanySetupForm from "../components/companySetup/CompanySetupForm";
 
 const SetupCompany = () => {
-  // Data form the register form page
-  const { state } = useLocation();
-
-  // We can use the previous data if needed
-  console.log(state);
-
   return (
     <div className="min-h-screen bg-cover bg-center bg-no-repeat formpage">
       <SecondaryNav />

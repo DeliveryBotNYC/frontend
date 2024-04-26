@@ -1,9 +1,35 @@
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 const AccountsGeneral = () => {
+  //temp bearer
+  let config = {
+    headers: {
+      Authorization:
+        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
+    },
+  };
+
+  // Get invoice data
+  const { isLoading, data, error } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => {
+      return axios
+        .get("https://api.dbx.delivery/retail/profile", config)
+        .then((res) => res.data);
+    },
+  });
   return (
     <div className="w-full h-full bg-white p-themePadding rounded-2xl">
       <div className="w-full h-full bg-white rounded-2xl flex flex-col justify-between items-center">
         {/* Form */}
         <div className="w-full h-full">
+          {isLoading ? (
+            <div className="h-full w-full justify-center text-center">
+              Loading..
+            </div>
+          ) : (
+            ""
+          )}
           {/* Header */}
           <div className="flex items-center justify-between gap-2.5">
             <p className="text-lg text-black font-bold">General</p>
@@ -20,7 +46,7 @@ const AccountsGeneral = () => {
               {/* Input Field */}
               <input
                 type="text"
-                placeholder="Leo"
+                value={data?.account?.firstname}
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
               />
             </div>
@@ -34,7 +60,7 @@ const AccountsGeneral = () => {
               {/* Input Field */}
               <input
                 type="text"
-                placeholder="Gerards"
+                value={data?.account?.lastname}
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
               />
             </div>

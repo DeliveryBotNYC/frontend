@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useState } from "react";
 
 import EyeIcon from "../../assets/eye-icon.svg";
@@ -6,15 +6,13 @@ import EyeIcon from "../../assets/eye-icon.svg";
 import { FaEyeSlash } from "react-icons/fa";
 import FormBtn from "../reusable/FormBtn";
 
-import {
-  useMutation,
-  QueryClientProvider,
-  useQuery,
-} from "@tanstack/react-query";
-
 import axios from "axios";
+import { useMutation } from "@tanstack/react-query";
 
 const LoginForm = () => {
+  const { state } = useLocation();
+  console.log(state);
+  const navigate = useNavigate();
   // State to change the password type to text
   const [changePasswordType, setChangePasswordType] = useState<boolean>(false);
 
@@ -27,11 +25,17 @@ const LoginForm = () => {
   // submit handler
   const formSubmitHandler = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    console.log(
-      axios.post("https://api.dbx.delivery/retail/login", loginFormValues)
-    );
+    addTodoMutation.mutate(loginFormValues);
   };
 
+  const addTodoMutation = useMutation({
+    mutationFn: (newTodo: string) =>
+      axios.post("https://api.dbx.delivery/retail/login", loginFormValues),
+    onSuccess: (data) => {
+      navigate("/");
+      //accessTokenRef.current = data.token;
+    },
+  });
   return (
     <form className="w-full mt-[60px]" onSubmit={formSubmitHandler}>
       {/* email field */}
@@ -97,6 +101,15 @@ const LoginForm = () => {
           )}
         </div>
       </div>
+      {addTodoMutation.isError &&
+      addTodoMutation.error.response.data.message ? (
+        <p className="text-xs text-themeRed">
+          {addTodoMutation.error.response.data.message}
+        </p>
+      ) : (
+        ""
+      )}
+      {state ? <p className="text-xs text-themeRed">{state} </p> : ""}
 
       {/* Submit Button */}
       <FormBtn hasBg={true} title="Login" />

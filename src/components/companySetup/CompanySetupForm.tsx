@@ -1,6 +1,16 @@
-import { useState } from "react";
-
+import { useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { useMutation } from "@tanstack/react-query";
+import axios from "axios";
 const CompanySetupForm = () => {
+  const navigate = useNavigate();
+  // Data form the register form page
+  const { state } = useLocation();
+  useEffect(() => {
+    !state?.email ? navigate("/register") : null;
+  });
+
   // active delivery per week btn
   const [deliveryPerWeek, setdeliveryPerWeek] = useState<string>("");
 
@@ -30,22 +40,41 @@ const CompanySetupForm = () => {
 
   // form data
   const [companySetupData, setCompanySetupData] = useState({
-    firstName: "",
-    lastName: "",
-    storetName: "",
-    phoneNum: "",
-    fullAddress: "",
-    aptNo: "",
-    accessCode: "",
-    pickupNote: "",
-    deliveryLimit: "",
+    email: state?.email,
+    password: state?.password,
+    comfirm_password: state?.comfirm_password,
+    firstname: "",
+    lastname: "",
+    store_name: "",
+    phone: "",
+    location: {
+      street_address_1: "",
+      street_address_2: "",
+      access_code: "",
+    },
+    note: "",
+    quantity: "",
   });
 
   // Submit Handler
   const formSubmitHandler = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    addTodoMutation.mutate(companySetupData);
   };
-
+  const addTodoMutation = useMutation({
+    mutationFn: (newTodo: string) =>
+      axios.post("https://api.dbx.delivery/retail/signup", companySetupData),
+    onSuccess: (data) => {
+      navigate("/");
+      console.log(data);
+      //accessTokenRef.current = data.token;
+    },
+    onError: (error) => {
+      if (error.response.status == 412)
+        navigate("/login", { state: error.response?.data?.message });
+      //accessTokenRef.current = data.token;
+    },
+  });
   return (
     <form className="mt-[60px] w-full" onSubmit={formSubmitHandler}>
       {/* Form Content */}
@@ -63,11 +92,11 @@ const CompanySetupForm = () => {
             type="text"
             placeholder="Enter your first name"
             className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-            value={companySetupData.firstName}
+            value={companySetupData.firstname}
             onChange={(e) =>
               setCompanySetupData({
                 ...companySetupData,
-                firstName: e.target.value,
+                firstname: e.target.value,
               })
             }
           />
@@ -86,11 +115,11 @@ const CompanySetupForm = () => {
             type="text"
             placeholder="Enter your last name"
             className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-            value={companySetupData.lastName}
+            value={companySetupData.lastname}
             onChange={(e) =>
               setCompanySetupData({
                 ...companySetupData,
-                lastName: e.target.value,
+                lastname: e.target.value,
               })
             }
           />
@@ -109,11 +138,11 @@ const CompanySetupForm = () => {
             type="text"
             placeholder="Enter your store name"
             className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-            value={companySetupData.storetName}
+            value={companySetupData.store_name}
             onChange={(e) =>
               setCompanySetupData({
                 ...companySetupData,
-                storetName: e.target.value,
+                store_name: e.target.value,
               })
             }
           />
@@ -132,11 +161,11 @@ const CompanySetupForm = () => {
             type="number"
             placeholder="Enter your phone number"
             className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-            value={companySetupData.phoneNum}
+            value={companySetupData.phone}
             onChange={(e) =>
               setCompanySetupData({
                 ...companySetupData,
-                phoneNum: e.target.value,
+                phone: e.target.value,
               })
             }
           />
@@ -155,11 +184,15 @@ const CompanySetupForm = () => {
             type="text"
             placeholder="Enter your full address"
             className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-            value={companySetupData.fullAddress}
+            value={companySetupData.location.street_address_1}
             onChange={(e) =>
               setCompanySetupData({
                 ...companySetupData,
-                fullAddress: e.target.value,
+                location: {
+                  street_address_1: e.target.value,
+                  street_address_2: companySetupData.location.street_address_2,
+                  access_code: companySetupData.location.access_code,
+                },
               })
             }
           />
@@ -179,11 +212,16 @@ const CompanySetupForm = () => {
               type="number"
               placeholder="Enter your Appartment No"
               className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-              value={companySetupData.aptNo}
+              value={companySetupData.location.street_address_2}
               onChange={(e) =>
                 setCompanySetupData({
                   ...companySetupData,
-                  aptNo: e.target.value,
+                  location: {
+                    street_address_1:
+                      companySetupData.location.street_address_1,
+                    street_address_2: e.target.value,
+                    access_code: companySetupData.location.access_code,
+                  },
                 })
               }
             />
@@ -201,11 +239,17 @@ const CompanySetupForm = () => {
               type="number"
               placeholder="Enter your Access Code"
               className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-              value={companySetupData.accessCode}
+              value={companySetupData.location.access_code}
               onChange={(e) =>
                 setCompanySetupData({
                   ...companySetupData,
-                  accessCode: e.target.value,
+                  location: {
+                    street_address_1:
+                      companySetupData.location.street_address_1,
+                    street_address_2:
+                      companySetupData.location.street_address_2,
+                    access_code: e.target.value,
+                  },
                 })
               }
             />
@@ -224,11 +268,11 @@ const CompanySetupForm = () => {
             type="text"
             placeholder="Please type your message"
             className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-            value={companySetupData.pickupNote}
+            value={companySetupData.note}
             onChange={(e) =>
               setCompanySetupData({
                 ...companySetupData,
-                pickupNote: e.target.value,
+                note: e.target.value,
               })
             }
           />
@@ -255,7 +299,7 @@ const CompanySetupForm = () => {
                   setdeliveryPerWeek(quantity);
                   setCompanySetupData({
                     ...companySetupData,
-                    deliveryLimit: quantity,
+                    quantity: quantity,
                   });
                 }}
               >
@@ -267,10 +311,15 @@ const CompanySetupForm = () => {
       </div>
 
       {/* Submit Btn */}
-      <div className="text-end mt-20">
-        <button className="text-sm md:text-base text-white font-bold bg-themeGreen px-themePadding py-2.5 rounded-md hover:-translate-x-4 duration-300">
-          Sign-up
-        </button>
+      <div className="flex items-center justify-center gap-5 mt-[50px]">
+        <Link to="/register" state={companySetupData}>
+          <p className="text-xs text-themeDarkGray"> Back</p>
+        </Link>
+        <div className="text-end w-full">
+          <button className="text-sm md:text-base text-white font-bold bg-themeGreen px-themePadding py-2.5 rounded-md hover:-translate-x-4 duration-300">
+            Sign-up
+          </button>
+        </div>
       </div>
     </form>
   );

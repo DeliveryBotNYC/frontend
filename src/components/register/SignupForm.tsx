@@ -4,11 +4,13 @@ import FormBtn from "../reusable/FormBtn";
 import EyeIcon from "../../assets/eye-icon.svg";
 
 import { FaEyeSlash } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const SignupForm = () => {
+  const [passwordError, setPasswordError] = useState("");
   // navigate to other page hook
   const navigate = useNavigate();
+  const { state } = useLocation();
 
   // State to change the password type to text
   const [changePasswordType, setChangePasswordType] = useState<boolean>(false);
@@ -17,17 +19,24 @@ const SignupForm = () => {
 
   // signup form value's
   const [signupFormValues, setSignupFormValues] = useState({
-    email: "",
-    password: "",
-    confirmPassword: "",
+    email: state?.email ? state?.email : "",
+    password: state?.password ? state?.password : "",
+    comfirm_password: state?.comfirm_password ? state?.comfirm_password : "",
   });
 
   // submit handler
   const formSubmitHandler = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    // Navigate to other page with state
-    navigate("/company-setup", { state: signupFormValues });
+    //check comfirm password
+    if (signupFormValues.password != signupFormValues.comfirm_password) {
+      setPasswordError("Passwords don't match");
+    }
+    //check user excists
+    else {
+      // Navigate to other page with state
+      navigate("/company-setup", { state: signupFormValues });
+    }
   };
 
   return (
@@ -109,11 +118,11 @@ const SignupForm = () => {
           type={changeConfirmPasswordType === true ? "text" : "password"}
           placeholder="Re-type your password"
           className="w-full text-xs sm:text-sm pb-[2px] text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-          value={signupFormValues.confirmPassword}
+          value={signupFormValues.comfirm_password}
           onChange={(e) =>
             setSignupFormValues({
               ...signupFormValues,
-              confirmPassword: e.target.value,
+              comfirm_password: e.target.value,
             })
           }
         />
@@ -136,7 +145,11 @@ const SignupForm = () => {
           )}
         </div>
       </div>
-
+      {passwordError ? (
+        <p className="text-xs text-themeRed">{passwordError}</p>
+      ) : (
+        ""
+      )}
       {/* Submit Button */}
       <FormBtn hasBg={true} title="Continue" />
     </form>

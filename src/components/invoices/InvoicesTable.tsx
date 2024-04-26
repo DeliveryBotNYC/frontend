@@ -2,14 +2,7 @@ import FilterIcon from "../../assets/filter-icon.svg";
 import StatusBtn from "../reusable/StatusBtn";
 import OrdersTablePagination from "../orders/OrdersTablePagination";
 import { useNavigate } from "react-router-dom";
-import {
-  JSXElementConstructor,
-  Key,
-  ReactElement,
-  ReactNode,
-  ReactPortal,
-  useContext,
-} from "react";
+import { useContext } from "react";
 import { ThemeContext } from "../../context/ThemeContext";
 
 import moment from "moment";

@@ -1,6 +1,7 @@
 import ContentBox from "../reusable/ContentBox";
 import AccountSidebar from "./AccountSidebar";
-import { Outlet } from "react-router-dom";
+import { Outlet, useOutletContext } from "react-router-dom";
+import React from "react";
 
 const AccountsMainContent = () => {
   return (
