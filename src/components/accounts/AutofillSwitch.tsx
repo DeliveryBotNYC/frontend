@@ -3,7 +3,6 @@ import { ThemeContext } from "../../context/ThemeContext";
 
 const AutofillSwitch = () => {
   const contextValue = useContext(ThemeContext);
-
   return (
     <div
       onClick={() => contextValue?.setAutofill((prev) => !prev)}

@@ -6,13 +6,55 @@ import { ThemeContext } from "../../context/ThemeContext";
 import EditApiPopup from "../popups/EditApiPopup";
 import GenerateApi from "../popups/GenerateApi";
 import GeneratedApiKey from "../popups/GeneratedApiKey";
+import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import axios from "axios";
 
 const CustomApiBox = () => {
+  //temp bearer
+  let config = {
+    headers: {
+      Authorization:
+        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
+    },
+  };
+  const [accountData, setaccountData] = useState({
+    requests: "",
+    last_used: "",
+    created_at: "",
+    active: false,
+  });
+  // Get invoice data
+  const { isLoading, data, error, status } = useQuery({
+    queryKey: ["api"],
+    queryFn: () => {
+      return axios
+        .get("https://api.dbx.delivery/automation/api", config)
+        .then((res) => res.data);
+    },
+  });
+
+  // form data
+  useEffect(() => {
+    if (status === "success")
+      if (data)
+        setaccountData({
+          ...accountData,
+          requests: data?.requests,
+          last_used: data?.last_used,
+          active: true,
+        });
+  }, [status === "success"]);
+
   const contextValue = useContext(ThemeContext);
 
   // show Edit api popup
   const showEditApiPopup = () => {
     contextValue?.setEditApi(true);
+  };
+
+  const showGenerateApiPopup = () => {
+    contextValue?.setGenerateAPI(true);
   };
 
   // close Edit api popup
@@ -44,12 +86,19 @@ const CustomApiBox = () => {
           <p className="text-themeDarkGray text-sm md:text-base text-center">
             Custom API
           </p>
-
           <button
-            className="w-full bg-themeLightOrangeTwo py-2.5 rounded-full flex items-center justify-center gap-2.5 mt-2.5 hover:translate-y-2 duration-200"
-            onClick={showEditApiPopup}
+            className={`w-full ${
+              accountData.active ? "bg-themeLightOrangeTwo" : "bg-themeGreen"
+            } py-2.5 rounded-full flex items-center justify-center gap-2.5 mt-2.5 hover:translate-y-2 duration-200`}
+            onClick={() =>
+              accountData.active
+                ? contextValue?.setEditApi(true)
+                : contextValue?.setGenerateAPI(true)
+            }
           >
-            <p className="text-white">Edit</p>
+            <p className="text-white">
+              {accountData.active ? "Edit" : "Configuration"}
+            </p>
             <img src={settingsIcon} alt="search-icon" />
           </button>
         </div>

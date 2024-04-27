@@ -1,5 +1,6 @@
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 const AccountsGeneral = () => {
   //temp bearer
   let config = {
@@ -9,8 +10,21 @@ const AccountsGeneral = () => {
     },
   };
 
+  const [accountData, setaccountData] = useState({
+    firstname: "",
+    lastname: "",
+    email: "",
+    store_name: "",
+    phone: "",
+    location: {
+      street_address_1: "",
+      street_address_2: "",
+      access_code: "",
+    },
+    note: "",
+  });
   // Get invoice data
-  const { isLoading, data, error } = useQuery({
+  const { isLoading, data, error, status } = useQuery({
     queryKey: ["profile"],
     queryFn: () => {
       return axios
@@ -18,6 +32,27 @@ const AccountsGeneral = () => {
         .then((res) => res.data);
     },
   });
+
+  // form data
+  useEffect(() => {
+    console.log("called");
+    if (status === "success")
+      setaccountData({
+        ...accountData,
+        firstname: data?.account?.firstname,
+        lastname: data?.account?.lastname,
+        email: data?.account?.email,
+        store_name: data?.account?.store_name,
+        phone: data?.account?.phone,
+        location: {
+          street_address_1: data?.account?.location?.street_address_1,
+          street_address_2: data?.account?.location?.street_address_2,
+          access_code: data?.account?.location?.access_code,
+        },
+        note: data?.account?.note,
+      });
+  }, [status === "success"]);
+
   return (
     <div className="w-full h-full bg-white p-themePadding rounded-2xl">
       <div className="w-full h-full bg-white rounded-2xl flex flex-col justify-between items-center">
@@ -46,8 +81,14 @@ const AccountsGeneral = () => {
               {/* Input Field */}
               <input
                 type="text"
-                value={data?.account?.firstname}
+                value={accountData.firstname}
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                onChange={(e) =>
+                  setaccountData({
+                    ...accountData,
+                    firstname: e.target.value,
+                  })
+                }
               />
             </div>
 
@@ -60,8 +101,14 @@ const AccountsGeneral = () => {
               {/* Input Field */}
               <input
                 type="text"
-                value={data?.account?.lastname}
+                value={accountData.lastname}
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                onChange={(e) =>
+                  setaccountData({
+                    ...accountData,
+                    lastname: e.target.value,
+                  })
+                }
               />
             </div>
 
@@ -74,8 +121,14 @@ const AccountsGeneral = () => {
               {/* Input Field */}
               <input
                 type="email"
-                placeholder="leo@rosefield.com"
+                value={accountData.email}
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                onChange={(e) =>
+                  setaccountData({
+                    ...accountData,
+                    email: e.target.value,
+                  })
+                }
               />
             </div>
           </div>
@@ -97,8 +150,15 @@ const AccountsGeneral = () => {
               {/* Input Field */}
               <input
                 type="text"
-                placeholder="Rose Field"
-                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                value={accountData.store_name}
+                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none bg-transparent"
+                disabled
+                onChange={(e) =>
+                  setaccountData({
+                    ...accountData,
+                    store_name: e.target.value,
+                  })
+                }
               />
             </div>
 
@@ -110,9 +170,15 @@ const AccountsGeneral = () => {
 
               {/* Input Field */}
               <input
-                type="number"
-                placeholder="+1 (929) 374-4819"
+                type="text"
+                value={accountData.phone}
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                onChange={(e) =>
+                  setaccountData({
+                    ...accountData,
+                    store_name: e.target.value,
+                  })
+                }
               />
             </div>
 
@@ -125,8 +191,19 @@ const AccountsGeneral = () => {
               {/* Input Field */}
               <input
                 type="text"
-                placeholder="837 East 84th St, NY, NY, 10024"
-                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                value={accountData.location.street_address_1}
+                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none bg-transparent"
+                disabled
+                onChange={(e) =>
+                  setaccountData({
+                    ...accountData,
+                    location: {
+                      street_address_1: e.target.value,
+                      street_address_2: accountData.location?.street_address_2,
+                      access_code: accountData.location?.access_code,
+                    },
+                  })
+                }
               />
             </div>
 
@@ -141,8 +218,20 @@ const AccountsGeneral = () => {
                 {/* Input Field */}
                 <input
                   type="number"
-                  placeholder="12H"
-                  className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                  value={accountData.location?.street_address_2}
+                  className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none bg-transparent"
+                  disabled
+                  onChange={(e) =>
+                    setaccountData({
+                      ...accountData,
+                      location: {
+                        street_address_1:
+                          accountData.location?.street_address_1,
+                        street_address_2: e.target.value,
+                        access_code: accountData.location?.access_code,
+                      },
+                    })
+                  }
                 />
               </div>
 
@@ -155,8 +244,20 @@ const AccountsGeneral = () => {
                 {/* Input Field */}
                 <input
                   type="password"
-                  placeholder="*******"
+                  value={accountData.location?.access_code}
                   className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                  onChange={(e) =>
+                    setaccountData({
+                      ...accountData,
+                      location: {
+                        street_address_1:
+                          accountData.location?.street_address_1,
+                        street_address_2:
+                          accountData.location?.street_address_2,
+                        access_code: e.target.value,
+                      },
+                    })
+                  }
                 />
               </div>
             </div>
@@ -164,13 +265,19 @@ const AccountsGeneral = () => {
 
           {/* Courier Note */}
           <div className="w-full col-span-2">
-            <label className="text-themeDarkGray text-xs">&nbsp;</label>
+            <label className="text-themeDarkGray text-xs">Courier note</label>
 
             {/* Input Field */}
             <input
               type="text"
-              placeholder="Courier Pickup note"
-              className="w-full text-sm text-themeDarkGray placeholder:text-themeDarkGray pb-1 border-b border-b-contentBg outline-none"
+              value={accountData.note}
+              className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+              onChange={(e) =>
+                setaccountData({
+                  ...accountData,
+                  note: e.target.value,
+                })
+              }
             />
           </div>
         </div>

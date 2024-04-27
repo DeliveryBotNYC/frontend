@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import ApiStats from "../reusable/ApiStats";
 import { ThemeContext } from "../../context/ThemeContext";
@@ -6,7 +6,47 @@ import { ThemeContext } from "../../context/ThemeContext";
 import ApiIcon from "../../assets/api.png";
 import CloseIcon from "../../assets/close-gray.svg";
 
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+
+import moment from "moment";
+
 const EditApiPopup = () => {
+  //temp bearer
+  let config = {
+    headers: {
+      Authorization:
+        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
+    },
+  };
+  const [accountData, setaccountData] = useState({
+    requests: "",
+    last_used: "",
+    created_at: "",
+    active: false,
+  });
+  // Get invoice data
+  const { isLoading, data, error, status } = useQuery({
+    queryKey: ["api"],
+    queryFn: () => {
+      return axios
+        .get("https://api.dbx.delivery/automation/api", config)
+        .then((res) => res.data);
+    },
+  });
+
+  // form data
+  useEffect(() => {
+    if (status === "success")
+      if (data)
+        setaccountData({
+          ...accountData,
+          requests: data?.requests,
+          last_used: data?.last_used,
+          created_at: data?.created_at,
+          active: true,
+        });
+  }, [status === "success"]);
   const contextValue = useContext(ThemeContext);
 
   // close Edit api popup
@@ -55,9 +95,15 @@ const EditApiPopup = () => {
 
       {/* Api Data's */}
       <div className="mt-5">
-        <ApiStats label="Date created:" value="01/04/2024" />
-        <ApiStats label="Last used:" value="07/04/2024" />
-        <ApiStats label="Number of requests" value="10048" />
+        <ApiStats
+          label="Date created:"
+          value={moment(accountData?.created_at).format("MM/DD/YY h:mm a")}
+        />
+        <ApiStats
+          label="Last used:"
+          value={moment(accountData?.last_used).format("MM/DD/YY h:mm a")}
+        />
+        <ApiStats label="Number of requests" value={accountData?.requests} />
       </div>
 
       {/* Button */}

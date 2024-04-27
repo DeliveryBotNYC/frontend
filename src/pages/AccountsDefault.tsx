@@ -1,6 +1,7 @@
-import { useState } from "react";
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import AutofillSwitch from "../components/accounts/AutofillSwitch";
-
 const AccountsDefault = () => {
   // Data
   const timeFrameData = [
@@ -17,7 +18,55 @@ const AccountsDefault = () => {
       title: "Same-day",
     },
   ];
+  //temp bearer
+  let config = {
+    headers: {
+      Authorization:
+        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
+    },
+  };
 
+  const [accountData, setaccountData] = useState({
+    quantity: "",
+    item_type: "",
+    tip: "",
+    barcode_type: "",
+    timeframe: "",
+    store_default: "",
+    autofill: "",
+    pickup_proof: { picture: false },
+    delivery_proof: { picture: false, recipient: false, signature: false },
+  });
+  // Get invoice data
+  const { isLoading, data, error, status } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => {
+      return axios
+        .get("https://api.dbx.delivery/retail/profile", config)
+        .then((res) => res.data);
+    },
+  });
+
+  // form data
+  useEffect(() => {
+    if (status === "success")
+      setaccountData({
+        ...accountData,
+        quantity: data?.defaults?.quantity,
+        item_type: data?.defaults?.item_type,
+        tip: data?.defaults?.tip,
+        barcode_type: data?.defaults?.barcode_type,
+        timeframe: data?.defaults?.timeframe,
+        store_default: data?.defaults?.store_default,
+        autofill: data?.defaults?.autofill,
+        pickup_proof: { picture: data?.defaults?.pickup_proof?.picture },
+        delivery_proof: {
+          picture: data?.defaults?.delivery_proof?.picture,
+          recipient: data?.defaults?.delivery_proof?.recipient,
+          signature: data?.defaults?.delivery_proof?.signature,
+        },
+      });
+  }, [status === "success"]);
   // active timeframe
   const [activeTimeFrame, setActiveTimeFrame] = useState<string>("1-hour");
 
@@ -40,8 +89,14 @@ const AccountsDefault = () => {
               {/* Input Field */}
               <input
                 type="number"
-                placeholder="1"
+                value={accountData?.quantity}
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                onChange={(e) =>
+                  setaccountData({
+                    ...accountData,
+                    quantity: e.target.value,
+                  })
+                }
               />
             </div>
 
@@ -50,7 +105,16 @@ const AccountsDefault = () => {
               <label className="text-themeDarkGray text-xs">Item type</label>
 
               {/* Select Field */}
-              <select className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none">
+              <select
+                value={accountData?.item_type}
+                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                onChange={(e) =>
+                  setaccountData({
+                    ...accountData,
+                    item_type: e.target.value,
+                  })
+                }
+              >
                 <option value="box">Box</option>
                 <option value="packets">Packets</option>
                 <option value="catoon">Catoon</option>
@@ -64,8 +128,14 @@ const AccountsDefault = () => {
               {/* Input Field */}
               <input
                 type="text"
-                placeholder="$"
+                value={accountData?.tip}
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                onChange={(e) =>
+                  setaccountData({
+                    ...accountData,
+                    tip: e.target.value,
+                  })
+                }
               />
             </div>
           </div>
@@ -75,10 +145,18 @@ const AccountsDefault = () => {
             {/* Barcode type */}
             <div className="w-full">
               <label className="text-themeDarkGray text-xs">Barcode type</label>
-
-              <select className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none">
+              <select
+                value={accountData?.barcode_type}
+                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                onChange={(e) =>
+                  setaccountData({
+                    ...accountData,
+                    barcode_type: e.target.value,
+                  })
+                }
+              >
                 <option value="data Matrix">Data Matrix</option>
-                <option value="data Matrix 2">Data Matrix 2</option>
+                <option value="qr">QR</option>
                 <option value="data Matrix 3">Data Matrix 3</option>
               </select>
             </div>
@@ -118,7 +196,14 @@ const AccountsDefault = () => {
                     id="pickup"
                     name="setStore"
                     type="radio"
+                    checked={accountData?.store_default == "pickup"}
                     className="scale-125 accent-themeOrange"
+                    onChange={(e) =>
+                      setaccountData({
+                        ...accountData,
+                        store_default: e.target.checked ? "pickup" : "delivery",
+                      })
+                    }
                   />
                   <label htmlFor="pickup" className="text-sm leading-none pt-1">
                     Pick-up
@@ -131,7 +216,14 @@ const AccountsDefault = () => {
                     id="delivery"
                     name="setStore"
                     type="radio"
+                    checked={accountData?.store_default == "delivery"}
                     className="scale-125 accent-themeOrange"
+                    onChange={(e) =>
+                      setaccountData({
+                        ...accountData,
+                        store_default: e.target.checked ? "delivery" : "pickup",
+                      })
+                    }
                   />
                   <label
                     htmlFor="delivery"
@@ -148,7 +240,7 @@ const AccountsDefault = () => {
               <label className="text-themeDarkGray text-xs">Autofill</label>
 
               {/* Switch */}
-              <AutofillSwitch />
+              <AutofillSwitch checked={accountData?.autofill} />
             </div>
 
             {/* Proof of pickup */}
@@ -162,6 +254,13 @@ const AccountsDefault = () => {
                   id="picture"
                   type="checkbox"
                   className="accent-themeLightOrangeTwo scale-125"
+                  checked={accountData?.pickup_proof?.picture}
+                  onChange={(e) =>
+                    setaccountData({
+                      ...accountData,
+                      pickup_proof: { picture: e.target.checked },
+                    })
+                  }
                 />
 
                 <label
@@ -187,6 +286,17 @@ const AccountsDefault = () => {
                     id="DeliveryPicture"
                     type="checkbox"
                     className="accent-themeLightOrangeTwo scale-125"
+                    checked={accountData?.delivery_proof?.picture}
+                    onChange={(e) =>
+                      setaccountData({
+                        ...accountData,
+                        delivery_proof: {
+                          picture: e.target.checked,
+                          recipient: accountData.delivery_proof.recipient,
+                          signature: accountData.delivery_proof.signature,
+                        },
+                      })
+                    }
                   />
 
                   <label
@@ -203,6 +313,17 @@ const AccountsDefault = () => {
                     id="recipient"
                     type="checkbox"
                     className="accent-themeLightOrangeTwo scale-125"
+                    checked={accountData?.delivery_proof?.recipient}
+                    onChange={(e) =>
+                      setaccountData({
+                        ...accountData,
+                        delivery_proof: {
+                          picture: accountData.delivery_proof.picture,
+                          recipient: e.target.checked,
+                          signature: accountData.delivery_proof.signature,
+                        },
+                      })
+                    }
                   />
 
                   <label
@@ -219,6 +340,17 @@ const AccountsDefault = () => {
                     id="signature"
                     type="checkbox"
                     className="accent-themeLightOrangeTwo scale-125"
+                    checked={accountData?.delivery_proof?.signature}
+                    onChange={(e) =>
+                      setaccountData({
+                        ...accountData,
+                        delivery_proof: {
+                          picture: accountData.delivery_proof.picture,
+                          recipient: accountData.delivery_proof.recipient,
+                          signature: e.target.checked,
+                        },
+                      })
+                    }
                   />
 
                   <label
@@ -235,6 +367,7 @@ const AccountsDefault = () => {
                     id="21+"
                     type="checkbox"
                     className="accent-themeLightOrangeTwo scale-125"
+                    disabled
                   />
 
                   <label
@@ -250,7 +383,8 @@ const AccountsDefault = () => {
                   <input
                     id="pin"
                     type="checkbox"
-                    className="accent-themeLightOrangeTwo scale-125"
+                    className="accent-themeLightOrangeTwo scale-125 bg-transparent"
+                    disabled
                   />
 
                   <label

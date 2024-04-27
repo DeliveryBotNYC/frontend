@@ -1,6 +1,6 @@
 import VisaIcon from "../../assets/visa-icon.svg";
 
-const PaymentMethodCard = () => {
+const PaymentMethodCard = ({ type, exp }) => {
   return (
     <div className="w-max px-5 py-4 rounded-2xl border border-secondaryBtnBorder flex items-center gap-10 mt-2">
       {/* Icon */}
@@ -10,10 +10,10 @@ const PaymentMethodCard = () => {
 
       {/* Middle Part */}
       <div>
-        <p className="text-sm lg:text-base text-black">Visa ending in 7130</p>
+        <p className="text-sm lg:text-base text-black">{type}</p>
 
         {/* Expire */}
-        <p className="text-xs text-themeDarkGray mt-2.5">Exp. date 06/2025</p>
+        <p className="text-xs text-themeDarkGray mt-2.5">{exp}</p>
       </div>
 
       {/* Right Side */}
