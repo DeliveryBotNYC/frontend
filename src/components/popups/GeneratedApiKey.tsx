@@ -10,6 +10,7 @@ import axios from "axios";
 import { useMutation } from "@tanstack/react-query";
 
 const GeneratedApiKey = () => {
+  var results;
   //temp bearer
   let config = {
     headers: {
@@ -33,10 +34,14 @@ const GeneratedApiKey = () => {
       );
     },
   });
+
   // Context
   const contextValue = useContext(ThemeContext);
+  console.log(contextValue?.showGeneratedApiKey);
   useEffect(() => {
-    if (contextValue?.showGeneratedApiKey) addTodoMutation.mutate();
+    if (contextValue?.showGeneratedApiKey) {
+      addTodoMutation.mutate();
+    }
   }, [contextValue?.showGeneratedApiKey]);
   // Copy Key Function
   const handleCopy = (text: string) => {
@@ -45,7 +50,9 @@ const GeneratedApiKey = () => {
   };
   if (addTodoMutation.isError) console.log("err!");
   if (addTodoMutation.isPending) console.log("load!");
-  if (addTodoMutation.isSuccess) console.log("done!");
+  if (addTodoMutation.isSuccess) {
+  }
+
   // Close Popup
   const closePopup = () => {
     contextValue?.setShowGeneratedApiKey(false);
@@ -84,7 +91,9 @@ const GeneratedApiKey = () => {
 
           {/* keybox */}
           <div className="border-b border-b-themeLightGray pb-[2px] flex items-center justify-between gap-2.5">
-            <p className="text-black">{generateApi?.token}</p>
+            <p className="text-black w-full overflow-auto">
+              {addTodoMutation?.data?.data?.token}
+            </p>
 
             <div onClick={() => handleCopy(generateApi?.token)}>
               <img src={CopyIcon} alt="copyBtn" className="cursor-pointer" />

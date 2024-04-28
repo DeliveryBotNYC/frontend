@@ -1,12 +1,12 @@
 import { useContext, useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import ApiStats from "../reusable/ApiStats";
 import { ThemeContext } from "../../context/ThemeContext";
 
 import ApiIcon from "../../assets/api.png";
 import CloseIcon from "../../assets/close-gray.svg";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import axios from "axios";
 
 import moment from "moment";
@@ -25,13 +25,22 @@ const EditApiPopup = () => {
     created_at: "",
     active: false,
   });
+  // Data form the register form page
+  const { state } = useLocation();
+  console.log(state);
   // Get invoice data
   const { isLoading, data, error, status } = useQuery({
-    queryKey: ["api"],
+    queryKey: ["get_api"],
     queryFn: () => {
       return axios
         .get("https://api.dbx.delivery/automation/api", config)
         .then((res) => res.data);
+    },
+  });
+
+  const addTodoMutation = useMutation({
+    mutationFn: () => {
+      return axios.put("https://api.dbx.delivery/automation/api", null, config);
     },
   });
 
@@ -55,6 +64,7 @@ const EditApiPopup = () => {
   };
 
   const toggleEditToGenerateApi = () => {
+    addTodoMutation.mutate();
     contextValue?.setEditApi(false);
     contextValue?.setGenerateAPI(true);
   };

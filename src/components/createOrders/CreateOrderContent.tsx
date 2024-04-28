@@ -9,6 +9,8 @@ import { ThemeContext } from "../../context/ThemeContext";
 import BlackOverlay from "../popups/BlackOverlay";
 import PricePopup from "../popups/PricePopup";
 
+import PlusIcon from "../../assets/plus-icon.svg";
+
 const CreateOrderContent = () => {
   const contextValue = useContext(ThemeContext);
 
