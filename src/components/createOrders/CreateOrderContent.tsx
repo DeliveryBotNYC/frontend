@@ -31,15 +31,11 @@ const CreateOrderContent = () => {
           <img src={UploadSmallIcon} alt="upload-icon" />
           <p className="text-sm text-secondaryBtnBorder">Upload</p>
         </div>
-
         {/* Pickup FOrm */}
         <PickupForm />
-
-        {/* Add Delivery */}
-        <AddDelivery />
-
         {/* Time */}
         <SelectDateandTime />
+        <AddDelivery />;
       </div>
 
       {/* Price Popup */}
