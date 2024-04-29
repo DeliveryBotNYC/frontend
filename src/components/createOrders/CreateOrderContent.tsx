@@ -35,7 +35,7 @@ const CreateOrderContent = () => {
         <PickupForm />
         {/* Time */}
         <SelectDateandTime />
-        <AddDelivery />;
+        <AddDelivery />
       </div>
 
       {/* Price Popup */}
