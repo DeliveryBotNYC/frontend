@@ -6,31 +6,37 @@ import { useState, useEffect } from "react";
 import "https://maps.googleapis.com/maps/api/js?key=AIzaSyAxbAIczxXk3xoL3RH85z3eAZLncLZAuGg&libraries=places";
 
 const AddDelivery = () => {
-  useEffect(() => {
-    initAutocomplete();
-  }, []);
   const initialDeliveryFormValues = {
     phone: "",
     name: "",
     note: "",
-    location: { street_address_1: "" },
+    location: { street_address_1: "", street_address_2: "", lat: "", lon: "" },
     required_verification: {
       picture: false,
       recipient: false,
       signature: false,
     },
   };
+  // login form value's
+  const [deliveryFormValues, setdeliveryFormValues] = useState([
+    initialDeliveryFormValues,
+  ]);
+  useEffect(() => {
+    initAutocomplete();
+  }, [[deliveryFormValues]]);
   let autocomplete;
   let address1Field;
 
-  function fillInAddress(i) {
+  function fillInAddress() {
     // Get the place details from the autocomplete object.
-    const place = autocomplete.getPlace();
+    const place = this.getPlace();
     let address1 = "";
+    let lat = "";
+    let lon = "";
     for (const component of place.address_components) {
       // @ts-ignore remove once typings fixed
       const componentType = component.types[0];
-
+      console.log(component);
       switch (componentType) {
         case "street_number": {
           address1 = `${component.long_name} ${address1}`;
@@ -56,35 +62,47 @@ const AddDelivery = () => {
         }
       }
     }
+    lat = place.geometry.location.lat();
+    lon = place.geometry.location.lng();
     setdeliveryFormValues([
-      ...deliveryFormValues.slice(0, i),
+      ...deliveryFormValues.slice(0, this.index),
       {
-        ...deliveryFormValues[i],
-        location: { street_address_1: address1 },
+        ...deliveryFormValues[this.index],
+        location: {
+          street_address_1: address1,
+          street_address_2:
+            deliveryFormValues[this.index].location.street_address_2,
+          lat: lat,
+          lon: lon,
+        },
       },
-      ...deliveryFormValues.slice(i + 1),
+      ...deliveryFormValues.slice(this.index + 1),
     ]);
   }
-
   function initAutocomplete() {
     var autocompletes = [];
     address1Field = document.getElementsByClassName("address");
-    console.log(address1Field);
-    for (var i = 0; i < address1Field.length; i++) {
-      autocomplete = new google.maps.places.Autocomplete(address1Field[i], {
-        componentRestrictions: { country: ["us", "ca"] },
-        fields: ["address_components", "geometry"],
-        types: ["address"],
-      });
-      console.log(autocomplete);
-      autocomplete.addListener("place_changed", fillInAddress(i));
+    {
+      deliveryFormValues?.map(
+        (deliveryFormValue, index) => (
+          //for (var i = 0; i < address1Field.length; i++) {
+          (autocomplete = new google.maps.places.Autocomplete(
+            address1Field[index],
+            {
+              componentRestrictions: { country: ["us", "ca"] },
+              fields: ["address_components", "geometry"],
+              types: ["address"],
+            }
+          )),
+          (autocomplete.inputId = address1Field[index].id),
+          (autocomplete.index = index),
+          autocomplete.addListener("place_changed", fillInAddress),
+          autocompletes.push(autocomplete)
+        )
+      );
     }
   }
-  // login form value's
-  const [deliveryFormValues, setdeliveryFormValues] = useState([
-    initialDeliveryFormValues,
-  ]);
-  console.log(deliveryFormValues);
+
   return (
     <>
       {deliveryFormValues?.map((deliveryFormValue, index) => (
@@ -187,7 +205,13 @@ const AddDelivery = () => {
                       ...deliveryFormValues.slice(0, index),
                       {
                         ...deliveryFormValues[index],
-                        location: { street_address_1: e.target.value },
+                        location: {
+                          street_address_1: e.target.value,
+                          street_address_2:
+                            deliveryFormValue.location.street_address_2,
+                          lat: deliveryFormValue.location.lat,
+                          lon: deliveryFormValue.location.lon,
+                        },
                       },
                       ...deliveryFormValues.slice(index + 1),
                     ])
