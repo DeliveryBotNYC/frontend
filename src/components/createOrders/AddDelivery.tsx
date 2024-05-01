@@ -1,26 +1,112 @@
 import DeliveredBwIcon from "../../assets/delivery-bw.svg";
 import DeliveredBwFilledIcon from "../../assets/delivery-bw-filled.svg";
+import homeIcon from "../../assets/store-bw.svg";
 import RefreshIcon from "../../assets/refresh-icon.svg";
 import PlusIcon from "../../assets/plus-icon.svg";
 import { useState, useEffect } from "react";
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 import "https://maps.googleapis.com/maps/api/js?key=AIzaSyAxbAIczxXk3xoL3RH85z3eAZLncLZAuGg&libraries=places";
+import {
+  enforceFormat,
+  formatToPhone,
+  isCompleted,
+  config,
+} from "../reusable/functions";
 
 const AddDelivery = () => {
   const initialDeliveryFormValues = {
     phone: "",
     name: "",
     note: "",
-    location: { street_address_1: "", street_address_2: "", lat: "", lon: "" },
+    tip: 0,
+    location: {
+      street_address_1: "",
+      street_address_2: "",
+      access_code: "",
+      lat: "",
+      lon: "",
+    },
     required_verification: {
       picture: false,
       recipient: false,
       signature: false,
     },
+    items: [
+      {
+        quantity: 1,
+        type: "box",
+      },
+      {
+        quantity: 1,
+        type: "box",
+      },
+    ],
   };
-  // login form value's
   const [deliveryFormValues, setdeliveryFormValues] = useState([
     initialDeliveryFormValues,
   ]);
+
+  // Get invoice data
+  const { isLoading, data, error, status } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => {
+      return axios
+        .get("https://api.dbx.delivery/retail/profile", config)
+        .then((res) => res.data);
+    },
+  });
+  function defaultValues(i, home) {
+    if (status === "success") {
+      if (data.defaults.store_default == "delivery" || home)
+        setdeliveryFormValues([
+          ...deliveryFormValues.slice(0, i),
+          {
+            ...deliveryFormValues[i],
+            phone: data?.account?.phone,
+            name: data?.account?.store_name,
+            note: data?.account?.note,
+            location: {
+              street_address_1:
+                data?.account?.location?.street_address_1 +
+                ", " +
+                data?.account?.location?.city +
+                ", " +
+                data?.account?.location?.state +
+                " " +
+                data?.account?.location?.zip,
+              street_address_2: data?.account?.location?.street_address_2,
+              access_code: data?.account?.location?.access_code,
+              lat: data?.account?.location?.lat,
+              lon: data?.account?.location?.lon,
+            },
+            required_verification: {
+              picture: data?.defaults?.delivery_proof?.picture,
+              recipient: data?.defaults?.delivery_proof?.recipient,
+              signature: data?.defaults?.delivery_proof?.signature,
+            },
+          },
+          ...deliveryFormValues.slice(i + 1),
+        ]);
+      else
+        setdeliveryFormValues([
+          ...deliveryFormValues.slice(0, i),
+          {
+            ...deliveryFormValues[i],
+            required_verification: {
+              picture: data?.defaults?.delivery_proof?.picture,
+              recipient: data?.defaults?.delivery_proof?.recipient,
+              signature: data?.defaults?.delivery_proof?.signature,
+            },
+          },
+          ...deliveryFormValues.slice(i + 1),
+        ]);
+    }
+  }
+  useEffect(() => {
+    defaultValues(0, false);
+  }, [status === "success"]);
+
   useEffect(() => {
     initAutocomplete();
   }, [[deliveryFormValues]]);
@@ -72,6 +158,7 @@ const AddDelivery = () => {
           street_address_1: address1,
           street_address_2:
             deliveryFormValues[this.index].location.street_address_2,
+          access_code: deliveryFormValues[this.index].location.access_code,
           lat: lat,
           lon: lon,
         },
@@ -107,7 +194,6 @@ const AddDelivery = () => {
     <>
       {deliveryFormValues?.map((deliveryFormValue, index) => (
         <div>
-          <input />
           <div className="w-full bg-white rounded-2xl my-5">
             {/* Header */}
             <div className="py-5 px-2.5 flex items-center justify-between gap-2.5">
@@ -115,9 +201,9 @@ const AddDelivery = () => {
               <div className="flex items-center gap-2.5">
                 <img
                   src={
-                    deliveryFormValue === initialDeliveryFormValues
-                      ? DeliveredBwIcon
-                      : DeliveredBwFilledIcon
+                    isCompleted(deliveryFormValue)
+                      ? DeliveredBwFilledIcon
+                      : DeliveredBwIcon
                   }
                   alt="icon"
                 />
@@ -129,7 +215,15 @@ const AddDelivery = () => {
 
               {/* Right Side */}
               <div>
-                {deliveryFormValue === initialDeliveryFormValues ? null : (
+                {deliveryFormValue === initialDeliveryFormValues ? (
+                  <img
+                    onClick={() => {
+                      defaultValues(index, true);
+                    }}
+                    src={homeIcon}
+                    alt="home-icon"
+                  />
+                ) : (
                   <img
                     onClick={() => {
                       setdeliveryFormValues([
@@ -158,6 +252,8 @@ const AddDelivery = () => {
                   id="phone"
                   type="tel"
                   value={deliveryFormValue.phone}
+                  onKeyUp={(e) => formatToPhone(e)}
+                  onKeyDown={(e) => enforceFormat(e)}
                   onChange={(e) =>
                     setdeliveryFormValues([
                       ...deliveryFormValues.slice(0, index),
@@ -195,7 +291,6 @@ const AddDelivery = () => {
                 <label className="text-themeDarkGray text-xs">
                   Address <span className="text-themeRed">*</span>
                 </label>
-                <input id="autocomplete" />
                 <input
                   type="text"
                   id="street_address_1"
@@ -209,6 +304,7 @@ const AddDelivery = () => {
                           street_address_1: e.target.value,
                           street_address_2:
                             deliveryFormValue.location.street_address_2,
+                          access_code: deliveryFormValue.location.access_code,
                           lat: deliveryFormValue.location.lat,
                           lon: deliveryFormValue.location.lon,
                         },
@@ -230,8 +326,25 @@ const AddDelivery = () => {
                   {/* Input Field */}
                   <input
                     type="number"
-                    placeholder="12H"
                     className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                    value={deliveryFormValue.location.street_address_2}
+                    onChange={(e) =>
+                      setdeliveryFormValues([
+                        ...deliveryFormValues.slice(0, index),
+                        {
+                          ...deliveryFormValues[index],
+                          location: {
+                            street_address_1:
+                              deliveryFormValue.location.street_address_2,
+                            street_address_2: e.target.value,
+                            access_code: deliveryFormValue.location.access_code,
+                            lat: deliveryFormValue.location.lat,
+                            lon: deliveryFormValue.location.lon,
+                          },
+                        },
+                        ...deliveryFormValues.slice(index + 1),
+                      ])
+                    }
                   />
                 </div>
 
@@ -244,28 +357,55 @@ const AddDelivery = () => {
                   {/* Input Field */}
                   <input
                     type="password"
-                    placeholder="*******"
                     className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                    value={deliveryFormValue.location.access_code}
+                    onChange={(e) =>
+                      setdeliveryFormValues([
+                        ...deliveryFormValues.slice(0, index),
+                        {
+                          ...deliveryFormValues[index],
+                          location: {
+                            street_address_1:
+                              deliveryFormValue.location.street_address_1,
+                            street_address_2:
+                              deliveryFormValue.location.street_address_2,
+                            access_code: e.target.value,
+                            lat: deliveryFormValue.location.lat,
+                            lon: deliveryFormValue.location.lon,
+                          },
+                        },
+                        ...deliveryFormValues.slice(index + 1),
+                      ])
+                    }
                   />
                 </div>
               </div>
 
               {/* Courier Note */}
               <div className="w-full col-span-2">
-                <label className="text-themeDarkGray text-xs">&nbsp;</label>
+                <label className="text-themeDarkGray text-xs">
+                  Courier note
+                </label>
 
                 {/* Input Field */}
                 <input
                   type="text"
-                  placeholder="Courier note"
-                  className="w-full text-sm text-themeDarkGray placeholder:text-themeDarkGray pb-1 border-b border-b-contentBg outline-none"
+                  value={deliveryFormValue.note}
+                  onChange={(e) =>
+                    setdeliveryFormValues([
+                      ...deliveryFormValues.slice(0, index),
+                      { ...deliveryFormValues[index], note: e.target.value },
+                      ...deliveryFormValues.slice(index + 1),
+                    ])
+                  }
+                  className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
                 />
               </div>
 
               {/* Picture Box */}
               <div>
                 <label className="text-themeDarkGray text-xs">
-                  Proof of pickup
+                  Proof of delivery
                 </label>
 
                 {/* Proofs */}
@@ -428,7 +568,6 @@ const AddDelivery = () => {
                   {/* Input Field */}
                   <input
                     type="text"
-                    placeholder="$"
                     className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
                   />
                 </div>
@@ -445,34 +584,31 @@ const AddDelivery = () => {
                   />
                 </div>
 
-                {/* Quantity */}
-                <div className="w-full">
-                  <label className="text-themeDarkGray text-xs">
-                    Quantity <span className="text-themeRed">*</span>
-                  </label>
-
-                  {/* Input Field */}
-                  <input
-                    type="number"
-                    placeholder="1"
-                    className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                  />
-                </div>
-
-                {/* Item type */}
-                <div className="w-full">
-                  <label className="text-themeDarkGray text-xs">
-                    Item type <span className="text-themeRed">*</span>
-                  </label>
-
-                  {/* Select Field */}
-                  <select className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none">
-                    <option value="box">Box</option>
-                    <option value="packets">Packets</option>
-                    <option value="catoon">Catoon</option>
-                  </select>
-                </div>
-
+                {deliveryFormValue.items?.map((item, index) => (
+                  <>
+                    <div className="w-full">
+                      <label className="text-themeDarkGray text-xs">
+                        Quantity <span className="text-themeRed">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="1"
+                        className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                      />
+                    </div>
+                    <div className="w-full">
+                      <label className="text-themeDarkGray text-xs">
+                        Item type <span className="text-themeRed">*</span>
+                      </label>
+                      {/* Select Field */}
+                      <select className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none">
+                        <option value="box">Box</option>
+                        <option value="packets">Packets</option>
+                        <option value="catoon">Catoon</option>
+                      </select>
+                    </div>
+                  </>
+                ))}
                 {/* Add barcode or Additional Item */}
                 <div className="col-span-4 flex items-center justify-between gap-2.5 py-2.5">
                   {/* left */}
@@ -513,12 +649,7 @@ const AddDelivery = () => {
       <div className="flex items-center justify-center">
         <button
           className="text-sm text-white bg-themeOrange flex items-center justify-center gap-2.5 py-2 px-7 rounded-full hover:translate-y-2 duration-200"
-          onClick={() =>
-            setdeliveryFormValues([
-              ...deliveryFormValues,
-              initialDeliveryFormValues,
-            ])
-          }
+          onClick={() => defaultValues(deliveryFormValues.length + 1, false)}
         >
           <img src={PlusIcon} alt="plus-icon" /> Add a delivery
         </button>
