@@ -37,10 +37,6 @@ const AddDelivery = () => {
         quantity: 1,
         type: "box",
       },
-      {
-        quantity: 1,
-        type: "box",
-      },
     ],
   };
   const [deliveryFormValues, setdeliveryFormValues] = useState([
@@ -56,13 +52,14 @@ const AddDelivery = () => {
         .then((res) => res.data);
     },
   });
+
   function defaultValues(i, home) {
     if (status === "success") {
       if (data.defaults.store_default == "delivery" || home)
         setdeliveryFormValues([
           ...deliveryFormValues.slice(0, i),
           {
-            ...deliveryFormValues[i],
+            ...initialDeliveryFormValues,
             phone: data?.account?.phone,
             name: data?.account?.store_name,
             note: data?.account?.note,
@@ -92,7 +89,7 @@ const AddDelivery = () => {
         setdeliveryFormValues([
           ...deliveryFormValues.slice(0, i),
           {
-            ...deliveryFormValues[i],
+            ...initialDeliveryFormValues,
             required_verification: {
               picture: data?.defaults?.delivery_proof?.picture,
               recipient: data?.defaults?.delivery_proof?.recipient,
@@ -122,7 +119,6 @@ const AddDelivery = () => {
     for (const component of place.address_components) {
       // @ts-ignore remove once typings fixed
       const componentType = component.types[0];
-      console.log(component);
       switch (componentType) {
         case "street_number": {
           address1 = `${component.long_name} ${address1}`;
@@ -584,7 +580,7 @@ const AddDelivery = () => {
                   />
                 </div>
 
-                {deliveryFormValue.items?.map((item, index) => (
+                {deliveryFormValue.items?.map((item, index2) => (
                   <>
                     <div className="w-full">
                       <label className="text-themeDarkGray text-xs">
@@ -592,8 +588,30 @@ const AddDelivery = () => {
                       </label>
                       <input
                         type="number"
-                        placeholder="1"
                         className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                        value={item.quantity}
+                        onChange={(e) =>
+                          setdeliveryFormValues([
+                            ...deliveryFormValues.slice(0, index),
+                            {
+                              ...deliveryFormValues[index],
+                              items: [
+                                ...deliveryFormValues[index].items.slice(
+                                  0,
+                                  index2
+                                ),
+                                {
+                                  quantity: Number(e.target.value),
+                                  type: item.type,
+                                },
+                                ...deliveryFormValues[index].items.slice(
+                                  index2 + 1
+                                ),
+                              ],
+                            },
+                            ...deliveryFormValues.slice(index + 1),
+                          ])
+                        }
                       />
                     </div>
                     <div className="w-full">
@@ -601,11 +619,60 @@ const AddDelivery = () => {
                         Item type <span className="text-themeRed">*</span>
                       </label>
                       {/* Select Field */}
-                      <select className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none">
+                      <select
+                        className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                        value={item.type}
+                        onChange={(e) =>
+                          setdeliveryFormValues([
+                            ...deliveryFormValues.slice(0, index),
+                            {
+                              ...deliveryFormValues[index],
+                              items: [
+                                ...deliveryFormValues[index].items.slice(
+                                  0,
+                                  index2
+                                ),
+                                {
+                                  quantity: item.quantity,
+                                  type: e.target.value,
+                                },
+                                ...deliveryFormValues[index].items.slice(
+                                  index2 + 1
+                                ),
+                              ],
+                            },
+                            ...deliveryFormValues.slice(index + 1),
+                          ])
+                        }
+                      >
                         <option value="box">Box</option>
-                        <option value="packets">Packets</option>
-                        <option value="catoon">Catoon</option>
+                        <option value="1-hander">Packets</option>
+                        <option value="bag">Catoon</option>
                       </select>
+                    </div>
+                    <div
+                      onClick={() =>
+                        setdeliveryFormValues([
+                          ...deliveryFormValues.slice(0, index),
+                          {
+                            ...deliveryFormValues[index],
+                            items: [
+                              ...deliveryFormValues[index].items.slice(
+                                0,
+                                index2
+                              ),
+                              ...deliveryFormValues[index].items.slice(
+                                index2 + 1
+                              ),
+                            ],
+                          },
+                          ...deliveryFormValues.slice(index + 1),
+                        ])
+                      }
+                    >
+                      <p className="text-xs text-themeDarkGray cursor-pointer">
+                        Remove item -
+                      </p>
                     </div>
                   </>
                 ))}
@@ -619,7 +686,24 @@ const AddDelivery = () => {
                   </div>
 
                   {/* right */}
-                  <div>
+                  <div
+                    onClick={() =>
+                      setdeliveryFormValues([
+                        ...deliveryFormValues.slice(0, index),
+                        {
+                          ...deliveryFormValues[index],
+                          items: [
+                            ...deliveryFormValues[index].items.slice(
+                              0,
+                              deliveryFormValues[index].items.length
+                            ),
+                            initialDeliveryFormValues.items[0],
+                          ],
+                        },
+                        ...deliveryFormValues.slice(index + 1),
+                      ])
+                    }
+                  >
                     <p className="text-xs text-themeDarkGray cursor-pointer">
                       Additional item +
                     </p>

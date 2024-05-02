@@ -1,7 +1,145 @@
 import DeliveredIcon from "../../assets/delivered.svg";
 import RefreshIcon from "../../assets/refresh-icon.svg";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
+import "https://maps.googleapis.com/maps/api/js?key=AIzaSyAxbAIczxXk3xoL3RH85z3eAZLncLZAuGg&libraries=places";
+import {
+  enforceFormat,
+  formatToPhone,
+  isCompleted,
+  config,
+} from "../reusable/functions";
 
 const PickupForm = () => {
+  const initialPickupFormValues = {
+    phone: "",
+    name: "",
+    note: "",
+    location: {
+      street_address_1: "",
+      street_address_2: "",
+      access_code: "",
+      lat: "",
+      lon: "",
+    },
+    required_verification: {
+      picture: false,
+    },
+  };
+
+  const [pickupFormValues, setPickupFormValues] = useState(
+    initialPickupFormValues
+  );
+
+  // Get invoice data
+  const { isLoading, data, error, status } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => {
+      return axios
+        .get("https://api.dbx.delivery/retail/profile", config)
+        .then((res) => res.data);
+    },
+  });
+
+  function defaultValues(i, home) {
+    if (status === "success") {
+      if (data.defaults.store_default == "pickup" || home)
+        setPickupFormValues({
+          ...initialPickupFormValues,
+
+          phone: data?.account?.phone,
+          name: data?.account?.store_name,
+          note: data?.account?.note,
+          location: {
+            street_address_1:
+              data?.account?.location?.street_address_1 +
+              ", " +
+              data?.account?.location?.city +
+              ", " +
+              data?.account?.location?.state +
+              " " +
+              data?.account?.location?.zip,
+            street_address_2: data?.account?.location?.street_address_2,
+            access_code: data?.account?.location?.access_code,
+            lat: data?.account?.location?.lat,
+            lon: data?.account?.location?.lon,
+          },
+          required_verification: {
+            picture: data?.defaults?.delivery_proof?.picture,
+          },
+        });
+      else
+        setPickupFormValues({
+          ...initialPickupFormValues,
+          required_verification: {
+            picture: data?.defaults?.delivery_proof?.picture,
+          },
+        });
+    }
+  }
+  useEffect(() => {
+    defaultValues(0, false);
+  }, [status === "success"]);
+
+  useEffect(() => {
+    initAutocomplete();
+  }, [[pickupFormValues]]);
+  let autocomplete;
+  let address1Field;
+  function fillInAddress() {
+    // Get the place details from the autocomplete object.
+    const place = this.getPlace();
+    let address1 = "";
+    for (const component of place.address_components) {
+      // @ts-ignore remove once typings fixed
+      const componentType = component.types[0];
+      switch (componentType) {
+        case "street_number": {
+          address1 = `${component.long_name} ${address1}`;
+          break;
+        }
+
+        case "route": {
+          address1 += component.short_name;
+          break;
+        }
+
+        case "locality":
+          address1 += ", " + component.long_name;
+          break;
+
+        case "administrative_area_level_1": {
+          address1 += ", " + component.short_name;
+          break;
+        }
+        case "postal_code": {
+          address1 += " " + component.long_name;
+          break;
+        }
+      }
+    }
+    setPickupFormValues({
+      ...pickupFormValues,
+      location: {
+        street_address_1: address1,
+        street_address_2: pickupFormValues.location.street_address_2,
+        access_code: pickupFormValues.location.access_code,
+        lat: place.geometry.location.lat(),
+        lon: place.geometry.location.lng(),
+      },
+    });
+  }
+  function initAutocomplete() {
+    address1Field = document.getElementById("street_address_1");
+    (autocomplete = new google.maps.places.Autocomplete(address1Field, {
+      componentRestrictions: { country: ["us", "ca"] },
+      fields: ["address_components", "geometry"],
+      types: ["address"],
+    })),
+      autocomplete.addListener("place_changed", fillInAddress);
+  }
+
   return (
     <div className="w-full bg-white rounded-2xl my-5">
       {/* Header */}
@@ -29,9 +167,16 @@ const PickupForm = () => {
 
           {/* Input Field */}
           <input
-            type="number"
-            placeholder="+1 (929) 374-4819"
             className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+            value={pickupFormValues.phone}
+            onKeyUp={(e) => formatToPhone(e)}
+            onKeyDown={(e) => enforceFormat(e)}
+            onChange={(e) =>
+              setPickupFormValues({
+                ...pickupFormValues,
+                phone: e.target.value,
+              })
+            }
           />
         </div>
 
@@ -44,8 +189,14 @@ const PickupForm = () => {
           {/* Input Field */}
           <input
             type="text"
-            placeholder="Mini Flowers"
             className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+            value={pickupFormValues.name}
+            onChange={(e) =>
+              setPickupFormValues({
+                ...pickupFormValues,
+                name: e.target.value,
+              })
+            }
           />
         </div>
 
@@ -58,8 +209,21 @@ const PickupForm = () => {
           {/* Input Field */}
           <input
             type="text"
-            placeholder="837 East 84th St, NY, NY, 10024"
+            id="street_address_1"
             className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+            value={pickupFormValues.location.street_address_1}
+            onChange={(e) =>
+              setPickupFormValues({
+                ...pickupFormValues,
+                location: {
+                  street_address_1: e.target.value,
+                  street_address_2: pickupFormValues.location.street_address_2,
+                  access_code: pickupFormValues.location.access_code,
+                  lat: pickupFormValues.location.lat,
+                  lon: pickupFormValues.location.lon,
+                },
+              })
+            }
           />
         </div>
 
@@ -74,8 +238,21 @@ const PickupForm = () => {
             {/* Input Field */}
             <input
               type="number"
-              placeholder="12H"
               className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+              value={pickupFormValues.location.street_address_1}
+              onChange={(e) =>
+                setPickupFormValues({
+                  ...pickupFormValues,
+                  location: {
+                    street_address_1:
+                      pickupFormValues.location.street_address_1,
+                    street_address_2: e.target.value,
+                    access_code: pickupFormValues.location.access_code,
+                    lat: pickupFormValues.location.lat,
+                    lon: pickupFormValues.location.lon,
+                  },
+                })
+              }
             />
           </div>
 
@@ -88,21 +265,38 @@ const PickupForm = () => {
             {/* Input Field */}
             <input
               type="password"
-              placeholder="*******"
               className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+              value={pickupFormValues.location.street_address_1}
+              onChange={(e) =>
+                setPickupFormValues({
+                  ...pickupFormValues,
+                  location: {
+                    street_address_1:
+                      pickupFormValues.location.street_address_1,
+                    street_address_2:
+                      pickupFormValues.location.street_address_2,
+                    access_code: e.target.value,
+                    lat: pickupFormValues.location.lat,
+                    lon: pickupFormValues.location.lon,
+                  },
+                })
+              }
             />
           </div>
         </div>
 
         {/* Courier Note */}
         <div className="w-full col-span-2">
-          <label className="text-themeDarkGray text-xs">&nbsp;</label>
+          <label className="text-themeDarkGray text-xs">Courier note</label>
 
           {/* Input Field */}
           <input
             type="text"
-            placeholder="Courier note"
-            className="w-full text-sm text-themeDarkGray placeholder:text-themeDarkGray pb-1 border-b border-b-contentBg outline-none"
+            value={pickupFormValues.note}
+            onChange={(e) =>
+              setPickupFormValues({ ...pickupFormValues, note: e.target.value })
+            }
+            className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
           />
         </div>
 
@@ -115,6 +309,15 @@ const PickupForm = () => {
               id="picture"
               type="checkbox"
               className="accent-themeLightOrangeTwo"
+              checked={pickupFormValues.required_verification.picture}
+              onChange={(e) =>
+                setPickupFormValues({
+                  ...pickupFormValues,
+                  required_verification: {
+                    picture: e.target.checked,
+                  },
+                })
+              }
             />
 
             <label

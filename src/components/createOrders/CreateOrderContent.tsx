@@ -4,7 +4,7 @@ import SelectDateandTime from "./SelectDateandTime";
 import ImageUploader from "../popups/ImageUploader";
 
 import UploadSmallIcon from "../../assets/upload-small.svg";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { ThemeContext } from "../../context/ThemeContext";
 import BlackOverlay from "../popups/BlackOverlay";
 import PricePopup from "../popups/PricePopup";
@@ -13,6 +13,7 @@ import PlusIcon from "../../assets/plus-icon.svg";
 
 const CreateOrderContent = () => {
   const contextValue = useContext(ThemeContext);
+  const [changePasswordType, setChangePasswordType] = useState({ you: "me" });
 
   // Close Popup Function
   const closePopup = () => {
@@ -39,7 +40,10 @@ const CreateOrderContent = () => {
       </div>
 
       {/* Price Popup */}
-      <PricePopup />
+      <PricePopup
+        state={changePasswordType}
+        stateChanger={setChangePasswordType}
+      />
 
       {/* Overlay For the price popup */}
       {contextValue?.showImageUploaderPopup === true ? (

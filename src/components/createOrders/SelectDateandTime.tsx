@@ -1,5 +1,5 @@
 import { useState } from "react";
-
+import moment from "moment";
 import TimeIcon from "../../assets/time.svg";
 import RechareIcon from "../../assets/recharge.svg";
 
@@ -9,6 +9,20 @@ const SelectDateandTime = () => {
     {
       id: 1,
       title: "1-hour",
+      slots: [
+        {
+          start_time: "2023-06-25T18:00:00.000Z",
+          end_time: "2023-06-25T20:00:00.000Z",
+        },
+        {
+          start_time: "2023-06-25T19:00:00.000Z",
+          end_time: "2023-06-25T21:00:00.000Z",
+        },
+        {
+          start_time: "2023-06-25T20:00:00.000Z",
+          end_time: "2023-06-25T21:00:00.000Z",
+        },
+      ],
     },
     {
       id: 2,
@@ -22,7 +36,12 @@ const SelectDateandTime = () => {
 
   // active timeframe
   const [activeTimeFrame, setActiveTimeFrame] = useState<string>("1-hour");
-
+  const [timeframFormValues, setTimeframeFormValues] = useState({
+    service: "1-hour",
+    start_time: "",
+    end_time: "",
+  });
+  console.log(timeframFormValues);
   return (
     <div className="w-full bg-white rounded-2xl my-5">
       {/* Header */}
@@ -51,10 +70,17 @@ const SelectDateandTime = () => {
           <div className="flex items-center gap-20">
             {timeFrameData?.map((item) => (
               <p
-                onClick={() => setActiveTimeFrame(item.title)}
+                onClick={() =>
+                  setTimeframeFormValues({
+                    ...timeframFormValues,
+                    service: item.title,
+                  })
+                }
                 key={item.id}
                 className={`text-sm text-themeLightPurple cursor-pointer ${
-                  activeTimeFrame === item.title ? "font-bold" : "font-normal"
+                  timeframFormValues.service === item.title
+                    ? "font-bold"
+                    : "font-normal"
                 }`}
               >
                 {item.title}
@@ -62,30 +88,6 @@ const SelectDateandTime = () => {
             ))}
           </div>
         </div>
-
-        {/* TimeFrame Two */}
-        <div className="w-full">
-          <label className="text-themeDarkGray text-xs">
-            Time-frame <span className="text-themeRed">*</span>
-          </label>
-
-          <div className="flex items-center gap-1 border-b border-b-contentBg pb-1">
-            {/* One */}
-            <input
-              type="time"
-              className="outline-none border-none text-sm text-themeLightBlack"
-            />
-
-            <p>-</p>
-
-            {/* One */}
-            <input
-              type="time"
-              className="outline-none border-none text-sm text-themeLightBlack"
-            />
-          </div>
-        </div>
-
         {/* date Two */}
         <div className="w-full">
           <label className="text-themeDarkGray text-xs">
@@ -94,7 +96,40 @@ const SelectDateandTime = () => {
 
           {/* left box */}
           <div className="border-b border-b-contentBg pb-[2px]">
-            <input type="date" className="w-full" />
+            <input
+              type="date"
+              className="w-full"
+              value={moment(timeframFormValues.start_time).format("yyyy-MM-DD")}
+            />
+          </div>
+        </div>
+        {/* TimeFrame Two */}
+        <div className="w-full">
+          <label className="text-themeDarkGray text-xs">
+            Time-frame <span className="text-themeRed">*</span>
+          </label>
+
+          <div className="flex items-center gap-1 border-b border-b-contentBg pb-1">
+            {/* One */}
+            {/* Select Field */}
+            <select
+              className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+              onChange={(e) =>
+                setTimeframeFormValues({
+                  ...timeframFormValues,
+                  start_time: e.target.value.split(";")[0],
+                  end_time: e.target.value.split(";")[1],
+                })
+              }
+            >
+              {timeFrameData[0].slots?.map((item) => (
+                <option value={item.start_time + ";" + item.end_time}>
+                  {moment(item.start_time).format("hh:mm A") +
+                    " - " +
+                    moment(item.end_time).format("hh:mm A")}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
