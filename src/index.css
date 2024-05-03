@@ -117,11 +117,14 @@ input[type="number"] {
   border: transparent;
 }
 
-::-webkit-scrollbar {
-  width: 10px;
+.show::-webkit-scrollbar {
+  width: 7px;
   height: 10px;
 }
-
+/* width */
+.hidden::-webkit-scrollbar {
+  width: 0px;
+}
 ::-webkit-scrollbar-thumb {
   background: #eeb678;
   border-radius: 3px;

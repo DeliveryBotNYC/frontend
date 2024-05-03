@@ -1,10 +1,11 @@
 import PickupForm from "./PickupForm";
 import AddDelivery from "./AddDelivery";
+import Map from "./Map";
 import SelectDateandTime from "./SelectDateandTime";
 import ImageUploader from "../popups/ImageUploader";
-
+import ContentBox2 from "../reusable/ContentBox2";
 import UploadSmallIcon from "../../assets/upload-small.svg";
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { ThemeContext } from "../../context/ThemeContext";
 import BlackOverlay from "../popups/BlackOverlay";
 import PricePopup from "../popups/PricePopup";
@@ -13,7 +14,13 @@ import PlusIcon from "../../assets/plus-icon.svg";
 
 const CreateOrderContent = () => {
   const contextValue = useContext(ThemeContext);
-  const [changePasswordType, setChangePasswordType] = useState({ you: "me" });
+
+  const [newOrderValues, setNewOrderValues] = useState({
+    pickup: {},
+    delivery: {},
+    timeframe: {},
+  });
+  console.log(newOrderValues);
 
   // Close Popup Function
   const closePopup = () => {
@@ -21,38 +28,26 @@ const CreateOrderContent = () => {
   };
 
   return (
-    <div className="w-full pl-20 pr-[42px] pt-[65px] relative">
-      {/* Content Box */}
-      <div className="w-full h-full lg:px-5 2xl:px-16 py-[20px] bg-contentBg rounded-tr-2xl rounded-tl-2xl">
-        {/* Upload Btn */}
-        <div
-          className="flex items-center justify-end gap-2.5 cursor-pointer"
-          onClick={() => contextValue?.setShowImageUploaderPopup(true)}
-        >
-          <img src={UploadSmallIcon} alt="upload-icon" />
-          <p className="text-sm text-secondaryBtnBorder">Upload</p>
+    <ContentBox2>
+      <div className="flex h-full justify-between gap-2.5 bg-contentBg">
+        <div className="overflow-auto">
+          {/* Pickup FOrm */}
+          <PickupForm state={newOrderValues} stateChanger={setNewOrderValues} />
+          {/* Time */}
+          <AddDelivery
+            state={newOrderValues}
+            stateChanger={setNewOrderValues}
+          />
+          <SelectDateandTime
+            state={newOrderValues}
+            stateChanger={setNewOrderValues}
+          />
         </div>
-        {/* Pickup FOrm */}
-        <PickupForm />
-        {/* Time */}
-        <AddDelivery />
-        <SelectDateandTime />
+        {/* Content Box */}
+        <Map state={newOrderValues} />
       </div>
-
-      {/* Price Popup */}
-      <PricePopup
-        state={changePasswordType}
-        stateChanger={setChangePasswordType}
-      />
-
-      {/* Overlay For the price popup */}
-      {contextValue?.showImageUploaderPopup === true ? (
-        <BlackOverlay closeFunc={closePopup} />
-      ) : null}
-
-      {/* Image Uploader Popup */}
-      <ImageUploader />
-    </div>
+      <PricePopup state={newOrderValues} />
+    </ContentBox2>
   );
 };
 

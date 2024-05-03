@@ -14,7 +14,7 @@ import {
   config,
 } from "../reusable/functions";
 
-const AddDelivery = () => {
+const AddDelivery = ({ stateChanger, ...rest }) => {
   const initialDeliveryFormValues = {
     phone: "",
     name: "",
@@ -24,6 +24,9 @@ const AddDelivery = () => {
       street_address_1: "",
       street_address_2: "",
       access_code: "",
+      city: "",
+      state: "",
+      zip: "",
       lat: "",
       lon: "",
     },
@@ -42,7 +45,9 @@ const AddDelivery = () => {
   const [deliveryFormValues, setdeliveryFormValues] = useState([
     initialDeliveryFormValues,
   ]);
-
+  useEffect(() => {
+    stateChanger({ ...rest.state, delivery: deliveryFormValues[0] });
+  }, [deliveryFormValues]);
   // Get invoice data
   const { isLoading, data, error, status } = useQuery({
     queryKey: ["profile"],
@@ -64,16 +69,12 @@ const AddDelivery = () => {
             name: data?.account?.store_name,
             note: data?.account?.note,
             location: {
-              street_address_1:
-                data?.account?.location?.street_address_1 +
-                ", " +
-                data?.account?.location?.city +
-                ", " +
-                data?.account?.location?.state +
-                " " +
-                data?.account?.location?.zip,
+              street_address_1: data?.account?.location?.street_address_1,
               street_address_2: data?.account?.location?.street_address_2,
               access_code: data?.account?.location?.access_code,
+              city: data?.account?.location?.city,
+              state: data?.account?.location?.state,
+              zip: data?.account?.location?.zip,
               lat: data?.account?.location?.lat,
               lon: data?.account?.location?.lon,
             },
@@ -113,7 +114,10 @@ const AddDelivery = () => {
   function fillInAddress() {
     // Get the place details from the autocomplete object.
     const place = this.getPlace();
-    let address1 = "";
+    let street_address_1 = "";
+    let city = "";
+    let state = "";
+    let zip = "";
     let lat = "";
     let lon = "";
     for (const component of place.address_components) {
@@ -121,25 +125,25 @@ const AddDelivery = () => {
       const componentType = component.types[0];
       switch (componentType) {
         case "street_number": {
-          address1 = `${component.long_name} ${address1}`;
+          street_address_1 = `${component.long_name} ${street_address_1}`;
           break;
         }
 
         case "route": {
-          address1 += component.short_name;
+          street_address_1 += component.short_name;
           break;
         }
 
         case "locality":
-          address1 += ", " + component.long_name;
+          city = component.long_name;
           break;
 
         case "administrative_area_level_1": {
-          address1 += ", " + component.short_name;
+          state = component.short_name;
           break;
         }
         case "postal_code": {
-          address1 += " " + component.long_name;
+          zip = component.long_name;
           break;
         }
       }
@@ -151,10 +155,13 @@ const AddDelivery = () => {
       {
         ...deliveryFormValues[this.index],
         location: {
-          street_address_1: address1,
+          street_address_1: street_address_1,
           street_address_2:
             deliveryFormValues[this.index].location.street_address_2,
           access_code: deliveryFormValues[this.index].location.access_code,
+          city: city,
+          state: state,
+          zip: zip,
           lat: lat,
           lon: lon,
         },

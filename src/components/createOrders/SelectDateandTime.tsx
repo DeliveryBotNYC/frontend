@@ -1,26 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import moment from "moment";
 import TimeIcon from "../../assets/time.svg";
 import RechareIcon from "../../assets/recharge.svg";
 
-const SelectDateandTime = () => {
+const SelectDateandTime = ({ stateChanger, ...rest }) => {
   // Data
   const timeFrameData = [
     {
       id: 1,
-      title: "1-hour",
+      title: "same-day",
       slots: [
         {
-          start_time: "2023-06-25T18:00:00.000Z",
-          end_time: "2023-06-25T20:00:00.000Z",
+          start_time: "2024-05-03T18:00:00.000Z",
+          end_time: "2024-05-03T24:00:00.000Z",
         },
         {
-          start_time: "2023-06-25T19:00:00.000Z",
-          end_time: "2023-06-25T21:00:00.000Z",
+          start_time: "2024-05-03T19:00:00.000Z",
+          end_time: "2024-05-03T22:00:00.000Z",
         },
         {
-          start_time: "2023-06-25T20:00:00.000Z",
-          end_time: "2023-06-25T21:00:00.000Z",
+          start_time: "2024-05-03T20:00:00.000Z",
+          end_time: "2024-05-03T23:00:00.000Z",
         },
       ],
     },
@@ -37,11 +37,16 @@ const SelectDateandTime = () => {
   // active timeframe
   const [activeTimeFrame, setActiveTimeFrame] = useState<string>("1-hour");
   const [timeframFormValues, setTimeframeFormValues] = useState({
-    service: "1-hour",
+    service: "same-day",
     start_time: "",
     end_time: "",
   });
-  console.log(timeframFormValues);
+  useEffect(() => {
+    stateChanger({
+      ...rest.state,
+      timeframe: timeframFormValues,
+    });
+  }, [timeframFormValues]);
   return (
     <div className="w-full bg-white rounded-2xl my-5">
       {/* Header */}
