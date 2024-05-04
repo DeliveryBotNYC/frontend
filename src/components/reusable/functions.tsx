@@ -6,15 +6,29 @@ export let config = {
 };
 
 export function isCompleted(input) {
-  var compled = false;
-  input.phone != "" &&
-  input.name != "" &&
-  input.location.street_address_1 != "" &&
-  input.location.lat != "" &&
-  input.location.lon != ""
-    ? (compled = true)
-    : (compled = false);
-  return compled;
+  return {
+    pickup:
+      input.pickup.phone === "" ||
+      input.pickup.name === "" ||
+      input.pickup.location.street_address_1 === "" ||
+      input.pickup.location.lat === "" ||
+      input.pickup.location.lon === ""
+        ? false
+        : true,
+  };
+}
+
+export function isEmpty(input) {
+  return {
+    pickup:
+      input.pickup.phone === "" &&
+      input.pickup.name === "" &&
+      input.pickup.location.street_address_1 === "" &&
+      input.pickup.location.lat === "" &&
+      input.pickup.location.lon === ""
+        ? true
+        : false,
+  };
 }
 
 export const isModifierKey = (event) => {
@@ -52,10 +66,34 @@ export const formatToPhone = (event) => {
   const last = input.substring(6, 10);
 
   if (input.length > 6) {
-    event.target.value = `(${areaCode}) ${middle} - ${last}`;
+    event.target.value = `(${areaCode}) ${middle}-${last}`;
   } else if (input.length > 3) {
     event.target.value = `(${areaCode}) ${middle}`;
   } else if (input.length > 0) {
     event.target.value = `(${areaCode}`;
   }
+};
+
+export const initialState = {
+  pickup: {
+    phone: "",
+    name: "",
+    note: "",
+    location: {
+      full: "",
+      street_address_1: "",
+      street_address_2: "",
+      access_code: "",
+      city: "",
+      state: "",
+      zip: "",
+      lat: "",
+      lon: "",
+    },
+    required_verification: {
+      picture: false,
+    },
+  },
+  delivery: {},
+  timeframe: {},
 };

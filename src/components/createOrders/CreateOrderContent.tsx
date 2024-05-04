@@ -16,11 +16,28 @@ const CreateOrderContent = () => {
   const contextValue = useContext(ThemeContext);
 
   const [newOrderValues, setNewOrderValues] = useState({
-    pickup: {},
+    pickup: {
+      phone: "",
+      name: "",
+      note: "",
+      location: {
+        full: "",
+        street_address_1: "",
+        street_address_2: "",
+        access_code: "",
+        city: "",
+        state: "",
+        zip: "",
+        lat: "",
+        lon: "",
+      },
+      required_verification: {
+        picture: false,
+      },
+    },
     delivery: {},
     timeframe: {},
   });
-  console.log(newOrderValues);
 
   // Close Popup Function
   const closePopup = () => {
@@ -29,11 +46,12 @@ const CreateOrderContent = () => {
 
   return (
     <ContentBox2>
-      <div className="flex h-full justify-between gap-2.5 bg-contentBg">
-        <div className="overflow-auto">
+      <div className="flex h-[calc(100%-60px)] justify-between gap-2.5 bg-contentBg">
+        <div className="overflow-auto px-themePadding w-3/4">
           {/* Pickup FOrm */}
           <PickupForm state={newOrderValues} stateChanger={setNewOrderValues} />
           {/* Time */}
+          {/*
           <AddDelivery
             state={newOrderValues}
             stateChanger={setNewOrderValues}
@@ -42,6 +60,7 @@ const CreateOrderContent = () => {
             state={newOrderValues}
             stateChanger={setNewOrderValues}
           />
+  */}
         </div>
         {/* Content Box */}
         <Map state={newOrderValues} />
