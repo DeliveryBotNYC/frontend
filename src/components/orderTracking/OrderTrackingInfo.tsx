@@ -62,7 +62,7 @@ const OrderTrackingInfo = ({ data }) => {
               </div>
 
               {/* delivery */}
-              <div>
+              <div className="text-right">
                 <p className="text-xs text-themeDarkGray">
                   {data?.delivery?.location.street_address_1}
                 </p>
@@ -73,22 +73,20 @@ const OrderTrackingInfo = ({ data }) => {
             </div>
 
             {/* Status */}
-            {contextValue?.activeSwitch === true ? (
-              <>
-                {/* Progressbar */}
-                <div className="pb-3">
-                  <Progressbar
-                    value={currentStatus === "delivered" ? "100%" : "70%"}
-                    status={currentStatus || ""}
-                  />
-                </div>
+            <>
+              {/* Progressbar */}
+              <div className="pb-3">
+                <Progressbar
+                  value={currentStatus === "delivered" ? "100%" : "70%"}
+                  status={currentStatus || ""}
+                />
+              </div>
 
-                {/* Delivery tracking */}
-                <div className="w-full">
-                  <InfoDetails items={data} />
-                </div>
-              </>
-            ) : null}
+              {/* Delivery tracking */}
+              <div className="w-full">
+                <InfoDetails items={data} />
+              </div>
+            </>
           </div>
 
           <div className="flex items-center justify-center gap-2.5 mt-16">

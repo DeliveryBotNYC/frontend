@@ -65,7 +65,7 @@ const TrackingOrderCard = ({ item }: { item: OrderItem }) => {
           </div>
 
           {/* delivery */}
-          <div>
+          <div className="text-right">
             <p className="text-xs text-themeDarkGray">
               {item?.delivery.location.street_address_1}
             </p>

@@ -16,18 +16,17 @@ import BetweenIcon from "../../assets/mapBetweenMarker.svg";
 
 const CurrentOrderMap = ({ data }) => {
   // Location Markers
-  const driver = {
-    location: {
-      lat: 40.759371,
-      lon: -73.966142,
-    },
-  };
   const betweens = [
     { lat: 40.759, lon: -73.965 },
     { lat: 40.754, lon: -73.965 },
   ];
   var betweensPoly = [];
-  betweensPoly.push([driver.location.lat, driver.location.lon]);
+  data.driver?.location?.lat
+    ? betweensPoly.push([
+        data.driver?.location?.lat,
+        data.driver?.location?.lon,
+      ])
+    : null;
   betweens?.map((item) => {
     betweensPoly.push([item.lat, item.lon]);
   });
@@ -60,19 +59,24 @@ const CurrentOrderMap = ({ data }) => {
     useEffect(() => {
       if (!map) return;
       {
+        let bounds = [];
         data?.pickup?.location?.lat && data?.delivery?.location?.lat
-          ? map.fitBounds(
-              [
-                [driver?.location?.lat, driver?.location?.lon],
-                [data.pickup?.location?.lat, data.pickup?.location?.lon],
-                [data.delivery?.location?.lat, data.delivery?.location?.lon],
-              ],
-              { padding: [50, 0], paddingBottomRight: [400, 0] }
+          ? bounds.push(
+              [data.pickup?.location?.lat, data.pickup?.location?.lon],
+              [data.delivery?.location?.lat, data.delivery?.location?.lon]
             )
-          : map.fitBounds([
-              [40.84, -73.91],
-              [40.63, -74.02],
-            ]);
+          : bounds.push([40.84, -73.91], [40.63, -74.02]);
+
+        data.driver?.location?.lat
+          ? bounds.push([
+              data.driver?.location?.lat,
+              data.driver?.location?.lon,
+            ])
+          : null;
+        map.fitBounds(bounds, {
+          padding: [50, 0],
+          paddingBottomRight: [400, 0],
+        });
       }
     }, [map]);
   }
@@ -95,13 +99,13 @@ const CurrentOrderMap = ({ data }) => {
             positions={betweensPoly}
           />
         ) : null}
-        {data?.pickup?.location?.lat && driver?.location?.lat ? (
+        {data?.pickup?.location?.lat && data?.driver?.location?.lat ? (
           <Polyline
             pathOptions={{ color: "#EEB678" }}
             positions={
               [
                 [data?.pickup?.location?.lat, data?.pickup?.location?.lon],
-                [driver?.location?.lat, driver.location.lon],
+                [data.driver?.location?.lat, data.driver?.location.lon],
               ] as LatLngExpression[]
             }
           />
@@ -133,11 +137,11 @@ const CurrentOrderMap = ({ data }) => {
 
         {/* Current Location Markers */}
         {/* Delivered Marker */}
-        {driver?.location?.lat && driver?.location?.lon ? (
+        {data.driver?.location?.lat && data.driver?.location?.lon ? (
           <Marker
             icon={currentLocationIcon}
             key={3}
-            position={[driver?.location?.lat, driver?.location?.lon]}
+            position={[data.driver?.location?.lat, data.driver?.location?.lon]}
           ></Marker>
         ) : null}
         {/* Multiple Delivery Markers */}

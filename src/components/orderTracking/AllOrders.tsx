@@ -42,7 +42,7 @@ const AllOrders = () => {
   });
 
   return (
-    <div className="min-w-[400px] h-full bg-white rounded-2xl">
+    <div className="min-w-[400px] h-full bg-white rounded-2xl hidden md:block">
       {/* SearchBox */}
       <div className="w-full h-[110px]  py-5 bg-white rounded-tr-2xl rounded-tl-2xl">
         <div className="w-full border-b border-b-primaryBorder flex items-center gap-2 pb-2 px-2.5">

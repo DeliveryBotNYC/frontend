@@ -49,7 +49,7 @@ const HomeMap = (state) => {
   });
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full  hidden md:block">
       <MapContainer
         className="h-full"
         center={[40.7540497, -73.9843973]}

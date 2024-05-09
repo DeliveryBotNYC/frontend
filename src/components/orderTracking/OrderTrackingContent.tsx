@@ -47,7 +47,7 @@ const OrderTrackingContent = () => {
   // Get orders data
   setInterval(() => {
     refetch();
-  }, 100000);
+  }, 1000000);
 
   return (
     <ContentBox>
