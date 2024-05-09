@@ -32,7 +32,7 @@ interface OrderItem {
 }
 
 const OrderSingleRow = ({ item }: { item: OrderItem }) => {
-  console.log(item);
+  //console.log(item);
   // Toggle Dropdown by custom hook
   const { isOpen, setIsOpen, dropdownRef, dotRef } =
     useClickOutside<HTMLDivElement>(false);

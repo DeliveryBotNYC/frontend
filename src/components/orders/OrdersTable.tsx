@@ -1,4 +1,4 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import OrderSingleRow from "./OrderSingleRow";
 import OrdersTableHeader from "./OrdersTableHeader";
 import OrdersTablePagination from "./OrdersTablePagination";
@@ -10,6 +10,17 @@ import { useQuery } from "@tanstack/react-query";
 const OrdersTable = () => {
   // Context to grab the search input state
   const contextValue = useContext(ThemeContext);
+  const [sortBy, setSortBy] = useState({ header: "created_at", order: "desc" });
+
+  function sortFunction(a, b) {
+    if (a[sortBy.header] === b[sortBy.header]) {
+      return 0;
+    } else {
+      if (sortBy.order == "desc") {
+        return a[sortBy.header] > b[sortBy.header] ? -1 : 1;
+      } else return a[sortBy.header] < b[sortBy.header] ? -1 : 1;
+    }
+  }
 
   //temp bearer
   let config = {
@@ -18,7 +29,6 @@ const OrdersTable = () => {
         "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
     },
   };
-
   // Get orders data
   const { isLoading, data, error } = useQuery({
     queryKey: ["orders"],
@@ -38,11 +48,11 @@ const OrdersTable = () => {
       >
         <table className="w-full">
           {/* Table Header */}
-          <OrdersTableHeader />
+          <OrdersTableHeader state={sortBy} stateChanger={setSortBy} />
 
           {/* Table Content */}
           <tbody>
-            {data?.map((item) => (
+            {data?.sort(sortFunction).map((item) => (
               <OrderSingleRow item={item} key={item.order_id} />
             ))}
           </tbody>

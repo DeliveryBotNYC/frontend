@@ -11,10 +11,41 @@ import BlackOverlay from "../popups/BlackOverlay";
 import PricePopup from "../popups/PricePopup";
 
 import PlusIcon from "../../assets/plus-icon.svg";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+
+import { config } from "../reusable/functions";
 
 const CreateOrderContent = () => {
   const contextValue = useContext(ThemeContext);
-
+  const { isLoading, data, error, isSuccess } = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => {
+      return axios
+        .get("https://api.dbx.delivery/retail/profile", config)
+        .then((res) => ({
+          default: res?.data?.defaults?.store_default,
+          phone: res?.data?.account?.phone,
+          name: res?.data?.account?.store_name,
+          note: res?.data?.account?.note,
+          tip: res?.data?.defaults?.tip,
+          location: {
+            full: res?.data?.account?.location?.street_address_1,
+            street_address_1: res?.data?.account?.location?.street_address_1,
+            street_address_2: res?.data?.account?.location?.street_address_2,
+            access_code: res?.data?.account?.location?.access_code,
+            city: res?.data?.account?.location?.city,
+            state: res?.data?.account?.location?.state,
+            zip: res?.data?.account?.location?.zip,
+            lat: res?.data?.account?.location?.lat,
+            lon: res?.data?.account?.location?.lon,
+          },
+          pickup_proof: res?.data?.defaults?.pickup_proof,
+          delivery_proof: res?.data?.defaults?.delivery_proof,
+          items: [{ quantity: 1, type: res?.data?.defaults?.item_type }],
+        }));
+    },
+  });
   const [newOrderValues, setNewOrderValues] = useState({
     pickup: {
       phone: "",
@@ -35,32 +66,103 @@ const CreateOrderContent = () => {
         picture: false,
       },
     },
-    delivery: {},
-    timeframe: {},
+    delivery: {
+      phone: "",
+      name: "",
+      note: "",
+      tip: 0,
+      location: {
+        street_address_1: "",
+        street_address_2: "",
+        access_code: "",
+        city: "",
+        state: "",
+        zip: "",
+        lat: "",
+        lon: "",
+      },
+      required_verification: {
+        picture: false,
+        recipient: false,
+        signature: false,
+      },
+      items: [
+        {
+          quantity: 1,
+          type: "box",
+        },
+      ],
+    },
+    timeframe: {
+      service: "1-hour",
+      service_id: 0,
+      start_time: "",
+      end_time: "",
+    },
   });
+  //update state when default data
+  useEffect(() => {
+    if (data?.default == "pickup")
+      setNewOrderValues({
+        ...newOrderValues,
+        pickup: {
+          phone: data.phone,
+          name: data.name,
+          note: data.note,
+          location: data.location,
+          required_verification: data.pickup_proof,
+        },
+        delivery: {
+          ...newOrderValues?.delivery,
+          required_verification: data.delivery_proof,
+          items: data.items,
+          tip: data.tip,
+        },
+      });
+    else if (data?.default == "delivery")
+      setNewOrderValues({
+        ...newOrderValues,
+        pickup: {
+          ...newOrderValues?.pickup,
+          required_verification: data.pickup_proof,
+        },
+        delivery: {
+          phone: data.phone,
+          name: data.name,
+          note: data.note,
+          location: data.location,
+          required_verification: data.delivery_proof,
+          items: data.items,
+          tip: data.tip,
+        },
+      });
+  }, [isSuccess]);
 
   // Close Popup Function
   const closePopup = () => {
     contextValue?.setShowImageUploaderPopup(false);
   };
-
   return (
     <ContentBox2>
       <div className="flex h-[calc(100%-60px)] justify-between gap-2.5 bg-contentBg">
         <div className="overflow-auto px-themePadding w-3/4">
           {/* Pickup FOrm */}
-          <PickupForm state={newOrderValues} stateChanger={setNewOrderValues} />
+          <PickupForm
+            state={newOrderValues}
+            stateChanger={setNewOrderValues}
+            data={data}
+          />
           {/* Time */}
-          {/*
+
           <AddDelivery
             state={newOrderValues}
             stateChanger={setNewOrderValues}
+            data={data}
           />
           <SelectDateandTime
             state={newOrderValues}
             stateChanger={setNewOrderValues}
           />
-  */}
         </div>
         {/* Content Box */}
         <Map state={newOrderValues} />

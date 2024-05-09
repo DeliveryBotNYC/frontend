@@ -12,10 +12,22 @@ const AllOrders = () => {
   const contextValue = useContext(ThemeContext);
 
   //temp bearer
-  let config = {
-    headers: {
-      Authorization:
-        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
+  let local = {
+    url: "http://localhost:3000",
+    config: {
+      headers: {
+        Authorization:
+          "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
+      },
+    },
+  };
+  let production = {
+    url: "https://api.dbx.delivery",
+    config: {
+      headers: {
+        Authorization:
+          "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
+      },
     },
   };
 
@@ -24,13 +36,13 @@ const AllOrders = () => {
     queryKey: ["orders"],
     queryFn: () => {
       return axios
-        .get("https://api.dbx.delivery/orders", config)
+        .get(local.url + "/orders", local.config)
         .then((res) => res.data);
     },
   });
 
   return (
-    <div className="min-w-[336px] h-full bg-white rounded-2xl">
+    <div className="min-w-[400px] h-full bg-white rounded-2xl">
       {/* SearchBox */}
       <div className="w-full h-[110px]  py-5 bg-white rounded-tr-2xl rounded-tl-2xl">
         <div className="w-full border-b border-b-primaryBorder flex items-center gap-2 pb-2 px-2.5">
@@ -60,7 +72,7 @@ const AllOrders = () => {
         style={{
           height: "calc(100% - 110px)",
         }}
-        className="overflow-auto tracking-orders"
+        className="overflow-auto"
       >
         {data?.map((item) => (
           <TrackingOrderCard key={item.order_id} item={item} />

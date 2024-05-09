@@ -5,7 +5,7 @@ import RefreshIcon from "../../assets/refresh-icon.svg";
 import homeIcon from "../../assets/store-bw.svg";
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import "https://maps.googleapis.com/maps/api/js?key=AIzaSyAxbAIczxXk3xoL3RH85z3eAZLncLZAuGg&libraries=places";
 import clipart from "../../assets/pickupClipArt.svg";
 import {
@@ -17,99 +17,65 @@ import {
   isEmpty,
 } from "../reusable/functions";
 
-const PickupForm = ({ stateChanger, ...rest }) => {
-  // Get defaults data
-  const { isLoading, data, error, isSuccess } = useQuery({
-    queryKey: ["profile"],
-    queryFn: () => {
-      return axios
-        .get("https://api.dbx.delivery/retail/profile", config)
-        .then((res) => ({
-          default: res?.data?.defaults?.store_default,
-          phone: res?.data?.account?.phone,
-          name: res?.data?.account?.store_name,
-          note: res?.data?.account?.note,
-          location: {
-            full: res?.data?.account?.location?.street_address_1,
-            street_address_1: res?.data?.account?.location?.street_address_1,
-            street_address_2: res?.data?.account?.location?.street_address_2,
-            access_code: res?.data?.account?.location?.access_code,
-            city: res?.data?.account?.location?.city,
-            state: res?.data?.account?.location?.state,
-            zip: res?.data?.account?.location?.zip,
-            lat: res?.data?.account?.location?.lat,
-            lon: res?.data?.account?.location?.lon,
-          },
-          required_verification: {
-            picture: res?.data?.defaults?.delivery_proof?.picture,
-          },
-        }));
-    },
-  });
-  //update state when default data
-  useEffect(() => {
-    if (isSuccess) {
-      if (data?.default == "pickup")
-        stateChanger({
-          ...rest?.state,
-          pickup: data,
-        });
-      else
-        stateChanger({
-          ...rest?.state,
-          pickup: {
-            ...rest?.state?.pickup,
-            required_verification: {
-              picture: data?.required_verification?.picture,
-            },
-          },
-        });
-    }
-  }, [isSuccess]);
-
-  //autofill phone or reset when changed
-  useEffect(() => {
-    if (
-      /^(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(
-        rest.state.pickup.phone
-      )
-    ) {
-      //when phone number is in database
-      if (rest.state.pickup.phone == "(917) 573-7687")
+const PickupForm = ({ data, stateChanger, ...rest }) => {
+  //phone autofill
+  const checkPhoneExist = useMutation({
+    mutationFn: (newTodo: string) =>
+      axios.post(
+        "https://api.dbx.delivery/orders/phone",
+        { phone: rest?.state?.pickup.phone },
+        config
+      ),
+    onSuccess: (phone_customer) => {
+      if (phone_customer.data)
         stateChanger({
           ...rest.state,
           pickup: {
             ...rest.state?.pickup,
-            name: "Junior Nicolle",
-            note: "Please leave at apt door",
+            name: phone_customer?.data.name,
             location: {
               ...initialState.pickup.location,
-              full: "75 West End Ave, New York, NY, 10025",
-              street_address_1: "75 West End Ave",
-              city: "New York",
-              state: "10025",
-              zip: "zip",
-              lat: "40.7679496",
-              lon: "-73.9544466",
+              full:
+                phone_customer?.data.location?.street_address_1 +
+                ", " +
+                phone_customer?.data.location?.city +
+                ", " +
+                phone_customer?.data.location?.state +
+                " " +
+                phone_customer?.data.location?.zip,
+              street_address_1: phone_customer?.data.location?.street_address_1,
+              city: phone_customer?.data.location?.city,
+              state: phone_customer?.data.location?.state,
+              zip: phone_customer?.data.location?.zip,
+              lat: phone_customer?.data.location?.lat,
+              lon: phone_customer?.data.location?.lon,
             },
           },
         });
+    },
+    onError: (error) => {
+      console.log(error);
+    },
+  });
+
+  //autofill phone or reset when changed
+  function phone_input(phone) {
+    console.log(phone);
+    stateChanger({
+      ...rest?.state,
+      pickup: {
+        ...initialState.pickup,
+        phone: phone,
+        required_verification: data?.required_verification,
+      },
+    });
+    if (/^(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(phone)) {
+      console.log("checkinbg");
+      checkPhoneExist.mutate(phone);
     }
-    //reset phone
-    else if (isSuccess)
-      stateChanger({
-        ...rest?.state,
-        pickup: {
-          ...initialState.pickup,
-          phone: rest?.state?.pickup?.phone,
-          required_verification: data?.required_verification,
-        },
-      });
-  }, [
-    /^(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(
-      rest?.state?.pickup?.phone
-    ),
-  ]);
+  }
+
+  //google autofill
   let autocomplete;
   let address1Field = document.getElementById("pickup_street_address_1");
   if (address1Field)
@@ -217,7 +183,13 @@ const PickupForm = ({ stateChanger, ...rest }) => {
               onClick={() => {
                 stateChanger({
                   ...rest.state,
-                  pickup: data,
+                  pickup: {
+                    ...rest.state.pickup,
+                    phone: data.phone,
+                    name: data.name,
+                    note: data.note,
+                    location: data.location,
+                  },
                 });
               }}
               src={homeIcon}
@@ -228,7 +200,10 @@ const PickupForm = ({ stateChanger, ...rest }) => {
               onClick={() => {
                 stateChanger({
                   ...rest?.state,
-                  pickup: initialState.pickup,
+                  pickup: {
+                    ...initialState.pickup,
+                    required_verification: data.pickup_proof,
+                  },
                 });
               }}
               src={RefreshIcon}
@@ -242,29 +217,20 @@ const PickupForm = ({ stateChanger, ...rest }) => {
       {!/^(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(
         rest?.state?.pickup?.phone
       ) ? (
-        <div className="w-full px-5 pb-3">
-          {/* Phone */}
-          <label className="text-themeDarkGray text-xs">
-            Phone <span className="text-themeRed">*</span>
-          </label>
-
-          {/* Input Field */}
-          <input
-            className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-            id="pickup_phone"
-            value={rest?.state?.pickup?.phone}
-            onKeyUp={(e) => formatToPhone(e)}
-            onKeyDown={(e) => enforceFormat(e)}
-            onChange={(e) =>
-              stateChanger({
-                ...rest?.state,
-                pickup: {
-                  ...rest?.state?.pickup,
-                  phone: e.target.value,
-                },
-              })
-            }
-          />
+        <div className="w-full grid grid-cols-1 gap-2.5 px-5 pb-3">
+          <div className="w-full">
+            <label className="text-themeDarkGray text-xs">
+              Phone <span className="text-themeRed">*</span>
+            </label>
+            <input
+              className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+              id="pickup_phone"
+              value={rest?.state?.pickup?.phone}
+              onKeyUp={(e) => formatToPhone(e)}
+              onKeyDown={(e) => enforceFormat(e)}
+              onChange={(e) => phone_input(e.target.value)}
+            />
+          </div>
           <img src={clipart} alt="pickup-clipart" />
         </div>
       ) : (
@@ -348,13 +314,11 @@ const PickupForm = ({ stateChanger, ...rest }) => {
           <div className="w-full flex items-center justify-between gap-2.5">
             {/* Apt */}
             <div className="w-full">
-              <label className="text-themeDarkGray text-xs">
-                Apt <span className="text-themeRed">*</span>
-              </label>
+              <label className="text-themeDarkGray text-xs">Apt</label>
 
               {/* Input Field */}
               <input
-                type="number"
+                type="text"
                 id="pickup_street_address_2"
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
                 value={rest?.state?.pickup?.location?.street_address_2}
@@ -375,13 +339,11 @@ const PickupForm = ({ stateChanger, ...rest }) => {
 
             {/* Access code */}
             <div className="w-full">
-              <label className="text-themeDarkGray text-xs">
-                Access code <span className="text-themeRed">*</span>
-              </label>
+              <label className="text-themeDarkGray text-xs">Access code</label>
 
               {/* Input Field */}
               <input
-                type="password"
+                type="text"
                 id="pickup_access_code"
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
                 value={rest?.state?.pickup?.location?.access_code}

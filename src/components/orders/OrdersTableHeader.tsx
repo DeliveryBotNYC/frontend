@@ -1,6 +1,6 @@
 import FilterIcon from "../../assets/filter-icon.svg";
 
-const OrdersTableHeader = () => {
+const OrdersTableHeader = ({ stateChanger, ...rest }) => {
   return (
     <thead className="w-full bg-contentBg px-themePadding">
       <tr>
@@ -13,14 +13,36 @@ const OrdersTableHeader = () => {
         </th>
 
         <th>
-          <div className="flex items-center gap-2.5 px-2.5">
+          <div
+            className="flex items-center gap-2.5 px-2.5"
+            onClick={() => {
+              stateChanger({
+                header: "status",
+                order:
+                  rest.header == "status" && rest.order == "desc"
+                    ? "asc"
+                    : "desc",
+              });
+            }}
+          >
             <p className="text-themeDarkGray font-normal">Status</p>
-            <img src={FilterIcon} alt="filter-icon" />
+            <img
+              src={rest.header == "status" ? FilterIcon : FilterIcon}
+              alt="filter-icon"
+            />
           </div>
         </th>
 
         <th>
-          <div className="flex items-center gap-2.5 px-2.5">
+          <div
+            className="flex items-center gap-2.5 px-2.5"
+            onClick={() => {
+              stateChanger({
+                header: "pickup.name",
+                order: "desc",
+              });
+            }}
+          >
             <p className="text-themeDarkGray font-normal">Pickup</p>
             <img src={FilterIcon} alt="filter-icon" />
           </div>
@@ -41,7 +63,15 @@ const OrdersTableHeader = () => {
         </th>
 
         <th>
-          <div className="flex items-center gap-2.5 pr-[30px] pl-2.5">
+          <div
+            className="flex items-center gap-2.5 pr-[30px] pl-2.5"
+            onClick={() => {
+              stateChanger({
+                header: "last_updated",
+                order: "desc",
+              });
+            }}
+          >
             <p className="text-themeDarkGray font-normal">Last updated</p>
             <img src={FilterIcon} alt="filter-icon" />
           </div>

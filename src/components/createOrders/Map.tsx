@@ -1,10 +1,48 @@
-import { MapContainer, Marker, Popup, TileLayer } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import { Icon } from "leaflet";
-
+import { useState, useEffect } from "react";
 import DeliveredBwFilledIcon from "../../assets/delivery-bw-filled.svg";
 const HomeMap = (state) => {
   // Delivered Markers
-
+  function Bounds() {
+    var map = useMap();
+    useEffect(() => {
+      if (!map) return;
+      {
+        state?.state?.pickup?.location?.lat &&
+        state?.state?.delivery?.location?.lat
+          ? map.fitBounds(
+              [
+                [
+                  state?.state?.pickup?.location?.lat,
+                  state?.state?.pickup?.location?.lon,
+                ],
+                [
+                  state?.state?.delivery?.location?.lat,
+                  state?.state?.delivery?.location?.lon,
+                ],
+              ],
+              { padding: [50, 50] }
+            )
+          : map.fitBounds([
+              [40.84, -73.91],
+              [40.63, -74.02],
+            ]);
+      }
+    }, [
+      map,
+      [
+        [
+          state?.state?.pickup?.location?.lat,
+          state?.state?.pickup?.location?.lon,
+        ],
+        [
+          state?.state?.delivery?.location?.lat,
+          state?.state?.delivery?.location?.lon,
+        ],
+      ],
+    ]);
+  }
   const customStoreIcon = new Icon({
     iconUrl: DeliveredBwFilledIcon,
     iconSize: [45, 52],
@@ -24,7 +62,7 @@ const HomeMap = (state) => {
         />
         {state?.state?.pickup?.location?.lat ? (
           <Marker
-            key="1"
+            key="pickup"
             icon={customStoreIcon}
             position={[
               state?.state?.pickup?.location?.lat,
@@ -34,7 +72,7 @@ const HomeMap = (state) => {
         ) : null}
         {state?.state?.delivery?.location?.lat ? (
           <Marker
-            key="1"
+            key="delivery"
             icon={customStoreIcon}
             position={[
               state?.state?.delivery?.location?.lat,
@@ -42,6 +80,7 @@ const HomeMap = (state) => {
             ]}
           ></Marker>
         ) : null}
+        <Bounds />
       </MapContainer>
     </div>
   );

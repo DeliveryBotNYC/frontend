@@ -1,67 +1,100 @@
 import { useState, useEffect } from "react";
 import moment from "moment";
+import TimeIconFilled from "../../assets/timeFilled.svg";
 import TimeIcon from "../../assets/time.svg";
 import RechareIcon from "../../assets/recharge.svg";
+import axios from "axios";
+import { useMutation } from "@tanstack/react-query";
+import { isCompleted, initialState } from "../reusable/functions";
+import clipart from "../../assets/timeframeClipArt.svg";
 
 const SelectDateandTime = ({ stateChanger, ...rest }) => {
-  // Data
-  const timeFrameData = [
-    {
-      id: 1,
-      title: "same-day",
-      slots: [
-        {
-          start_time: "2024-05-03T18:00:00.000Z",
-          end_time: "2024-05-03T24:00:00.000Z",
-        },
-        {
-          start_time: "2024-05-03T19:00:00.000Z",
-          end_time: "2024-05-03T22:00:00.000Z",
-        },
-        {
-          start_time: "2024-05-03T20:00:00.000Z",
-          end_time: "2024-05-03T23:00:00.000Z",
-        },
-      ],
+  //console.log(rest?.state.timeframe);
+  const [fastest, setFastest] = useState({});
+  let config = {
+    headers: {
+      Authorization:
+        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
     },
-    {
-      id: 2,
-      title: "2-hour",
-    },
-    {
-      id: 3,
-      title: "Same-day",
-    },
-  ];
+  };
+  const [selectedDate, setSelectedDate] = useState(
+    moment().format("YYYY-MM-DD")
+  );
 
-  // active timeframe
-  const [activeTimeFrame, setActiveTimeFrame] = useState<string>("1-hour");
-  const [timeframFormValues, setTimeframeFormValues] = useState({
-    service: "same-day",
-    start_time: "",
-    end_time: "",
+  //set to fastest service
+  //rest?.state?.timeframe?.service_id
+  // Data
+  const [timeframes, setTimeframes] = useState([]);
+  const addTodoMutation = useMutation({
+    mutationFn: (getTimeframes: string) =>
+      axios.post(
+        "https://api.dbx.delivery/orders/timeframes?date=" +
+          moment(selectedDate).format("MM-DD-YYYY"),
+        rest?.state,
+        config
+      ),
+    onSuccess: (data) => {
+      setFastest({
+        service: data?.data[0]?.service,
+        service_id: 0,
+        start_time: data?.data[0]?.slots[0]?.start_time,
+        end_time: data?.data[0]?.slots[0]?.end_time,
+      }),
+        setTimeframes(data?.data);
+      stateChanger({
+        ...rest?.state,
+        timeframe: {
+          service: data?.data[0]?.service,
+          service_id: 0,
+          start_time: data?.data[0]?.slots[0]?.start_time,
+          end_time: data?.data[0]?.slots[0]?.end_time,
+        },
+      });
+    },
+    onError: (error) => {},
   });
   useEffect(() => {
-    stateChanger({
-      ...rest.state,
-      timeframe: timeframFormValues,
-    });
-  }, [timeframFormValues]);
+    isCompleted(rest?.state).pickup && isCompleted(rest?.state).delivery
+      ? addTodoMutation.mutate(rest?.state)
+      : setTimeframes([]);
+  }, [rest?.state.pickup && rest?.state.delivery]);
   return (
     <div className="w-full bg-white rounded-2xl my-5">
       {/* Header */}
       <div className="py-5 px-2.5 flex items-center justify-between gap-2.5">
         {/* Left side */}
         <div className="flex items-center gap-2.5">
-          <img src={TimeIcon} alt="icon" />
+          <img
+            src={
+              isCompleted(rest?.state).timeframe &&
+              isCompleted(rest?.state).pickup &&
+              isCompleted(rest?.state).delivery
+                ? TimeIconFilled
+                : TimeIcon
+            }
+            alt="icon"
+          />
 
           <p className="text-2xl text-black font-bold heading">Time</p>
         </div>
 
         {/* Right Side */}
-        <div>
-          <img src={RechareIcon} alt="refresh-icon" />
-        </div>
+        {rest?.state.timeframe.start_time != fastest?.start_time &&
+        isCompleted(rest?.state).pickup &&
+        isCompleted(rest?.state).delivery ? (
+          <div>
+            <img
+              onClick={() => {
+                stateChanger({
+                  ...rest?.state,
+                  timeframe: fastest,
+                });
+              }}
+              src={RechareIcon}
+              alt="refresh-icon"
+            />
+          </div>
+        ) : null}
       </div>
 
       {/* Pickup Forms Data */}
@@ -73,22 +106,28 @@ const SelectDateandTime = ({ stateChanger, ...rest }) => {
           </label>
 
           <div className="flex items-center gap-20">
-            {timeFrameData?.map((item) => (
+            {timeframes?.map((item, index) => (
               <p
                 onClick={() =>
-                  setTimeframeFormValues({
-                    ...timeframFormValues,
-                    service: item.title,
+                  stateChanger({
+                    ...rest?.state,
+                    timeframe: {
+                      ...rest?.state?.timeframe,
+                      service: item?.service,
+                      service_id: index,
+                      start_time: item?.slots[0].start_time,
+                      end_time: item?.slots[0].end_time,
+                    },
                   })
                 }
-                key={item.id}
+                key={item?.index}
                 className={`text-sm text-themeLightPurple cursor-pointer ${
-                  timeframFormValues.service === item.title
+                  rest?.state?.timeframe?.service === item?.service
                     ? "font-bold"
                     : "font-normal"
                 }`}
               >
-                {item.title}
+                {item?.service}
               </p>
             ))}
           </div>
@@ -104,7 +143,11 @@ const SelectDateandTime = ({ stateChanger, ...rest }) => {
             <input
               type="date"
               className="w-full"
-              value={moment(timeframFormValues.start_time).format("yyyy-MM-DD")}
+              value={moment(selectedDate).format("yyyy-MM-DD")}
+              onChange={(e) => {
+                setSelectedDate(e.target.value);
+                addTodoMutation.mutate(rest?.state);
+              }}
             />
           </div>
         </div>
@@ -119,21 +162,32 @@ const SelectDateandTime = ({ stateChanger, ...rest }) => {
             {/* Select Field */}
             <select
               className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+              id="timeframe"
+              value={
+                rest?.state?.timeframe.start_time +
+                ";" +
+                rest?.state?.timeframe.end_time
+              }
               onChange={(e) =>
-                setTimeframeFormValues({
-                  ...timeframFormValues,
-                  start_time: e.target.value.split(";")[0],
-                  end_time: e.target.value.split(";")[1],
+                stateChanger({
+                  ...rest?.state,
+                  timeframe: {
+                    ...rest?.state?.timeframe,
+                    start_time: e.target.value.split(";")[0],
+                    end_time: e.target.value.split(";")[1],
+                  },
                 })
               }
             >
-              {timeFrameData[0].slots?.map((item) => (
-                <option value={item.start_time + ";" + item.end_time}>
-                  {moment(item.start_time).format("hh:mm A") +
-                    " - " +
-                    moment(item.end_time).format("hh:mm A")}
-                </option>
-              ))}
+              {timeframes[rest?.state?.timeframe?.service_id]?.slots?.map(
+                (item) => (
+                  <option value={item.start_time + ";" + item.end_time}>
+                    {moment(item.start_time).format("hh:mm A") +
+                      " - " +
+                      moment(item.end_time).format("hh:mm A")}
+                  </option>
+                )
+              )}
             </select>
           </div>
         </div>

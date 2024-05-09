@@ -14,31 +14,10 @@ import UseGetOrderId from "../../hooks/UseGetOrderId";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 
-const OrderTrackingInfo = () => {
+const OrderTrackingInfo = ({ data }) => {
   // Context to grab the search input state
   const contextValue = useContext(ThemeContext);
 
-  // Grab the order id from addressbar
-  const orderId = UseGetOrderId();
-
-  //temp bearer
-  let config = {
-    headers: {
-      Authorization:
-        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
-    },
-  };
-  // Get orders data
-  const { isLoading, data, error, refetch } = useQuery({
-    queryKey: ["order"],
-    queryFn: () => {
-      return axios
-        .get("https://api.dbx.delivery/orders?order_id=" + orderId, config)
-        .then((res) => res.data);
-    },
-  });
-  //refetch if theres already data
-  data ? refetch() : null;
   // Current Order Status
   const currentStatus = data?.status;
 
@@ -55,7 +34,9 @@ const OrderTrackingInfo = () => {
             <div className="w-full flex items-center justify-between">
               <p className="text-lg text-themeOrange">
                 DBX
-                <span className="text-black font-semibold">{orderId}</span>
+                <span className="text-black font-semibold">
+                  {data?.order_id}
+                </span>
               </p>
 
               <Link to="/orders">
@@ -104,7 +85,7 @@ const OrderTrackingInfo = () => {
 
                 {/* Delivery tracking */}
                 <div className="w-full">
-                  <InfoDetails items={data?.logs} />
+                  <InfoDetails items={data} />
                 </div>
               </>
             ) : null}
@@ -121,7 +102,7 @@ const OrderTrackingInfo = () => {
         <div className="w-full bg-white rounded-2xl flex items-center justify-between gap-2.5 py-4">
           {/* left */}
           <div className="w-full flex items-center justify-center">
-            <Link to={`/order/edit/${orderId}`}>
+            <Link to={`/order/edit/${data?.order_id}`}>
               <p className="text-xs text-themeLightOrangeTwo">
                 View/edit order details
               </p>

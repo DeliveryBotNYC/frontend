@@ -8,16 +8,33 @@ export let config = {
 export function isCompleted(input) {
   return {
     pickup:
-      input.pickup.phone === "" ||
+      !/^(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(
+        input.pickup.phone
+      ) ||
       input.pickup.name === "" ||
       input.pickup.location.street_address_1 === "" ||
       input.pickup.location.lat === "" ||
       input.pickup.location.lon === ""
         ? false
         : true,
+    delivery:
+      !/^(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(
+        input.delivery.phone
+      ) ||
+      input.delivery.name === "" ||
+      input.delivery.location.street_address_1 === "" ||
+      input.delivery.location.lat === "" ||
+      input.delivery.location.lon === ""
+        ? false
+        : true,
+    timeframe:
+      input.timeframe.service === "" ||
+      input.timeframe.start_time === "" ||
+      input.timeframe.end_time === ""
+        ? false
+        : true,
   };
 }
-
 export function isEmpty(input) {
   return {
     pickup:
@@ -26,6 +43,14 @@ export function isEmpty(input) {
       input.pickup.location.street_address_1 === "" &&
       input.pickup.location.lat === "" &&
       input.pickup.location.lon === ""
+        ? true
+        : false,
+    delivery:
+      input.delivery.phone === "" &&
+      input.delivery.name === "" &&
+      input.delivery.location.street_address_1 === "" &&
+      input.delivery.location.lat === "" &&
+      input.delivery.location.lon === ""
         ? true
         : false,
   };
@@ -94,6 +119,38 @@ export const initialState = {
       picture: false,
     },
   },
-  delivery: {},
-  timeframe: {},
+  delivery: {
+    phone: "",
+    name: "",
+    note: "",
+    tip: 0,
+    external_order_id: "",
+    location: {
+      street_address_1: "",
+      street_address_2: "",
+      access_code: "",
+      city: "",
+      state: "",
+      zip: "",
+      lat: "",
+      lon: "",
+    },
+    required_verification: {
+      picture: false,
+      recipient: false,
+      signature: false,
+    },
+    items: [
+      {
+        quantity: 1,
+        type: "box",
+      },
+    ],
+  },
+  timeframe: {
+    service: "same-day",
+    service_id: 0,
+    start_time: "",
+    end_time: "",
+  },
 };

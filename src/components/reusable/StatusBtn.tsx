@@ -13,13 +13,19 @@ const StatusBtn = ({ type }: { type: string }) => {
           ? processingStyle
           : type === "assigned"
           ? assignedStyle
+          : type === "arrived_at_pickup"
+          ? assignedStyle
           : type === "picked_up"
+          ? pickedStyle
+          : type === "arrived_at_delivery"
           ? pickedStyle
           : type === "delivered"
           ? deliveredStyle
           : type === "returned"
           ? cancelledStyle
           : type === "canceled"
+          ? cancelledStyle
+          : type === "undeliverable"
           ? cancelledStyle
           : type === "ongoing"
           ? processingStyle
@@ -34,7 +40,11 @@ const StatusBtn = ({ type }: { type: string }) => {
         ? "Processing"
         : type === "assigned"
         ? "Assigned"
+        : type === "arrived_at_pickup"
+        ? "Assigned"
         : type === "picked_up"
+        ? "Picked-up"
+        : type === "arrived_at_delivery"
         ? "Picked-up"
         : type === "delivered"
         ? "Delivered"
@@ -42,6 +52,8 @@ const StatusBtn = ({ type }: { type: string }) => {
         ? "Returned"
         : type === "canceled"
         ? "Canceled"
+        : type === "undeliverable"
+        ? "Undeliverable"
         : type === "ongoing"
         ? "Ongoing"
         : type === "received"

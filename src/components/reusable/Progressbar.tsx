@@ -17,14 +17,20 @@ const Progressbar = ({ status, value }: { status: string; value: string }) => {
       ? (value = "0%")
       : status === "assigned"
       ? (value = "25%")
+      : status === "arrived_at_pickup"
+      ? (value = "30%")
       : status === "picked_up"
       ? (value = "50%")
+      : status === "arrived_at_delivery"
+      ? (value = "75%")
       : status === "delivered"
       ? (value = "100%")
       : status === "returned"
       ? (value = "100%")
       : status === "canceled"
       ? (value = "100%")
+      : status === "undeliverable"
+      ? (value = "75%")
       : null;
   }
 
@@ -35,13 +41,19 @@ const Progressbar = ({ status, value }: { status: string; value: string }) => {
           ? processingBg
           : status === "assigned"
           ? assignedBg
+          : status === "arrived_at_pickup"
+          ? assignedBg
           : status === "picked_up"
+          ? pickedBg
+          : status === "arrived_at_delivery"
           ? pickedBg
           : status === "delivered"
           ? deliveredBg
           : status === "returned"
           ? cancelledBg
           : status === "canceled"
+          ? cancelledBg
+          : status === "undeliverable"
           ? cancelledBg
           : null
       } rounded-full relative mb-2.5`}
@@ -57,13 +69,19 @@ const Progressbar = ({ status, value }: { status: string; value: string }) => {
             ? processingValueBg
             : status === "assigned"
             ? assignedValueBg
+            : status === "arrived_at_pickup"
+            ? assignedValueBg
             : status === "picked_up"
+            ? pickedValueBg
+            : status === "arrived_at_delivery"
             ? pickedValueBg
             : status === "delivered"
             ? deliveredValueBg
             : status === "returned"
             ? cancelledValueBg
             : status === "canceled"
+            ? cancelledValueBg
+            : status === "undeliverable"
             ? cancelledValueBg
             : null
         } rounded-full`}

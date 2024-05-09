@@ -4,41 +4,37 @@ import {
   Polyline,
   Popup,
   TileLayer,
+  useMap,
 } from "react-leaflet";
+import { useState, useEffect } from "react";
 import { Icon, LatLngExpression } from "leaflet";
 
 import DeliveredIcon from "../../assets/delivered.svg";
 import CRIcon from "../../assets/current-loc.svg";
 import MultiDelIcon from "../../assets/multi-Del.svg";
+import BetweenIcon from "../../assets/mapBetweenMarker.svg";
 
-const CurrentOrderMap = () => {
-  // Delivered Markers
-  const DeliveredMarkers = [
-    {
-      id: 1,
-      geoCode: [51.505, -0.06],
-      pContent: "Order Delivered",
-    },
-  ];
-
+const CurrentOrderMap = ({ data }) => {
   // Location Markers
-  const LocationMarkers = [
-    {
-      id: 1,
-      geoCode: [51.5, -0.07],
-      pContent: "Delivery man at 20 min away",
+  const driver = {
+    location: {
+      lat: 40.759371,
+      lon: -73.966142,
     },
+  };
+  const betweens = [
+    { lat: 40.759, lon: -73.965 },
+    { lat: 40.754, lon: -73.965 },
   ];
-
-  // Location Markers
-  const MultiDelMarkers = [
-    {
-      id: 1,
-      geoCode: [51.496, -0.07],
-      pContent: "Multiple Delivery will be delievered Here",
-    },
-  ];
-
+  var betweensPoly = [];
+  betweensPoly.push([driver.location.lat, driver.location.lon]);
+  betweens?.map((item) => {
+    betweensPoly.push([item.lat, item.lon]);
+  });
+  betweensPoly.push([
+    data?.delivery?.location?.lat,
+    data?.delivery?.location?.lon,
+  ]);
   const customDeliveredIcon = new Icon({
     iconUrl: DeliveredIcon,
     iconSize: [38, 48],
@@ -46,7 +42,7 @@ const CurrentOrderMap = () => {
 
   const currentLocationIcon = new Icon({
     iconUrl: CRIcon,
-    iconSize: [37, 38],
+    iconSize: [40, 40],
   });
 
   const CustomMultiDelIcon = new Icon({
@@ -54,13 +50,32 @@ const CurrentOrderMap = () => {
     iconSize: [38, 48],
   });
 
-  const polyline = [
-    [51.505, -0.06],
-    [51.506, -0.07],
-    [51.496, -0.07],
-  ];
+  const BetweenMarker = new Icon({
+    iconUrl: BetweenIcon,
+    iconSize: [15, 15],
+  });
 
-  const AssignedOptions = { color: "#EEB678" };
+  function Bounds() {
+    var map = useMap();
+    useEffect(() => {
+      if (!map) return;
+      {
+        data?.pickup?.location?.lat && data?.delivery?.location?.lat
+          ? map.fitBounds(
+              [
+                [driver?.location?.lat, driver?.location?.lon],
+                [data.pickup?.location?.lat, data.pickup?.location?.lon],
+                [data.delivery?.location?.lat, data.delivery?.location?.lon],
+              ],
+              { padding: [50, 0], paddingBottomRight: [400, 0] }
+            )
+          : map.fitBounds([
+              [40.84, -73.91],
+              [40.63, -74.02],
+            ]);
+      }
+    }, [map]);
+  }
 
   return (
     <div className="w-full h-full">
@@ -74,58 +89,68 @@ const CurrentOrderMap = () => {
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png"
         />
-        <Polyline
-          pathOptions={AssignedOptions}
-          positions={polyline as LatLngExpression[]}
-        />
-        {/* Delivered Markers */}
-        {DeliveredMarkers?.map(({ geoCode, id, pContent }) => {
-          const convertedGeoCode: [number, number] = [geoCode[0], geoCode[1]];
+        {data?.delivery?.location?.lat ? (
+          <Polyline
+            pathOptions={{ color: "rgba(238, 182, 120, 0.4)" }}
+            positions={betweensPoly}
+          />
+        ) : null}
+        {data?.pickup?.location?.lat && driver?.location?.lat ? (
+          <Polyline
+            pathOptions={{ color: "#EEB678" }}
+            positions={
+              [
+                [data?.pickup?.location?.lat, data?.pickup?.location?.lon],
+                [driver?.location?.lat, driver.location.lon],
+              ] as LatLngExpression[]
+            }
+          />
+        ) : null}
 
-          return (
-            <Marker
-              icon={customDeliveredIcon}
-              key={id}
-              position={convertedGeoCode}
-            >
-              <Popup>
-                <p className="text-themeDarkGreen text-sm">{pContent}</p>
-              </Popup>
-            </Marker>
-          );
-        })}
+        {/* Pickup Marker */}
+        {data?.pickup?.location?.lat ? (
+          <Marker
+            icon={CustomMultiDelIcon}
+            key={1}
+            position={[
+              data?.pickup?.location?.lat,
+              data?.pickup?.location?.lon,
+            ]}
+          ></Marker>
+        ) : null}
+
+        {/* Delivered Marker */}
+        {data?.delivery?.location?.lat ? (
+          <Marker
+            icon={customDeliveredIcon}
+            key={2}
+            position={[
+              data?.delivery?.location?.lat,
+              data?.delivery?.location?.lon,
+            ]}
+          ></Marker>
+        ) : null}
+
         {/* Current Location Markers */}
-        {LocationMarkers?.map(({ geoCode, id, pContent }) => {
-          const convertedGeoCode: [number, number] = [geoCode[0], geoCode[1]];
-
-          return (
-            <Marker
-              key={id}
-              icon={currentLocationIcon}
-              position={convertedGeoCode}
-            >
-              <Popup>
-                <p className="text-themeBlue text-sm">{pContent}</p>
-              </Popup>
-            </Marker>
-          );
-        })}
+        {/* Delivered Marker */}
+        {driver?.location?.lat && driver?.location?.lon ? (
+          <Marker
+            icon={currentLocationIcon}
+            key={3}
+            position={[driver?.location?.lat, driver?.location?.lon]}
+          ></Marker>
+        ) : null}
         {/* Multiple Delivery Markers */}
-        {MultiDelMarkers?.map(({ geoCode, id, pContent }) => {
-          const convertedGeoCode: [number, number] = [geoCode[0], geoCode[1]];
-
+        {betweens?.map((item, index) => {
           return (
             <Marker
-              key={id}
-              icon={CustomMultiDelIcon}
-              position={convertedGeoCode}
-            >
-              <Popup>
-                <p className="text-themeBlue text-sm">{pContent}</p>
-              </Popup>
-            </Marker>
+              key={index}
+              icon={BetweenMarker}
+              position={[item.lat, item.lon]}
+            ></Marker>
           );
         })}
+        <Bounds />
       </MapContainer>
     </div>
   );
