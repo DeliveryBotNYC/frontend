@@ -7,46 +7,59 @@ import {
   useMap,
 } from "react-leaflet";
 import { useState, useEffect } from "react";
-import { Icon, LatLngExpression } from "leaflet";
+import { Icon, LatLngExpression, divIcon } from "leaflet";
 
-import DeliveredIcon from "../../assets/delivered.svg";
 import CRIcon from "../../assets/current-loc.svg";
-import MultiDelIcon from "../../assets/multi-Del.svg";
 import BetweenIcon from "../../assets/mapBetweenMarker.svg";
+import PickupIcon from "../../assets/pickupMapIcon.svg";
+import PickUpCompletedIcom from "../../assets/pickupCompletedMapIcon.svg";
+import DeliveryIcon from "../../assets/deliveryMapIcon.svg";
+import DeliveryCompletedIcon from "../../assets/deliveryMapCompletedIcon.svg";
 
 const CurrentOrderMap = ({ data }) => {
   // Location Markers
-  const betweens = [
-    { lat: 40.759, lon: -73.965 },
-    { lat: 40.754, lon: -73.965 },
-  ];
   var betweensPoly = [];
-  data.driver?.location?.lat
+  data.driver?.location?.lat && data.status != "delivered"
     ? betweensPoly.push([
         data.driver?.location?.lat,
         data.driver?.location?.lon,
       ])
     : null;
-  betweens?.map((item) => {
+  data.stops?.map((item) => {
     betweensPoly.push([item.lat, item.lon]);
-  });
-  betweensPoly.push([
-    data?.delivery?.location?.lat,
-    data?.delivery?.location?.lon,
-  ]);
-  const customDeliveredIcon = new Icon({
-    iconUrl: DeliveredIcon,
-    iconSize: [38, 48],
   });
 
   const currentLocationIcon = new Icon({
     iconUrl: CRIcon,
     iconSize: [40, 40],
   });
+  const deliveryMarker = new divIcon({
+    className: "delivery-icon",
+    html: `<img src= ${
+      data?.status == "delivered" ? DeliveryCompletedIcon : DeliveryIcon
+    }/><span style="position: fixed;top:16px;width: 41px;text-align: center;left: -3px;color: white;"> ${
+      data?.status == "assigned" ||
+      data?.status == "arrived_at_pickup" ||
+      data?.status == "picked_up" ||
+      data?.status == "arrived_at_delivery"
+        ? data.delivery?.stop
+        : ""
+    } </span>`,
+  });
 
-  const CustomMultiDelIcon = new Icon({
-    iconUrl: MultiDelIcon,
-    iconSize: [38, 48],
+  const pickupMarker = new divIcon({
+    className: "pickup-icon",
+    html: `<img src= ${
+      data?.status == "processing" ||
+      data?.status == "assigned" ||
+      data?.status == "arrived_at_pickup"
+        ? PickupIcon
+        : PickUpCompletedIcom
+    }/><span style="position: fixed;top: 8px;width: 41px;text-align: center;left: 3px;color: white;"> ${
+      data?.status == "assigned" || data?.status == "arrived_at_pickup"
+        ? data.pickup?.stop
+        : ""
+    } </span>`,
   });
 
   const BetweenMarker = new Icon({
@@ -60,10 +73,12 @@ const CurrentOrderMap = ({ data }) => {
       if (!map) return;
       {
         let bounds = [];
-        data?.pickup?.location?.lat && data?.delivery?.location?.lat
-          ? bounds.push(
-              [data.pickup?.location?.lat, data.pickup?.location?.lon],
-              [data.delivery?.location?.lat, data.delivery?.location?.lon]
+        Array.isArray(data?.stops) && data?.stops?.length > 0
+          ? bounds.push(data?.stops)
+          : data.delivery?.lat
+          ? betweensPoly.push(
+              [data.delivery?.lat, data.delivery?.lon],
+              [data.pickup?.lat, data.pickup?.lon]
             )
           : bounds.push([40.84, -73.91], [40.63, -74.02]);
 
@@ -99,7 +114,7 @@ const CurrentOrderMap = ({ data }) => {
             positions={betweensPoly}
           />
         ) : null}
-        {data?.pickup?.location?.lat && data?.driver?.location?.lat ? (
+        {data?.driver?.location?.histry ? (
           <Polyline
             pathOptions={{ color: "#EEB678" }}
             positions={
@@ -114,7 +129,7 @@ const CurrentOrderMap = ({ data }) => {
         {/* Pickup Marker */}
         {data?.pickup?.location?.lat ? (
           <Marker
-            icon={CustomMultiDelIcon}
+            icon={pickupMarker}
             key={1}
             position={[
               data?.pickup?.location?.lat,
@@ -126,7 +141,7 @@ const CurrentOrderMap = ({ data }) => {
         {/* Delivered Marker */}
         {data?.delivery?.location?.lat ? (
           <Marker
-            icon={customDeliveredIcon}
+            icon={deliveryMarker}
             key={2}
             position={[
               data?.delivery?.location?.lat,
@@ -145,14 +160,15 @@ const CurrentOrderMap = ({ data }) => {
           ></Marker>
         ) : null}
         {/* Multiple Delivery Markers */}
-        {betweens?.map((item, index) => {
-          return (
+        {data.stops?.map((item, index) => {
+          return item.o_order != data?.pickup?.o_order &&
+            item.o_order != data?.delivery?.o_order ? (
             <Marker
               key={index}
               icon={BetweenMarker}
               position={[item.lat, item.lon]}
             ></Marker>
-          );
+          ) : null;
         })}
         <Bounds />
       </MapContainer>

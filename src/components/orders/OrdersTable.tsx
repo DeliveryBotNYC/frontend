@@ -10,9 +10,17 @@ import { useQuery } from "@tanstack/react-query";
 const OrdersTable = () => {
   // Context to grab the search input state
   const contextValue = useContext(ThemeContext);
-  const [sortBy, setSortBy] = useState({ header: "created_at", order: "desc" });
+  const [sortBy, setSortBy] = useState({
+    header: "last_updated",
+    order: "desc",
+  });
 
   function sortFunction(a, b) {
+    sortBy.header == "start_time"
+      ? ((a = a.timeframe), (b = b.timeframe))
+      : sortBy.header == "name"
+      ? ((a = a.delivery), (b = b.delivery))
+      : null;
     if (a[sortBy.header] === b[sortBy.header]) {
       return 0;
     } else {
