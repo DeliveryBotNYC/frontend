@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
+import { url } from "../../hooks/useConfig";
 import axios from "axios";
 const CompanySetupForm = () => {
   const navigate = useNavigate();
@@ -63,7 +64,7 @@ const CompanySetupForm = () => {
   };
   const addTodoMutation = useMutation({
     mutationFn: (newTodo: string) =>
-      axios.post("https://api.dbx.delivery/retail/signup", companySetupData),
+      axios.post(url + "/retail/signup", companySetupData),
     onSuccess: (data) => {
       navigate("/");
       console.log(data);

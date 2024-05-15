@@ -1,14 +1,10 @@
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
+import { useConfig, url } from "../hooks/useConfig";
 const AccountsGeneral = () => {
+  const config = useConfig();
   //temp bearer
-  let config = {
-    headers: {
-      Authorization:
-        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
-    },
-  };
 
   const [accountData, setaccountData] = useState({
     firstname: "",
@@ -27,9 +23,7 @@ const AccountsGeneral = () => {
   const { isLoading, data, error, status } = useQuery({
     queryKey: ["profile"],
     queryFn: () => {
-      return axios
-        .get("https://api.dbx.delivery/retail/profile", config)
-        .then((res) => res.data);
+      return axios.get(url + "/retail/profile", config).then((res) => res.data);
     },
   });
 

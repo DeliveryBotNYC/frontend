@@ -18,6 +18,7 @@ import DeliveryCompletedIcon from "../../assets/deliveryMapCompletedIcon.svg";
 
 const CurrentOrderMap = ({ data }) => {
   // Location Markers
+  console.log(data);
   var betweensPoly = [];
   data.driver?.location?.lat && data.status != "delivered"
     ? betweensPoly.push([
@@ -35,9 +36,9 @@ const CurrentOrderMap = ({ data }) => {
   });
   const deliveryMarker = new divIcon({
     className: "delivery-icon",
-    html: `<img src= ${
+    html: `<img src= '${
       data?.status == "delivered" ? DeliveryCompletedIcon : DeliveryIcon
-    }/><span style="position: fixed;top:16px;width: 41px;text-align: center;left: -3px;color: white;"> ${
+    }'/><span style="position: fixed;top:16px;width: 41px;text-align: center;left: -3px;color: white;"> ${
       data?.status == "assigned" ||
       data?.status == "arrived_at_pickup" ||
       data?.status == "picked_up" ||
@@ -48,14 +49,14 @@ const CurrentOrderMap = ({ data }) => {
   });
 
   const pickupMarker = new divIcon({
-    className: "pickup-icon",
-    html: `<img src= ${
+    className: "delivery-icon",
+    html: `<img src= '${
       data?.status == "processing" ||
       data?.status == "assigned" ||
       data?.status == "arrived_at_pickup"
         ? PickupIcon
         : PickUpCompletedIcom
-    }/><span style="position: fixed;top: 8px;width: 41px;text-align: center;left: 3px;color: white;"> ${
+    }'/><span style="position: fixed;top:8px;width: 41px;text-align: center;left: 3px;color: white;"> ${
       data?.status == "assigned" || data?.status == "arrived_at_pickup"
         ? data.pickup?.stop
         : ""
@@ -161,8 +162,8 @@ const CurrentOrderMap = ({ data }) => {
         ) : null}
         {/* Multiple Delivery Markers */}
         {data.stops?.map((item, index) => {
-          return item.o_order != data?.pickup?.o_order &&
-            item.o_order != data?.delivery?.o_order ? (
+          return item.address_id != data?.delivery?.location?.address_id &&
+            item.address_id != data?.pickup?.location?.address_id ? (
             <Marker
               key={index}
               icon={BetweenMarker}

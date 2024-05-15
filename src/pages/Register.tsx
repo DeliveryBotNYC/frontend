@@ -1,13 +1,14 @@
 import SecondaryNav from "../components/primary/SecondaryNav";
 import SignupForm from "../components/register/SignupForm";
 import { Link } from "react-router-dom";
-
+import BackgroundMap from "../components/reusable/mapBackground";
 // Image
 import SignupLogos from "../assets/signup-logos.svg";
 
 const Register = () => {
   return (
-    <div className="min-h-screen bg-cover bg-center bg-no-repeat formpage">
+    <div className="min-h-screen">
+      <BackgroundMap />
       <SecondaryNav />
 
       {/* Form Container */}

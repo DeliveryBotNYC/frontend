@@ -3,10 +3,25 @@ import CustomApiBox from "./CustomApiBox";
 import SmsNotifications from "./SmsNotifications";
 import CleanCloud from "./CleanCloud";
 import Zapiet from "./Zapiet";
-
+import { useConfig, url } from "../../hooks/useConfig";
 import SearchIcon from "../../assets/search.svg";
+import axios from "axios";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useContext, useState, useEffect } from "react";
 
 const AutomationContent = () => {
+  const config = useConfig();
+  const [automationData, setAutomationData] = useState({});
+
+  const { isLoading, data, error, status } = useQuery({
+    queryKey: ["get_automations"],
+    queryFn: () => {
+      return axios.get(url + "/automation", config).then((res) => res.data);
+    },
+  });
+  useEffect(() => {
+    if (status === "success") setAutomationData(data);
+  }, [status === "success"]);
   return (
     <ContentBox>
       <div className="w-full h-full bg-white rounded-2xl px-themePadding py-5 relative">
@@ -34,13 +49,19 @@ const AutomationContent = () => {
         {/* Cards Container */}
         <div className="w-full grid grid-cols-4 gap-5 mt-5">
           {/* Custom Api */}
-          <CustomApiBox />
+          <CustomApiBox
+            state={automationData}
+            stateChanger={setAutomationData}
+          />
 
           {/* SMS Notification */}
-          <SmsNotifications />
+          <SmsNotifications
+            state={automationData}
+            stateChanger={setAutomationData}
+          />
 
           {/* CleanCloud */}
-          <CleanCloud />
+          <CleanCloud state={automationData} stateChanger={setAutomationData} />
 
           {/* Zapiet */}
           <Zapiet />

@@ -4,7 +4,7 @@ import OrdersTablePagination from "../orders/OrdersTablePagination";
 import { useNavigate } from "react-router-dom";
 import { useContext } from "react";
 import { ThemeContext } from "../../context/ThemeContext";
-
+import { useConfig, url } from "../../hooks/useConfig";
 import moment from "moment";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
@@ -18,24 +18,15 @@ interface invoiceItem {
 }
 
 const InvoicesTable = () => {
+  const config = useConfig();
   // Invoices Context
   const contextValue = useContext(ThemeContext);
-
-  //temp bearer
-  let config = {
-    headers: {
-      Authorization:
-        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
-    },
-  };
 
   // Get invoice data
   const { isLoading, data, error } = useQuery({
     queryKey: ["cat"],
     queryFn: () => {
-      return axios
-        .get("https://api.dbx.delivery/invoices", config)
-        .then((res) => res.data);
+      return axios.get(url + "/invoices", config).then((res) => res.data);
     },
   });
   // navigate to the invoices

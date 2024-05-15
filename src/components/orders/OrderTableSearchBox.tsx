@@ -16,7 +16,7 @@ const OrderTableSearchBox = () => {
         <input
           type="text"
           className="w-full bg-transparent outline-none border-none placeholder:text-textLightBlack text-themeLightBlack"
-          placeholder="Search..."
+          placeholder="Search by order #, name, or address"
           value={contextValue?.searchInput || ""}
           onChange={(e) =>
             contextValue?.setSearchInput &&

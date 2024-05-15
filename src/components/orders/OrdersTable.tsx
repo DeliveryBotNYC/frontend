@@ -1,9 +1,9 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import OrderSingleRow from "./OrderSingleRow";
 import OrdersTableHeader from "./OrdersTableHeader";
 import OrdersTablePagination from "./OrdersTablePagination";
 import { ThemeContext } from "../../context/ThemeContext";
-
+import { useConfig, url } from "../../hooks/useConfig";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
 
@@ -31,21 +31,16 @@ const OrdersTable = () => {
   }
 
   //temp bearer
-  let config = {
-    headers: {
-      Authorization:
-        "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
-    },
-  };
+  const config = useConfig();
+
   // Get orders data
   const { isLoading, data, error } = useQuery({
     queryKey: ["orders"],
     queryFn: () => {
-      return axios
-        .get("https://api.dbx.delivery/orders", config)
-        .then((res) => res.data);
+      return axios.get(url + "/orders", config).then((res) => res.data);
     },
   });
+  console.log(data);
   return (
     <>
       <div
@@ -60,9 +55,33 @@ const OrdersTable = () => {
 
           {/* Table Content */}
           <tbody>
-            {data?.sort(sortFunction).map((item) => (
-              <OrderSingleRow item={item} key={item.order_id} />
-            ))}
+            {data
+              ?.sort(sortFunction)
+              .map((item) =>
+                contextValue?.searchInput == "" ||
+                (item?.order_id &&
+                  item?.order_id
+                    .toLowerCase()
+                    .includes(contextValue?.searchInput.toLowerCase())) ||
+                (item?.pickup?.name &&
+                  item?.pickup?.name
+                    .toLowerCase()
+                    .includes(contextValue?.searchInput.toLowerCase())) ||
+                (item?.pickup?.location?.street_address_1 &&
+                  item?.pickup?.location?.street_address_1
+                    .toLowerCase()
+                    .includes(contextValue?.searchInput.toLowerCase())) ||
+                (item?.delivery?.name &&
+                  item?.delivery?.name
+                    .toLowerCase()
+                    .includes(contextValue?.searchInput.toLowerCase())) ||
+                (item?.delivery?.location?.street_address_1 &&
+                  item?.delivery?.location?.street_address_1
+                    .toLowerCase()
+                    .includes(contextValue?.searchInput.toLowerCase())) ? (
+                  <OrderSingleRow item={item} key={item.order_id} />
+                ) : null
+              )}
           </tbody>
         </table>
       </div>

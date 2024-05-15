@@ -4,40 +4,19 @@ import TrackingOrderCard from "./TrackingOrderCard";
 import OrdersData from "../../data/OrdersData.json";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
-
+import { useConfig, url } from "../../hooks/useConfig";
 import SearchIcon from "../../assets/search.svg";
 
 const AllOrders = () => {
+  const config = useConfig();
   // Context to grab the search input state
   const contextValue = useContext(ThemeContext);
-
-  //temp bearer
-  let local = {
-    url: "http://localhost:3000",
-    config: {
-      headers: {
-        Authorization:
-          "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
-      },
-    },
-  };
-  let production = {
-    url: "https://api.dbx.delivery",
-    config: {
-      headers: {
-        Authorization:
-          "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
-      },
-    },
-  };
 
   // Get orders data
   const { isLoading, data, error } = useQuery({
     queryKey: ["orders"],
     queryFn: () => {
-      return axios
-        .get(local.url + "/orders", local.config)
-        .then((res) => res.data);
+      return axios.get(url + "/orders", config).then((res) => res.data);
     },
   });
 
@@ -74,9 +53,31 @@ const AllOrders = () => {
         }}
         className="overflow-auto"
       >
-        {data?.map((item) => (
-          <TrackingOrderCard key={item.order_id} item={item} />
-        ))}
+        {data?.map((item) =>
+          contextValue?.searchInput == "" ||
+          (item?.order_id &&
+            item?.order_id
+              .toLowerCase()
+              .includes(contextValue?.searchInput.toLowerCase())) ||
+          (item?.pickup?.name &&
+            item?.pickup?.name
+              .toLowerCase()
+              .includes(contextValue?.searchInput.toLowerCase())) ||
+          (item?.pickup?.location?.street_address_1 &&
+            item?.pickup?.location?.street_address_1
+              .toLowerCase()
+              .includes(contextValue?.searchInput.toLowerCase())) ||
+          (item?.delivery?.name &&
+            item?.delivery?.name
+              .toLowerCase()
+              .includes(contextValue?.searchInput.toLowerCase())) ||
+          (item?.delivery?.location?.street_address_1 &&
+            item?.delivery?.location?.street_address_1
+              .toLowerCase()
+              .includes(contextValue?.searchInput.toLowerCase())) ? (
+            <TrackingOrderCard key={item.order_id} item={item} />
+          ) : null
+        )}
       </div>
     </div>
   );

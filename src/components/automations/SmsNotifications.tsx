@@ -5,7 +5,7 @@ import { useContext } from "react";
 import { ThemeContext } from "../../context/ThemeContext";
 import BlackOverlay from "../popups/BlackOverlay";
 
-const SmsNotifications = () => {
+const SmsNotifications = ({ stateChanger, ...rest }) => {
   // Context
   const contextValue = useContext(ThemeContext);
 

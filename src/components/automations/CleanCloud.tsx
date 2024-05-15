@@ -9,9 +9,9 @@ import CleanCloudUpdatePopup from "../popups/CleanCloudUpdatePopup";
 
 // import CloseIcon from "../../assets/close-gray.svg";
 
-const CleanCloud = () => {
+const CleanCloud = ({ stateChanger, ...rest }) => {
+  //console.log(rest);
   const contextValue = useContext(ThemeContext);
-
   // close Edit popup
   const closeCleanCloudPopup = () => {
     contextValue?.setCleanCloud(false);
@@ -39,9 +39,17 @@ const CleanCloud = () => {
 
           <button
             onClick={() => contextValue?.setCleanCloud(true)}
-            className="w-full bg-themeGreen py-2.5 rounded-full flex items-center justify-center gap-2.5 mt-2.5 hover:translate-y-2 duration-200"
+            className={`w-full ${
+              typeof rest?.state?.cleancloud?.requests !== "undefined"
+                ? "bg-themeLightOrangeTwo"
+                : "bg-themeGreen"
+            } py-2.5 rounded-full flex items-center justify-center gap-2.5 mt-2.5 hover:translate-y-2 duration-200`}
           >
-            <p className="text-white">Configuration</p>
+            <p className="text-white">
+              {typeof rest?.state?.cleancloud?.requests !== "undefined"
+                ? "Edit"
+                : "Configuration"}
+            </p>
             <img src={settingsIcon} alt="search-icon" />
           </button>
         </div>
@@ -61,9 +69,8 @@ const CleanCloud = () => {
       ) : null}
 
       {/* Edit Popup */}
-      <CleanCloudEditPopup />
 
-      {/* Update Popup */}
+      <CleanCloudEditPopup />
       <CleanCloudUpdatePopup />
     </div>
   );

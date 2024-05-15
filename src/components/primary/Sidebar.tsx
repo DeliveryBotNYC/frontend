@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useContext } from "react";
 import { ThemeContext } from "../../context/ThemeContext";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 
 // Images
 import HomeIcon from "../../assets/sidebar/home.svg";
@@ -17,56 +17,100 @@ import SettingsActiveIcon from "../../assets/sidebar/settings-active.svg";
 import LogoutIcon from "../../assets/logout.svg";
 import DispatchIcon from "../../assets/sidebar/dispatch.svg";
 import DispatchActiveIcon from "../../assets/sidebar/dispatch-active.svg";
-
+import useAuth from "../../hooks/useAuth";
 const Sidebar = () => {
   // Context
   const contextValue = useContext(ThemeContext);
 
-  // Sidebar Links Data
-  const sidebarLinksData = [
-    {
-      id: 1,
-      initialIcon: HomeIcon,
-      activeIcon: HomeActiveIcon,
-      title: "Home",
-      target: "/",
-    },
-    {
-      id: 2,
-      initialIcon: DispatchIcon,
-      activeIcon: DispatchActiveIcon,
-      title: "Dispatch",
-      target: "/dispatch",
-    },
-    {
-      id: 3,
-      initialIcon: OrdersIcon,
-      activeIcon: OrdersActiveIcon,
-      title: "Orders",
-      target: "/orders",
-    },
-    {
-      id: 4,
-      initialIcon: InvoicesIcon,
-      activeIcon: InvoicesActiveIcon,
-      title: "Invoices",
-      target: "/invoices",
-    },
-    {
-      id: 5,
-      initialIcon: AutomationIcon,
-      activeIcon: AutomationActiveIcon,
-      title: "Automation",
-      target: "/automations",
-    },
-    {
-      id: 6,
-      initialIcon: SettingsIcon,
-      activeIcon: SettingsActiveIcon,
-      title: "Account",
-      target: "/accounts",
-    },
-  ];
+  const { setAuth, auth } = useAuth();
+  const ROLES = {
+    User: 2001,
+    Admin: 5150,
+  };
+  var sidebarLinksData = [];
+
+  auth?.roles?.find((role) => [ROLES.Admin]?.includes(role))
+    ? (sidebarLinksData = [
+        {
+          id: 1,
+          initialIcon: HomeIcon,
+          activeIcon: HomeActiveIcon,
+          title: "Home",
+          target: "/",
+        },
+        {
+          id: 2,
+          initialIcon: DispatchIcon,
+          activeIcon: DispatchActiveIcon,
+          title: "Dispatch",
+          target: "/dispatch",
+        },
+        {
+          id: 3,
+          initialIcon: OrdersIcon,
+          activeIcon: OrdersActiveIcon,
+          title: "Orders",
+          target: "/orders",
+        },
+        {
+          id: 4,
+          initialIcon: InvoicesIcon,
+          activeIcon: InvoicesActiveIcon,
+          title: "Invoices",
+          target: "/invoices",
+        },
+        {
+          id: 5,
+          initialIcon: AutomationIcon,
+          activeIcon: AutomationActiveIcon,
+          title: "Automation",
+          target: "/automations",
+        },
+        {
+          id: 6,
+          initialIcon: SettingsIcon,
+          activeIcon: SettingsActiveIcon,
+          title: "Account",
+          target: "/accounts",
+        },
+      ])
+    : (sidebarLinksData = [
+        {
+          id: 1,
+          initialIcon: HomeIcon,
+          activeIcon: HomeActiveIcon,
+          title: "Home",
+          target: "/",
+        },
+        {
+          id: 3,
+          initialIcon: OrdersIcon,
+          activeIcon: OrdersActiveIcon,
+          title: "Orders",
+          target: "/orders",
+        },
+        {
+          id: 4,
+          initialIcon: InvoicesIcon,
+          activeIcon: InvoicesActiveIcon,
+          title: "Invoices",
+          target: "/invoices",
+        },
+        {
+          id: 5,
+          initialIcon: AutomationIcon,
+          activeIcon: AutomationActiveIcon,
+          title: "Automation",
+          target: "/automations",
+        },
+        {
+          id: 6,
+          initialIcon: SettingsIcon,
+          activeIcon: SettingsActiveIcon,
+          title: "Account",
+          target: "/accounts",
+        },
+      ]);
 
   return (
     <AnimatePresence>
@@ -133,7 +177,13 @@ const Sidebar = () => {
           }}
         >
           {/* Logout Btn */}
-          <NavLink to="/login">
+          <NavLink
+            to="/login"
+            onClick={function (event) {
+              localStorage.clear();
+              setAuth({});
+            }}
+          >
             <div className="flex items-center justify-center gap-4 mb-7">
               {/* Icon */}
               <img src={LogoutIcon} alt="logout-icon" />

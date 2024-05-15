@@ -1,6 +1,7 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useRef, useState, useEffect } from "react";
 
+import useAuth from "../../hooks/useAuth";
 import EyeIcon from "../../assets/eye-icon.svg";
 
 import { FaEyeSlash } from "react-icons/fa";
@@ -8,31 +9,46 @@ import FormBtn from "../reusable/FormBtn";
 
 import axios from "axios";
 import { useMutation } from "@tanstack/react-query";
+import { url } from "../../hooks/useConfig";
 
 const LoginForm = () => {
-  const { state } = useLocation();
-  console.log(state);
+  const { setAuth } = useAuth();
+
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || "/";
+
+  const userRef = useRef();
+  const errRef = useRef();
+
+  const [user, setUser] = useState("");
+  const [pwd, setPwd] = useState("");
+  const [errMsg, setErrMsg] = useState("");
   // State to change the password type to text
   const [changePasswordType, setChangePasswordType] = useState<boolean>(false);
-
-  // login form value's
-  const [loginFormValues, setLoginFormValues] = useState({
-    email: "",
-    password: "",
-  });
 
   // submit handler
   const formSubmitHandler = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    addTodoMutation.mutate(loginFormValues);
+    addTodoMutation.mutate({ email: user, password: pwd });
   };
 
   const addTodoMutation = useMutation({
     mutationFn: (newTodo: string) =>
-      axios.post("https://api.dbx.delivery/retail/login", loginFormValues),
+      axios.post(url + "/retail/login", {
+        email: user,
+        password: pwd,
+      }),
     onSuccess: (data) => {
-      navigate("/");
+      const accessToken = data?.data?.token;
+      const roles = data?.data?.roles;
+      setAuth({ user, pwd, roles, accessToken });
+      localStorage.setItem("aT", accessToken);
+      localStorage.setItem("roles", JSON.stringify(roles));
+      setUser("");
+      setPwd("");
+      navigate(from, { replace: true });
+      //navigate("/");
       //accessTokenRef.current = data.token;
     },
   });
@@ -51,13 +67,8 @@ const LoginForm = () => {
           type="email"
           placeholder="Enter your email here"
           className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-          value={loginFormValues.email}
-          onChange={(e) =>
-            setLoginFormValues({
-              ...loginFormValues,
-              email: e.target.value,
-            })
-          }
+          value={user}
+          onChange={(e) => setUser(e.target.value)}
         />
       </div>
 
@@ -74,13 +85,8 @@ const LoginForm = () => {
           type={changePasswordType === true ? "text" : "password"}
           placeholder="Enter your password here"
           className="w-full text-xs sm:text-sm pb-[2px] text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-          value={loginFormValues.password}
-          onChange={(e) =>
-            setLoginFormValues({
-              ...loginFormValues,
-              password: e.target.value,
-            })
-          }
+          value={pwd}
+          onChange={(e) => setPwd(e.target.value)}
         />
 
         {/* Eye Icon */}
@@ -109,7 +115,6 @@ const LoginForm = () => {
       ) : (
         ""
       )}
-      {state ? <p className="text-xs text-themeRed">{state} </p> : ""}
 
       {/* Submit Button */}
       <FormBtn hasBg={true} title="Login" />

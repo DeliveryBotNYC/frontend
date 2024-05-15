@@ -10,7 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import axios from "axios";
 
-const CustomApiBox = () => {
+const CustomApiBox = ({ stateChanger, ...rest }) => {
   //temp bearer
   let config = {
     headers: {

@@ -2,7 +2,7 @@ import ContentBox from "../reusable/ContentBox";
 import AllOrders from "./AllOrders";
 import CurrentOrderMap from "./CurrentOrderMap";
 import OrderTrackingInfo from "./OrderTrackingInfo";
-
+import { useConfig, url } from "../../hooks/useConfig";
 import Orders from "../../data/OrdersData.json";
 import RateDeliveryMan from "./RateDeliveryMan";
 import { useState, useEffect } from "react";
@@ -14,32 +14,14 @@ const OrderTrackingContent = () => {
   // Grab the order id from addressbar
   const orderId = UseGetOrderId();
 
-  //temp bearer
-  let local = {
-    url: "http://localhost:3000",
-    config: {
-      headers: {
-        Authorization:
-          "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
-      },
-    },
-  };
-  let production = {
-    url: "https://api.dbx.delivery",
-    config: {
-      headers: {
-        Authorization:
-          "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
-      },
-    },
-  };
+  const config = useConfig();
   const [getOrder, setgetOrder] = useState({});
 
   const { isSuccess, data, refetch } = useQuery({
     queryKey: ["currentorder", { orderId }],
     queryFn: () => {
       return axios
-        .get(local.url + "/orders?order_id=" + orderId, local.config)
+        .get(url + "/orders?order_id=" + orderId, config)
         .then((res) => setgetOrder(res.data));
     },
   });

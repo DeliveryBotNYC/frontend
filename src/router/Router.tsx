@@ -19,91 +19,39 @@ import DispatchRoutes from "../pages/DispatchRoutes";
 import DispatchStops from "../pages/DispatchStops";
 import DispatchOrders from "../pages/DispatchOrders";
 
-const Router = () => {
-  // Routes Data
-  const allRoutes = [
-    {
-      id: 1,
-      path: "/",
-      component: <Home />,
-    },
-    {
-      id: 2,
-      path: "/login",
-      component: <Login />,
-    },
-    {
-      id: 3,
-      path: "/reset-password",
-      component: <ForgotPassword />,
-    },
-    {
-      id: 4,
-      path: "/register",
-      component: <Register />,
-    },
-    {
-      id: 5,
-      path: "/company-setup",
-      component: <SetupCompany />,
-    },
-    {
-      id: 6,
-      path: "/orders",
-      component: <Orders />,
-    },
-    {
-      id: 7,
-      path: "/orders/tracking/:id",
-      component: <OrderTracking />,
-    },
-    {
-      id: 8,
-      path: "/create-order",
-      component: <CreateOrder />,
-    },
-    {
-      id: 9,
-      path: "/invoices",
-      component: <Invoices />,
-    },
-    {
-      id: 10,
-      path: "/invoices/:id",
-      component: <SingleInvoice />,
-    },
-    {
-      id: 11,
-      path: "/automations",
-      component: <Automations />,
-    },
-    {
-      id: 11,
-      path: "/dispatch",
-      component: <Dispatch />,
-    },
-  ];
+import RequireAuth from "../components/auth/RequireAuth";
 
+const Router = () => {
+  const ROLES = {
+    User: 2001,
+    Admin: 5150,
+  };
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* Mapping the routes array and returing individual routes */}
-        {allRoutes.map(({ component, id, path }) => (
-          <Route key={id} path={path} element={component} />
-        ))}
+    <Routes>
+      <Route key={1} path="/login" element={<Login />} />
+      <Route path="/reset-password" element={<ForgotPassword />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/company-setup" element={<SetupCompany />} />
+
+      <Route element={<RequireAuth allowedRoles={[ROLES.Admin, ROLES.User]} />}>
+        <Route path="" element={<Home />} />
+        <Route path="orders" element={<Orders />} />
+        <Route path="orders/tracking/:id" element={<OrderTracking />} />
+        <Route path="automations" element={<Automations />} />
+        <Route path="invoices" element={<Invoices />} />
+        <Route path="invoices/:id" element={<SingleInvoice />} />
+        <Route path="create-order" element={<CreateOrder />} />
         {/* Account Routes */}
-        <Route path="/accounts" element={<Accounts />}>
+        <Route path="accounts" element={<Accounts />}>
           <Route path="general" element={<AccountsGeneral />} />
           <Route path="defaults" element={<AccountsDefault />} />
           <Route path="billing" element={<AccountsBilling />} />
         </Route>
-        <Route path="/dispatch" element={<Dispatch />}>
-          <Route path="" element={<DispatchRoutes />} />
-          <Route path="route/:id" element={<DispatchStops />} />
-          <Route path="route/:id/order/:id" element={<DispatchOrders />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+      </Route>
+      <Route element={<RequireAuth allowedRoles={[ROLES.Admin]} />}>
+        <Route path="dispatch" element={<Dispatch />} />
+      </Route>
+    </Routes>
   );
 };
 

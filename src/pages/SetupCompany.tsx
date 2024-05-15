@@ -1,10 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
 import SecondaryNav from "../components/primary/SecondaryNav";
 import CompanySetupForm from "../components/companySetup/CompanySetupForm";
+import BackgroundMap from "../components/reusable/mapBackground";
 
 const SetupCompany = () => {
   return (
-    <div className="min-h-screen bg-cover bg-center bg-no-repeat formpage">
+    <div className="min-h-screen">
+      <BackgroundMap />
       <SecondaryNav />
 
       {/* Form Container */}
