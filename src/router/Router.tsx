@@ -3,6 +3,7 @@ import Home from "../pages/Home";
 import Login from "../pages/Login";
 import Register from "../pages/Register";
 import ForgotPassword from "../pages/ForgotPassword";
+import ResetPassword from "../pages/ResetPassword";
 import SetupCompany from "../pages/SetupCompany";
 import Orders from "../pages/Orders";
 import OrderTracking from "../pages/OrderTracking";
@@ -29,7 +30,8 @@ const Router = () => {
   return (
     <Routes>
       <Route key={1} path="/login" element={<Login />} />
-      <Route path="/reset-password" element={<ForgotPassword />} />
+      <Route path="/reset-password/:id" element={<ResetPassword />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/register" element={<Register />} />
       <Route path="/company-setup" element={<SetupCompany />} />
 

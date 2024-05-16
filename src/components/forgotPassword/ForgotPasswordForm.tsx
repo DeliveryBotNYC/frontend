@@ -2,6 +2,11 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import FormBtn from "../reusable/FormBtn";
 
+import axios from "axios";
+import { useMutation } from "@tanstack/react-query";
+
+import { url } from "../../hooks/useConfig";
+
 const ForgotPasswordForm = () => {
   // login form value's
   const [loginFormValues, setLoginFormValues] = useState("");
@@ -9,9 +14,19 @@ const ForgotPasswordForm = () => {
   // If the form submited then show the instruction text
   const [emailSubmited, setEmailSubmited] = useState(false);
 
+  const addTodoMutation = useMutation({
+    mutationFn: (newTodo: string) =>
+      axios.post(url + "/retail/forgot_password", {
+        email: loginFormValues,
+      }),
+    onSuccess: (data) => {
+      setEmailSubmited(true);
+    },
+  });
+
   const formSubmitHandler = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
+    addTodoMutation.mutate(loginFormValues);
     setEmailSubmited(true);
   };
 

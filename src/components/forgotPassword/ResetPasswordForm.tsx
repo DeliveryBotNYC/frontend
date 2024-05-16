@@ -1,55 +1,130 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import FormBtn from "../reusable/FormBtn";
+import EyeIcon from "../../assets/eye-icon.svg";
+import { FaEyeSlash } from "react-icons/fa";
+
+import axios from "axios";
+import { useMutation } from "@tanstack/react-query";
+
+import { url } from "../../hooks/useConfig";
+
+import { useConfig } from "../../hooks/UseGetJtoken";
 
 const ForgotPasswordForm = () => {
+  const config = useConfig();
+  const navigate = useNavigate();
   // login form value's
-  const [loginFormValues, setLoginFormValues] = useState("");
+  const [pwd, setPwd] = useState("");
+  const [cpwd, setCpwd] = useState("");
 
-  // If the form submited then show the instruction text
-  const [emailSubmited, setEmailSubmited] = useState(false);
+  const [errmsg, setErrmsg] = useState<boolean>(false);
+  // State to change the password type to text
+  const [changePasswordType, setChangePasswordType] = useState<boolean>(false);
+  const [changeConfirmPasswordType, setChangeConfirmPasswordType] =
+    useState<boolean>(false);
+
+  const addTodoMutation = useMutation({
+    mutationFn: (newTodo: string) =>
+      axios.patch(
+        url + "/retail/profile",
+        {
+          password: pwd,
+        },
+        config
+      ),
+    onSuccess: (data) => {
+      navigate("/login");
+    },
+  });
 
   const formSubmitHandler = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-
-    setEmailSubmited(true);
+    pwd != cpwd
+      ? setErrmsg(true)
+      : (setErrmsg(false), addTodoMutation.mutate(pwd));
   };
 
   return (
     <form className="w-full mt-[60px]" onSubmit={formSubmitHandler}>
-      {/* email field */}
-      <div className="w-full">
-        <label htmlFor="emailField" className="text-themeDarkGray text-xs">
-          Email <span className="text-themeRed">*</span>
+      {/* password field */}
+      <div className="w-full mt-5 relative">
+        <label htmlFor="passwordField" className="text-themeDarkGray text-xs">
+          Password <span className="text-themeRed">*</span>
         </label>
 
         {/* input */}
         <input
           required
-          id="emailField"
-          type="email"
-          placeholder="Enter your email here"
-          className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-          value={loginFormValues}
-          onChange={(e) => setLoginFormValues(e.target.value)}
+          id="passwordField"
+          type={changePasswordType === true ? "text" : "password"}
+          placeholder="Enter your password here"
+          className="w-full text-xs sm:text-sm pb-[2px] text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
+          value={pwd}
+          onChange={(e) => setPwd(e.target.value)}
         />
+
+        {/* Eye Icon */}
+        <div className="absolute right-0 top-1/2 -translate-y-1/2">
+          {changePasswordType === false ? (
+            <img
+              src={EyeIcon}
+              alt="eye-icon"
+              className="cursor-pointer"
+              onClick={() => setChangePasswordType(true)}
+            />
+          ) : (
+            <FaEyeSlash
+              color="#676767"
+              size={17}
+              onClick={() => setChangePasswordType(false)}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* password field */}
+      <div className="w-full mt-5 relative">
+        <label htmlFor="passwordField" className="text-themeDarkGray text-xs">
+          Confirm password <span className="text-themeRed">*</span>
+        </label>
+
+        {/* input */}
+        <input
+          required
+          id="passwordField"
+          type={changeConfirmPasswordType === true ? "text" : "password"}
+          placeholder="Re-type your password"
+          className="w-full text-xs sm:text-sm pb-[2px] text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
+          value={cpwd}
+          onChange={(e) => setCpwd(e.target.value)}
+        />
+
+        {/* Eye Icon */}
+        <div className="absolute right-0 top-1/2 -translate-y-1/2">
+          {changeConfirmPasswordType === false ? (
+            <img
+              src={EyeIcon}
+              alt="eye-icon"
+              className="cursor-pointer"
+              onClick={() => setChangeConfirmPasswordType(true)}
+            />
+          ) : (
+            <FaEyeSlash
+              color="#676767"
+              size={17}
+              onClick={() => setChangeConfirmPasswordType(false)}
+            />
+          )}
+        </div>
       </div>
 
       {/* If Form Submited */}
-      {emailSubmited === true ? (
-        <p className="text-xs text-themeDarkGreen mt-5">
-          Instructions to reset your password send to your email.
-        </p>
+      {errmsg ? (
+        <p className="text-xs text-themeRed mt-5">Passwords don't match.</p>
       ) : null}
 
-      {/* Submit Button */}
-      {emailSubmited === true ? (
-        <Link to={"/login"}>
-          <FormBtn hasBg={true} title={"Back to login"} />
-        </Link>
-      ) : (
-        <FormBtn hasBg={true} title={"Reset Password"} />
-      )}
+      <FormBtn hasBg={true} title={"Reset Password"} />
 
       {/* Forgot password */}
       <Link to={"/login"}>

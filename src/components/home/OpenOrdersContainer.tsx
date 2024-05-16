@@ -50,14 +50,14 @@ const OpenOrdersContainer = () => {
       </div>
 
       {/*  Data Card Container */}
-      <div className="w-full m-h-[150px] overflow-auto">
+      <div className="w-full h-[150px] overflow-auto">
         {data?.length > 0 ? (
           data?.map((item) => (
             <OpenOrdersCard item={item} key={item.order_id} />
           ))
         ) : data ? (
           <div className="px-themePadding py-2 grid grid-cols-6 items-center gap-2.5 border-b-2 border-b-themeLightGray">
-            no orders{" "}
+            no open orders
           </div>
         ) : (
           <div className="px-themePadding py-2 grid grid-cols-6 items-center gap-2.5 border-b-2 border-b-themeLightGray">

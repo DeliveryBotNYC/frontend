@@ -4,7 +4,7 @@ import FormBtn from "../components/reusable/FormBtn";
 import BackgroundMap from "../components/reusable/mapBackground";
 // Importing Images
 import RightBoxImage from "../assets/login-right-image.svg";
-import ResetPasswordForm from "../components/forgotPassword/ForgotPasswordForm";
+import ResetPasswordForm from "../components/forgotPassword/ResetPasswordForm";
 
 const ForgotPassword = () => {
   return (
@@ -25,7 +25,7 @@ const ForgotPassword = () => {
           <div className="sm:w-[55%] md:w-[60%] p-8 sm:p-10 md:p-14 lg:p-20 xl:p-[100px]">
             {/* Heading */}
             <h2 className="text-xl md:text-2xl text-black heading font-bold text-center">
-              Forgot Password
+              Reset Password
             </h2>
 
             {/* Form */}
