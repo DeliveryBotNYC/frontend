@@ -2,8 +2,11 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
+import "https://maps.googleapis.com/maps/api/js?key=AIzaSyAxbAIczxXk3xoL3RH85z3eAZLncLZAuGg&libraries=places";
 import { url } from "../../hooks/useConfig";
 import axios from "axios";
+import { enforceFormat, formatToPhone } from "../reusable/functions";
+
 const CompanySetupForm = () => {
   const navigate = useNavigate();
   // Data form the register form page
@@ -49,13 +52,89 @@ const CompanySetupForm = () => {
     store_name: "",
     phone: "",
     location: {
+      full: "",
       street_address_1: "",
       street_address_2: "",
       access_code: "",
+      city: "",
+      state: "",
+      zip: "",
+      lat: "",
+      lon: "",
     },
     note: "",
     quantity: "",
   });
+  console.log(companySetupData);
+  //google autofill
+  let autocomplete;
+  let address1Field = document.getElementById("street_address_1");
+  if (address1Field)
+    (autocomplete = new google.maps.places.Autocomplete(address1Field, {
+      componentRestrictions: { country: ["us", "ca"] },
+      fields: ["address_components", "geometry"],
+      types: ["address"],
+    })),
+      autocomplete.addListener("place_changed", fillInAddress);
+  function fillInAddress() {
+    // Get the place details from the autocomplete object.
+    const place = this.getPlace();
+    let full = "";
+    let street_address_1 = "";
+    let city = "";
+    let state = "";
+    let zip = "";
+    let building = "";
+    for (const component of place.address_components) {
+      // @ts-ignore remove once typings fixed
+      const componentType = component.types[0];
+      switch (componentType) {
+        case "street_number": {
+          building = `${component.long_name} ${street_address_1}`;
+          full = `${component.long_name} ${street_address_1}`;
+          street_address_1 = `${component.long_name} ${street_address_1}`;
+          break;
+        }
+
+        case "route": {
+          full += component.short_name;
+          street_address_1 += component.short_name;
+          break;
+        }
+
+        case "locality":
+          full += ", " + component.long_name;
+          city = component.long_name;
+          break;
+
+        case "administrative_area_level_1": {
+          full += ", " + component.short_name;
+          state = component.short_name;
+          break;
+        }
+        case "postal_code": {
+          full += " " + component.long_name;
+          zip = component.long_name;
+          break;
+        }
+      }
+    }
+    if (building) {
+      setCompanySetupData({
+        ...companySetupData,
+        location: {
+          ...companySetupData.location,
+          full: full,
+          street_address_1: street_address_1,
+          city: city,
+          state: state,
+          zip: zip,
+          lat: place.geometry.location.lat(),
+          lon: place.geometry.location.lng(),
+        },
+      });
+    }
+  }
 
   // Submit Handler
   const formSubmitHandler = (e: React.FormEvent<HTMLFormElement>) => {
@@ -159,10 +238,11 @@ const CompanySetupForm = () => {
           <input
             required
             id="phoneField"
-            type="number"
             placeholder="Enter your phone number"
             className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
             value={companySetupData.phone}
+            onKeyUp={(e) => formatToPhone(e)}
+            onKeyDown={(e) => enforceFormat(e)}
             onChange={(e) =>
               setCompanySetupData({
                 ...companySetupData,
@@ -181,18 +261,17 @@ const CompanySetupForm = () => {
           {/* input */}
           <input
             required
-            id="addressField"
+            id="street_address_1"
             type="text"
             placeholder="Enter your full address"
             className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-            value={companySetupData.location.street_address_1}
+            value={companySetupData.location.full}
             onChange={(e) =>
               setCompanySetupData({
                 ...companySetupData,
                 location: {
-                  street_address_1: e.target.value,
-                  street_address_2: companySetupData.location.street_address_2,
-                  access_code: companySetupData.location.access_code,
+                  ...companySetupData.location,
+                  full: e.target.value,
                 },
               })
             }
@@ -218,10 +297,8 @@ const CompanySetupForm = () => {
                 setCompanySetupData({
                   ...companySetupData,
                   location: {
-                    street_address_1:
-                      companySetupData.location.street_address_1,
+                    ...companySetupData.location,
                     street_address_2: e.target.value,
-                    access_code: companySetupData.location.access_code,
                   },
                 })
               }
@@ -245,10 +322,7 @@ const CompanySetupForm = () => {
                 setCompanySetupData({
                   ...companySetupData,
                   location: {
-                    street_address_1:
-                      companySetupData.location.street_address_1,
-                    street_address_2:
-                      companySetupData.location.street_address_2,
+                    ...companySetupData.location,
                     access_code: e.target.value,
                   },
                 })
