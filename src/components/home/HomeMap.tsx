@@ -6,67 +6,20 @@ import ShopIcon from "../../assets/pickup.svg";
 import CRIcon from "../../assets/current-loc.svg";
 import MultiDelIcon from "../../assets/multi-Del.svg";
 
+import { stadia } from "../reusable/functions";
+
 const HomeMap = () => {
   // Delivered Markers
-  const DeliveredMarkers = [
-    {
-      id: 1,
-      geoCode: [51.505, -0.06],
-      pContent: "Order Delivered",
-    },
-    {
-      id: 2,
-      geoCode: [51.507, -0.061],
-      pContent: "Order Delivered",
-    },
-    {
-      id: 3,
-      geoCode: [51.509, -0.062],
-      pContent: "Order Delivered",
-    },
-  ];
+  const DeliveredMarkers = [];
 
   // Delivered Markers
-  const StoreMarkers = [
-    {
-      id: 1,
-      geoCode: [51.501, -0.08],
-      pContent: "Order Picked Up",
-    },
-    {
-      id: 2,
-      geoCode: [51.505, -0.04],
-      pContent: "Order Picked Up",
-    },
-  ];
+  const StoreMarkers = [];
 
   // Location Markers
-  const LocationMarkers = [
-    {
-      id: 1,
-      geoCode: [51.503, -0.062],
-      pContent: "Delivery man at 20 min away",
-    },
-    {
-      id: 2,
-      geoCode: [51.501, -0.069],
-      pContent: "Delivery man at 50 min away",
-    },
-  ];
+  const LocationMarkers = [];
 
   // Location Markers
-  const MultiDelMarkers = [
-    {
-      id: 1,
-      geoCode: [51.508, -0.061],
-      pContent: "Multiple Delivery will be delievered Here",
-    },
-    {
-      id: 2,
-      geoCode: [51.506, -0.07],
-      pContent: "Multiple Delivery will be delievered Here",
-    },
-  ];
+  const MultiDelMarkers = [];
 
   const customDeliveredIcon = new Icon({
     iconUrl: DeliveredIcon,
@@ -98,7 +51,10 @@ const HomeMap = () => {
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png"
+          url={
+            "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=" +
+            stadia
+          }
         />
 
         {/* Delivered Markers */}

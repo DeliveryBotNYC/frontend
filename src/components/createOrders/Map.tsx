@@ -2,6 +2,7 @@ import { MapContainer, Marker, Popup, TileLayer, useMap } from "react-leaflet";
 import { Icon } from "leaflet";
 import { useState, useEffect } from "react";
 import DeliveredBwFilledIcon from "../../assets/delivery-bw-filled.svg";
+import { stadia } from "../reusable/functions";
 const HomeMap = (state) => {
   // Delivered Markers
   function Bounds() {
@@ -58,7 +59,10 @@ const HomeMap = (state) => {
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png"
+          url={
+            "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=" +
+            stadia
+          }
         />
         {state?.state?.pickup?.location?.lat ? (
           <Marker

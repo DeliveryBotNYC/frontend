@@ -2,14 +2,16 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
-import { isCompleted, config } from "../reusable/functions";
+import { isCompleted } from "../reusable/functions";
+import { url, useConfig } from "../../hooks/useConfig";
 
 const PricePopup = ({ stateChanger, ...rest }) => {
+  const config = useConfig();
   const [givenQuote, setGivenQuote] = useState({ price: "", tip: "" });
   const navigate = useNavigate();
   const addTodoMutation = useMutation({
     mutationFn: (newTodo: string) =>
-      axios.post("https://api.dbx.delivery/orders", rest.state, config),
+      axios.post(url + "/orders", rest.state, config),
     onSuccess: (data) => {
       navigate("/orders/tracking/" + data.data.order_id);
     },
@@ -21,7 +23,7 @@ const PricePopup = ({ stateChanger, ...rest }) => {
 
   const createQuote = useMutation({
     mutationFn: (newQuote: string) =>
-      axios.post("https://api.dbx.delivery/orders/quote", rest.state, config),
+      axios.post(url + "/orders/quote", rest.state, config),
     onSuccess: (quote) => {
       setGivenQuote({ price: quote.data.price, tip: quote.data.delivery.tip });
     },

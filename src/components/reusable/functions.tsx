@@ -1,10 +1,4 @@
-export let config = {
-  headers: {
-    Authorization:
-      "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjowLCJlbWFpbCI6InNtaTN0aEBtYWlsLmNvbSIsImlhdCI6MTcxMjUxNzE5NCwiZXhwIjoxNzQ4NTE3MTk0fQ.Tq4Hf4jYL0cRVv_pv6EP39ttuPsN_zBO7HUocL2xsNs",
-  },
-};
-
+export const stadia = "fdcd2695-e5e1-4888-b985-4ffc0cccc317";
 export function isCompleted(input) {
   return {
     pickup:

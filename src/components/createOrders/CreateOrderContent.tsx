@@ -14,36 +14,35 @@ import PlusIcon from "../../assets/plus-icon.svg";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
-import { config } from "../reusable/functions";
+import { url, useConfig } from "../../hooks/useConfig";
 
 const CreateOrderContent = () => {
+  const config = useConfig();
   const contextValue = useContext(ThemeContext);
   const { isLoading, data, error, isSuccess } = useQuery({
     queryKey: ["profile"],
     queryFn: () => {
-      return axios
-        .get("https://api.dbx.delivery/retail/profile", config)
-        .then((res) => ({
-          default: res?.data?.defaults?.store_default,
-          phone: res?.data?.account?.phone,
-          name: res?.data?.account?.store_name,
-          note: res?.data?.account?.note,
-          tip: res?.data?.defaults?.tip,
-          location: {
-            full: res?.data?.account?.location?.street_address_1,
-            street_address_1: res?.data?.account?.location?.street_address_1,
-            street_address_2: res?.data?.account?.location?.street_address_2,
-            access_code: res?.data?.account?.location?.access_code,
-            city: res?.data?.account?.location?.city,
-            state: res?.data?.account?.location?.state,
-            zip: res?.data?.account?.location?.zip,
-            lat: res?.data?.account?.location?.lat,
-            lon: res?.data?.account?.location?.lon,
-          },
-          pickup_proof: res?.data?.defaults?.pickup_proof,
-          delivery_proof: res?.data?.defaults?.delivery_proof,
-          items: [{ quantity: 1, type: res?.data?.defaults?.item_type }],
-        }));
+      return axios.get(url + "/retail/profile", config).then((res) => ({
+        default: res?.data?.defaults?.store_default,
+        phone: res?.data?.account?.phone,
+        name: res?.data?.account?.store_name,
+        note: res?.data?.account?.note,
+        tip: res?.data?.defaults?.tip,
+        location: {
+          full: res?.data?.account?.location?.street_address_1,
+          street_address_1: res?.data?.account?.location?.street_address_1,
+          street_address_2: res?.data?.account?.location?.street_address_2,
+          access_code: res?.data?.account?.location?.access_code,
+          city: res?.data?.account?.location?.city,
+          state: res?.data?.account?.location?.state,
+          zip: res?.data?.account?.location?.zip,
+          lat: res?.data?.account?.location?.lat,
+          lon: res?.data?.account?.location?.lon,
+        },
+        pickup_proof: res?.data?.defaults?.pickup_proof,
+        delivery_proof: res?.data?.defaults?.delivery_proof,
+        items: [{ quantity: 1, type: res?.data?.defaults?.item_type }],
+      }));
     },
   });
   const [newOrderValues, setNewOrderValues] = useState({

@@ -15,7 +15,7 @@ import PickupIcon from "../../assets/pickupMapIcon.svg";
 import PickUpCompletedIcom from "../../assets/pickupCompletedMapIcon.svg";
 import DeliveryIcon from "../../assets/deliveryMapIcon.svg";
 import DeliveryCompletedIcon from "../../assets/deliveryMapCompletedIcon.svg";
-
+import { stadia } from "../reusable/functions";
 const CurrentOrderMap = ({ data }) => {
   // Location Markers
   console.log(data);
@@ -107,7 +107,10 @@ const CurrentOrderMap = ({ data }) => {
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png"
+          url={
+            "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=" +
+            stadia
+          }
         />
         {data?.delivery?.location?.lat ? (
           <Polyline

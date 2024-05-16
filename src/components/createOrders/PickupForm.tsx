@@ -12,17 +12,19 @@ import {
   enforceFormat,
   formatToPhone,
   isCompleted,
-  config,
   initialState,
   isEmpty,
 } from "../reusable/functions";
 
+import { url, useConfig } from "../../hooks/useConfig";
+
 const PickupForm = ({ data, stateChanger, ...rest }) => {
+  const config = useConfig();
   //phone autofill
   const checkPhoneExist = useMutation({
     mutationFn: (newTodo: string) =>
       axios.post(
-        "https://api.dbx.delivery/orders/phone",
+        url + "/orders/phone",
         { phone: rest?.state?.pickup.phone },
         config
       ),

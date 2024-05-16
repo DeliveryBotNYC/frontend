@@ -1,5 +1,5 @@
 import { MapContainer, TileLayer } from "react-leaflet";
-
+import { stadia } from "../reusable/functions";
 const BackgroundMap = () => {
   return (
     <div className="w-full h-full absolute -z-50">
@@ -11,7 +11,10 @@ const BackgroundMap = () => {
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png"
+          url={
+            "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=" +
+            stadia
+          }
         />
       </MapContainer>
     </div>
