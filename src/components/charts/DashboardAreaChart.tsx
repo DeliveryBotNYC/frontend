@@ -11,11 +11,11 @@ interface CustomFunctionParams {
   };
 }
 
-const DashboardAreaChart = () => {
+const DashboardAreaChart = ({ item }) => {
   const series = [
     {
       name: "",
-      data: [30, 20, 35, 42, 35],
+      data: item.chart,
     },
   ];
 
@@ -86,7 +86,7 @@ const DashboardAreaChart = () => {
         inverseColors: false,
         opacityFrom: 0.0,
         opacityTo: 0.0,
-        stops: [20, 100, 100, 100],
+        stops: item.chart,
       },
     },
   };

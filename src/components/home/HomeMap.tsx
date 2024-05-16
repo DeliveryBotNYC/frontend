@@ -89,12 +89,7 @@ const HomeMap = () => {
   });
 
   return (
-    <div
-      className="w-full mt-5 3xl:pb-0 xl:pb-4"
-      style={{
-        height: "calc(50% - 20px)",
-      }}
-    >
+    <div className="w-full mt-5 3xl:pb-0 xl:pb-4 h-1/2">
       <MapContainer
         className="h-full"
         center={[40.7540497, -73.9843973]}
