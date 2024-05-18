@@ -7,12 +7,12 @@ import { url } from "../../hooks/useConfig";
 import axios from "axios";
 import { enforceFormat, formatToPhone } from "../reusable/functions";
 
-const CompanySetupForm = () => {
+const SetupForm = () => {
   const navigate = useNavigate();
   // Data form the register form page
   const { state } = useLocation();
   useEffect(() => {
-    !state?.email ? navigate("/register") : null;
+    !state?.email ? navigate("/auth/signup") : null;
   });
 
   // active delivery per week btn
@@ -151,7 +151,7 @@ const CompanySetupForm = () => {
     },
     onError: (error) => {
       if (error.response.status == 412)
-        navigate("/login", { state: error.response?.data?.message });
+        navigate("/auth/login", { state: error.response?.data?.message });
       //accessTokenRef.current = data.token;
     },
   });
@@ -289,7 +289,6 @@ const CompanySetupForm = () => {
             {/* input */}
             <input
               id="aptField"
-              type="number"
               placeholder="Enter your Appartment No"
               className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
               value={companySetupData.location.street_address_2}
@@ -308,13 +307,12 @@ const CompanySetupForm = () => {
           {/* Access */}
           <div className="w-full">
             <label htmlFor="accessField" className="text-themeDarkGray text-xs">
-              Access
+              Access Code
             </label>
 
             {/* input */}
             <input
               id="accessField"
-              type="number"
               placeholder="Enter your Access Code"
               className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
               value={companySetupData.location.access_code}
@@ -387,7 +385,7 @@ const CompanySetupForm = () => {
 
       {/* Submit Btn */}
       <div className="flex items-center justify-center gap-5 mt-[50px]">
-        <Link to="/register" state={companySetupData}>
+        <Link to="/auth/signup" state={companySetupData}>
           <p className="text-xs text-themeDarkGray"> Back</p>
         </Link>
         <div className="text-end w-full">
@@ -400,4 +398,4 @@ const CompanySetupForm = () => {
   );
 };
 
-export default CompanySetupForm;
+export default SetupForm;

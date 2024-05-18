@@ -1,52 +1,69 @@
-import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import FormBtn from "../reusable/FormBtn";
+
 import EyeIcon from "../../assets/eye-icon.svg";
+
 import { FaEyeSlash } from "react-icons/fa";
+import { useLocation, useNavigate } from "react-router-dom";
 
-import axios from "axios";
-import { useMutation } from "@tanstack/react-query";
-
-import { url } from "../../hooks/useConfig";
-
-import { useConfig } from "../../hooks/UseGetJtoken";
-
-const ForgotPasswordForm = () => {
-  const config = useConfig();
+const SignupForm = () => {
+  const [passwordError, setPasswordError] = useState("");
+  // navigate to other page hook
   const navigate = useNavigate();
-  // login form value's
-  const [pwd, setPwd] = useState("");
-  const [cpwd, setCpwd] = useState("");
+  const { state } = useLocation();
 
-  const [errmsg, setErrmsg] = useState<boolean>(false);
   // State to change the password type to text
   const [changePasswordType, setChangePasswordType] = useState<boolean>(false);
   const [changeConfirmPasswordType, setChangeConfirmPasswordType] =
     useState<boolean>(false);
 
-  const addTodoMutation = useMutation({
-    mutationFn: (newTodo: string) =>
-      axios.patch(
-        url + "/retail/profile",
-        {
-          password: pwd,
-        },
-        config
-      ),
-    onSuccess: (data) => {
-      navigate("/login");
-    },
+  // signup form value's
+  const [signupFormValues, setSignupFormValues] = useState({
+    email: state?.email ? state?.email : "",
+    password: state?.password ? state?.password : "",
+    comfirm_password: state?.comfirm_password ? state?.comfirm_password : "",
   });
 
+  // submit handler
   const formSubmitHandler = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    pwd != cpwd
-      ? setErrmsg(true)
-      : (setErrmsg(false), addTodoMutation.mutate(pwd));
+
+    //check comfirm password
+    if (signupFormValues.password != signupFormValues.comfirm_password) {
+      setPasswordError("Passwords don't match");
+    }
+    //check user excists
+    else {
+      // Navigate to other page with state
+      navigate("/auth/signup/setup", { state: signupFormValues });
+    }
   };
 
   return (
     <form className="w-full mt-[60px]" onSubmit={formSubmitHandler}>
+      {/* email field */}
+      <div className="w-full">
+        <label htmlFor="emailField" className="text-themeDarkGray text-xs">
+          Email <span className="text-themeRed">*</span>
+        </label>
+
+        {/* input */}
+        <input
+          required
+          id="emailField"
+          type="email"
+          placeholder="Enter your email here"
+          className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
+          value={signupFormValues.email}
+          onChange={(e) =>
+            setSignupFormValues({
+              ...signupFormValues,
+              email: e.target.value,
+            })
+          }
+        />
+      </div>
+
       {/* password field */}
       <div className="w-full mt-5 relative">
         <label htmlFor="passwordField" className="text-themeDarkGray text-xs">
@@ -60,8 +77,13 @@ const ForgotPasswordForm = () => {
           type={changePasswordType === true ? "text" : "password"}
           placeholder="Enter your password here"
           className="w-full text-xs sm:text-sm pb-[2px] text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-          value={pwd}
-          onChange={(e) => setPwd(e.target.value)}
+          value={signupFormValues.password}
+          onChange={(e) =>
+            setSignupFormValues({
+              ...signupFormValues,
+              password: e.target.value,
+            })
+          }
         />
 
         {/* Eye Icon */}
@@ -96,8 +118,13 @@ const ForgotPasswordForm = () => {
           type={changeConfirmPasswordType === true ? "text" : "password"}
           placeholder="Re-type your password"
           className="w-full text-xs sm:text-sm pb-[2px] text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-          value={cpwd}
-          onChange={(e) => setCpwd(e.target.value)}
+          value={signupFormValues.comfirm_password}
+          onChange={(e) =>
+            setSignupFormValues({
+              ...signupFormValues,
+              comfirm_password: e.target.value,
+            })
+          }
         />
 
         {/* Eye Icon */}
@@ -118,20 +145,15 @@ const ForgotPasswordForm = () => {
           )}
         </div>
       </div>
-
-      {/* If Form Submited */}
-      {errmsg ? (
-        <p className="text-xs text-themeRed mt-5">Passwords don't match.</p>
-      ) : null}
-
-      <FormBtn hasBg={true} title={"Reset Password"} />
-
-      {/* Forgot password */}
-      <Link to={"/login"}>
-        <p className="mt-5 text-xs text-themeGray text-center">Login</p>
-      </Link>
+      {passwordError ? (
+        <p className="text-xs text-themeRed">{passwordError}</p>
+      ) : (
+        ""
+      )}
+      {/* Submit Button */}
+      <FormBtn hasBg={true} title="Continue" />
     </form>
   );
 };
 
-export default ForgotPasswordForm;
+export default SignupForm;

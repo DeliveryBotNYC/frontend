@@ -1,10 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "../pages/Home";
-import Login from "../pages/Login";
-import Register from "../pages/Register";
-import ForgotPassword from "../pages/ForgotPassword";
-import ResetPassword from "../pages/ResetPassword";
-import SetupCompany from "../pages/SetupCompany";
+//import Register from "../pages/Register";
+//import SetupCompany from "../pages/SetupCompany";
 import Orders from "../pages/Orders";
 import OrderTracking from "../pages/OrderTracking";
 import CreateOrder from "../pages/CreateOrder";
@@ -20,6 +17,14 @@ import DispatchRoutes from "../pages/DispatchRoutes";
 import DispatchStops from "../pages/DispatchStops";
 import DispatchOrders from "../pages/DispatchOrders";
 
+import Auth from "../pages/Auth";
+import LoginContext from "../components/auth/LoginContext";
+import SignupContext from "../components/auth/SignupContext";
+import SetupContext from "../components/auth/SetupContext";
+import LoginForm from "../components/auth/LoginForm";
+import ForgotPasswordForm from "../components/auth/ForgotPasswordForm";
+import ResetPasswordForm from "../components/auth/ResetPasswordForm";
+
 import RequireAuth from "../components/auth/RequireAuth";
 
 const Router = () => {
@@ -29,11 +34,15 @@ const Router = () => {
   };
   return (
     <Routes>
-      <Route key={1} path="/login" element={<Login />} />
-      <Route path="/reset-password/:id" element={<ResetPassword />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/company-setup" element={<SetupCompany />} />
+      <Route path="/auth" element={<Auth />}>
+        <Route path="signup/setup" element={<SetupContext />} />
+        <Route path="signup" element={<SignupContext />} />
+        <Route path="" element={<LoginContext />}>
+          <Route path="login" element={<LoginForm />} />
+          <Route path="forgot-password" element={<ForgotPasswordForm />} />
+          <Route path="reset-password/:id" element={<ResetPasswordForm />} />
+        </Route>
+      </Route>
 
       <Route element={<RequireAuth allowedRoles={[ROLES.Admin, ROLES.User]} />}>
         <Route path="" element={<Home />} />
