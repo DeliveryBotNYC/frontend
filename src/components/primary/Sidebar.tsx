@@ -178,7 +178,7 @@ const Sidebar = () => {
         >
           {/* Logout Btn */}
           <NavLink
-            to="/login"
+            to="/auth/login"
             onClick={function (event) {
               localStorage.clear();
               setAuth({});

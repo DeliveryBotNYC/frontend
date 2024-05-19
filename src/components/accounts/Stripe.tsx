@@ -3,6 +3,10 @@ import ReactDOM from "react-dom";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import SetupForm from "./SetupForm";
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
+import { useConfig, url } from "../../hooks/useConfig";
+import { useState, useEffect } from "react";
 
 // Make sure to call `loadStripe` outside of a component’s render to avoid
 // recreating the `Stripe` object on every render.
@@ -11,20 +15,29 @@ const stripePromise = loadStripe(
 );
 
 function Stripe() {
-  const options = {
-    // passing the SetupIntent's client secret
-    clientSecret:
-      "seti_1PHzQ1BtqkgzqqGPYYOhLv0z_secret_Q8Fv4UNs05YBRFoVrbsgBJzqKfaGNpv",
-    // Fully customizable with appearance API.
-    appearance: {
-      /*...*/
+  const config = useConfig();
+  var options;
+  console.log(options);
+  const { isLoading, data, error, status } = useQuery({
+    queryKey: ["client_secret"],
+    queryFn: () => {
+      return axios
+        .get(url + "/stripe/setupintent", config)
+        .then((res) => res.data);
     },
-  };
+  });
 
   return (
-    <Elements stripe={stripePromise} options={options}>
-      <SetupForm />
-    </Elements>
+    <>
+      {status === "success" ? (
+        <Elements
+          stripe={stripePromise}
+          options={{ clientSecret: data.client_secret }}
+        >
+          <SetupForm />
+        </Elements>
+      ) : null}
+    </>
   );
 }
 export default Stripe;

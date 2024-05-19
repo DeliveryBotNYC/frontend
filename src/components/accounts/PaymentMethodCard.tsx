@@ -1,6 +1,6 @@
 import VisaIcon from "../../assets/visa-icon.svg";
 
-const PaymentMethodCard = ({ type, exp, defaults }) => {
+const PaymentMethodCard = ({ item }) => {
   return (
     <div className="w-max px-5 py-4 rounded-2xl border border-secondaryBtnBorder flex items-center gap-10 mt-2">
       {/* Icon */}
@@ -10,18 +10,24 @@ const PaymentMethodCard = ({ type, exp, defaults }) => {
 
       {/* Middle Part */}
       <div>
-        <p className="text-sm lg:text-base text-black">{type}</p>
+        <p className="min-w-40 text-sm lg:text-base text-black">
+          {item.type} ending in {item.last4}
+        </p>
 
         {/* Expire */}
-        <p className="text-xs text-themeDarkGray mt-2.5">{exp}</p>
+        <p className="text-xs text-themeDarkGray mt-2.5">{item.exp}</p>
       </div>
 
       {/* Right Side */}
-      {defaults ? (
-        <div className="px-2.5 py-1.5 bg-themeOrange rounded-full">
+      {item.default ? (
+        <div className="w-24 text-center px-2.5 py-1.5 bg-themeOrange rounded-full">
           <p className="text-xs text-white">Default</p>
         </div>
-      ) : null}
+      ) : (
+        <div className="w-24 text-center px-2.5 py-1.5 rounded-full cursor-pointer">
+          <p className="text-xs text-themeDarkGray">Set as default</p>
+        </div>
+      )}
     </div>
   );
 };
