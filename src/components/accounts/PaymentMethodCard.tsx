@@ -1,6 +1,6 @@
 import VisaIcon from "../../assets/visa-icon.svg";
 
-const PaymentMethodCard = ({ type, exp }) => {
+const PaymentMethodCard = ({ type, exp, defaults }) => {
   return (
     <div className="w-max px-5 py-4 rounded-2xl border border-secondaryBtnBorder flex items-center gap-10 mt-2">
       {/* Icon */}
@@ -17,9 +17,11 @@ const PaymentMethodCard = ({ type, exp }) => {
       </div>
 
       {/* Right Side */}
-      <div className="px-2.5 py-1.5 bg-themeOrange rounded-full">
-        <p className="text-xs text-white">Default</p>
-      </div>
+      {defaults ? (
+        <div className="px-2.5 py-1.5 bg-themeOrange rounded-full">
+          <p className="text-xs text-white">Default</p>
+        </div>
+      ) : null}
     </div>
   );
 };

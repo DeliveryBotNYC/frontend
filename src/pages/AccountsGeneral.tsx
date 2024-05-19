@@ -1,64 +1,39 @@
+import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
-import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { useConfig, url } from "../hooks/useConfig";
+import { useOutletContext } from "react-router-dom";
+import { url, useConfig } from "../hooks/useConfig";
+
 const AccountsGeneral = () => {
   const config = useConfig();
-  //temp bearer
-
-  const [accountData, setaccountData] = useState({
-    firstname: "",
-    lastname: "",
-    email: "",
-    store_name: "",
-    phone: "",
-    location: {
-      street_address_1: "",
-      street_address_2: "",
-      access_code: "",
+  const { accounstData, setaccountsData } = useOutletContext();
+  const [updatedGeneralData, setaUpdatedGeneralData] = useState({});
+  function handleChange(e) {
+    accounstData.account[e.target.id] != e.target.value
+      ? setaUpdatedGeneralData({
+          ...updatedGeneralData,
+          [e.target.id]: e.target.value,
+        })
+      : (delete updatedGeneralData?.[e.target.id],
+        setaUpdatedGeneralData(updatedGeneralData));
+  }
+  const addTodoMutation = useMutation({
+    mutationFn: (newTodo: string) =>
+      axios.patch(url + "/retail/profile", updatedGeneralData, config),
+    onSuccess: (data) => {
+      setaUpdatedGeneralData({});
+      setaccountsData({ ...accounstData, account: data.data.account });
     },
-    note: "",
-  });
-  // Get invoice data
-  const { isLoading, data, error, status } = useQuery({
-    queryKey: ["profile"],
-    queryFn: () => {
-      return axios.get(url + "/retail/profile", config).then((res) => res.data);
+    onError: (error) => {
+      console.log(error);
+      //accessTokenRef.current = data.token;
     },
   });
-
-  // form data
-  useEffect(() => {
-    console.log("called");
-    if (status === "success")
-      setaccountData({
-        ...accountData,
-        firstname: data?.account?.firstname,
-        lastname: data?.account?.lastname,
-        email: data?.account?.email,
-        store_name: data?.account?.store_name,
-        phone: data?.account?.phone,
-        location: {
-          street_address_1: data?.account?.location?.street_address_1,
-          street_address_2: data?.account?.location?.street_address_2,
-          access_code: data?.account?.location?.access_code,
-        },
-        note: data?.account?.note,
-      });
-  }, [status === "success"]);
-
   return (
     <div className="w-full h-full bg-white p-themePadding rounded-2xl">
       <div className="w-full h-full bg-white rounded-2xl flex flex-col justify-between items-center">
         {/* Form */}
         <div className="w-full h-full">
-          {isLoading ? (
-            <div className="h-full w-full justify-center text-center">
-              Loading..
-            </div>
-          ) : (
-            ""
-          )}
           {/* Header */}
           <div className="flex items-center justify-between gap-2.5">
             <p className="text-lg text-black font-bold">General</p>
@@ -75,14 +50,10 @@ const AccountsGeneral = () => {
               {/* Input Field */}
               <input
                 type="text"
-                value={accountData.firstname}
+                defaultValue={accounstData?.account?.firstname}
+                id="firstname"
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                onChange={(e) =>
-                  setaccountData({
-                    ...accountData,
-                    firstname: e.target.value,
-                  })
-                }
+                onChange={(e) => handleChange(e)}
               />
             </div>
 
@@ -95,14 +66,10 @@ const AccountsGeneral = () => {
               {/* Input Field */}
               <input
                 type="text"
-                value={accountData.lastname}
+                id="lastname"
+                defaultValue={accounstData?.account?.lastname}
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                onChange={(e) =>
-                  setaccountData({
-                    ...accountData,
-                    lastname: e.target.value,
-                  })
-                }
+                onChange={(e) => handleChange(e)}
               />
             </div>
 
@@ -115,14 +82,10 @@ const AccountsGeneral = () => {
               {/* Input Field */}
               <input
                 type="email"
-                value={accountData.email}
+                id="email"
+                defaultValue={accounstData?.account?.email}
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                onChange={(e) =>
-                  setaccountData({
-                    ...accountData,
-                    email: e.target.value,
-                  })
-                }
+                onChange={(e) => handleChange(e)}
               />
             </div>
           </div>
@@ -144,15 +107,11 @@ const AccountsGeneral = () => {
               {/* Input Field */}
               <input
                 type="text"
-                value={accountData.store_name}
+                id="store_name"
+                defaultValue={accounstData?.account?.store_name}
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none bg-transparent"
                 disabled
-                onChange={(e) =>
-                  setaccountData({
-                    ...accountData,
-                    store_name: e.target.value,
-                  })
-                }
+                onChange={(e) => handleChange(e)}
               />
             </div>
 
@@ -165,14 +124,10 @@ const AccountsGeneral = () => {
               {/* Input Field */}
               <input
                 type="text"
-                value={accountData.phone}
+                id="phone"
+                defaultValue={accounstData?.account?.phone}
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                onChange={(e) =>
-                  setaccountData({
-                    ...accountData,
-                    store_name: e.target.value,
-                  })
-                }
+                onChange={(e) => handleChange(e)}
               />
             </div>
 
@@ -185,19 +140,10 @@ const AccountsGeneral = () => {
               {/* Input Field */}
               <input
                 type="text"
-                value={accountData.location.street_address_1}
+                id="street_address_1"
+                defaultValue={accounstData?.account?.location?.street_address_1}
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none bg-transparent"
                 disabled
-                onChange={(e) =>
-                  setaccountData({
-                    ...accountData,
-                    location: {
-                      street_address_1: e.target.value,
-                      street_address_2: accountData.location?.street_address_2,
-                      access_code: accountData.location?.access_code,
-                    },
-                  })
-                }
               />
             </div>
 
@@ -212,20 +158,12 @@ const AccountsGeneral = () => {
                 {/* Input Field */}
                 <input
                   type="number"
-                  value={accountData.location?.street_address_2}
+                  id="street_address_2"
+                  defaultValue={
+                    accounstData?.account?.location?.street_address_2
+                  }
                   className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none bg-transparent"
                   disabled
-                  onChange={(e) =>
-                    setaccountData({
-                      ...accountData,
-                      location: {
-                        street_address_1:
-                          accountData.location?.street_address_1,
-                        street_address_2: e.target.value,
-                        access_code: accountData.location?.access_code,
-                      },
-                    })
-                  }
                 />
               </div>
 
@@ -238,20 +176,10 @@ const AccountsGeneral = () => {
                 {/* Input Field */}
                 <input
                   type="password"
-                  value={accountData.location?.access_code}
+                  id="access_code"
+                  defaultValue={accounstData?.account?.location?.access_code}
                   className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                  onChange={(e) =>
-                    setaccountData({
-                      ...accountData,
-                      location: {
-                        street_address_1:
-                          accountData.location?.street_address_1,
-                        street_address_2:
-                          accountData.location?.street_address_2,
-                        access_code: e.target.value,
-                      },
-                    })
-                  }
+                  disabled
                 />
               </div>
             </div>
@@ -264,21 +192,23 @@ const AccountsGeneral = () => {
             {/* Input Field */}
             <input
               type="text"
-              value={accountData.note}
+              id="note"
+              defaultValue={accounstData?.account?.note}
               className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-              onChange={(e) =>
-                setaccountData({
-                  ...accountData,
-                  note: e.target.value,
-                })
-              }
+              onChange={(e) => handleChange(e)}
             />
           </div>
         </div>
 
         {/* Submit Button */}
         <div className="w-full flex items-center justify-center">
-          <button className="w-[352px] py-2.5 bg-themeGreen text-white shadow-btnShadow rounded-lg hover:scale-95 duration-200">
+          <button
+            disabled={Object.keys(updatedGeneralData).length < 1}
+            onClick={() => addTodoMutation.mutate(updatedGeneralData)}
+            className={`w-[352px] py-2.5 text-white shadow-btnShadow rounded-lg hover:scale-95 duration-200 bg-theme${
+              Object.keys(updatedGeneralData).length > 0 ? "Green" : "LightGray"
+            }`}
+          >
             Save
           </button>
         </div>
