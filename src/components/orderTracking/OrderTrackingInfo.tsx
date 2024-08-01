@@ -100,7 +100,7 @@ const OrderTrackingInfo = ({ data }) => {
         <div className="w-full bg-white rounded-2xl flex items-center justify-between gap-2.5 py-4">
           {/* left */}
           <div className="w-full flex items-center justify-center">
-            <Link to={`/order/edit/${data?.order_id}`}>
+            <Link to={`/orders/edit/${data?.order_id}`}>
               <p className="text-xs text-themeLightOrangeTwo">
                 View/edit order details
               </p>

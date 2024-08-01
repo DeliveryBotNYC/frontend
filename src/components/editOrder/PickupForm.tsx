@@ -5,7 +5,6 @@ import homeIcon from "../../assets/store-bw.svg";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import "https://maps.googleapis.com/maps/api/js?key=AIzaSyAxbAIczxXk3xoL3RH85z3eAZLncLZAuGg&libraries=places";
 import clipart from "../../assets/pickupClipArt.svg";
 import {
   enforceFormat,
@@ -18,37 +17,8 @@ import {
 import { url, useConfig } from "../../hooks/useConfig";
 
 const PickupForm = ({ data, stateChanger, ...rest }) => {
-  const notAllowed = ["new_order", "processing", "assigned"].includes(
-    rest?.state?.status
-  )
-    ? false
-    : true;
-  const notAllowedAddress = ["new_order", "processing"].includes(
-    rest?.state?.status
-  )
-    ? false
-    : true;
   const config = useConfig();
   const [autoFillDropdown, setaAutoFillDropdown] = useState([]);
-  //phone autofill
-  const checkPhoneExist = useMutation({
-    mutationFn: (newTodo: string) =>
-      axios.get(url + "/customer?phone=" + rest?.state?.pickup.phone, config),
-    onSuccess: (phone_customer) => {
-      if (phone_customer.data)
-        stateChanger({
-          ...rest.state,
-          pickup: {
-            ...rest.state?.pickup,
-            name: phone_customer?.data.name,
-            location: phone_customer?.data.location,
-          },
-        });
-    },
-    onError: (error) => {
-      console.log(error);
-    },
-  });
 
   //address autofill
   const checkAddressExist = useMutation({
@@ -76,13 +46,6 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
         required_verification: data?.required_verification,
       },
     });
-    if (
-      data?.autofill &&
-      /^(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(phone)
-    ) {
-      console.log("checkinbg");
-      checkPhoneExist.mutate(phone);
-    }
   }
 
   //address autofill
@@ -131,7 +94,7 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
 
         {/* Right Side */}
         <div>
-          {isEmpty(rest?.state).pickup && rest?.state?.status == "new_order" ? (
+          {isEmpty(rest?.state).pickup ? (
             <img
               onClick={() => {
                 stateChanger({
@@ -148,7 +111,7 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
               src={homeIcon}
               alt="home-icon"
             />
-          ) : rest?.state?.status == "new_order" ? (
+          ) : (
             <img
               onClick={() => {
                 stateChanger({
@@ -162,14 +125,14 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
               src={RefreshIcon}
               alt="refresh-icon"
             />
-          ) : null}
+          )}
         </div>
       </div>
 
       {/* Pickup Forms Data */}
       {!/^(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(
         rest?.state?.pickup?.phone
-      ) && rest?.state?.status == "new_order" ? (
+      ) ? (
         <div className="w-full grid grid-cols-1 gap-2.5 px-5 pb-3">
           <div className="w-full">
             <label className="text-themeDarkGray text-xs">
@@ -196,7 +159,6 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
 
             {/* Input Field */}
             <input
-              disabled={notAllowed}
               className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
               id="pickup_phone"
               value={rest?.state?.pickup?.phone}
@@ -221,7 +183,6 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
 
             {/* Input Field */}
             <input
-              disabled={notAllowed}
               type="text"
               id="pickup_name"
               className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
@@ -239,17 +200,12 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
           </div>
 
           {/* Address */}
-          <div
-            className={`w-full ${
-              !rest?.state?.pickup?.location?.lat ? "col-span-2" : ""
-            }`}
-          >
+          <div className="w-full">
             <label className="text-themeDarkGray text-xs">
               Address <span className="text-themeRed">*</span>
             </label>
             {/* Input Field */}
             <input
-              disabled={notAllowedAddress}
               value={rest?.state?.pickup?.location?.street_address_1}
               type="search"
               className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
@@ -265,60 +221,54 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
           </div>
 
           {/* Apt, Access code */}
-          {rest?.state?.pickup?.location?.lat ? (
-            <div className="w-full flex items-center justify-between gap-2.5">
-              {/* Apt */}
-              <div className="w-full">
-                <label className="text-themeDarkGray text-xs">Apt</label>
+          <div className="w-full flex items-center justify-between gap-2.5">
+            {/* Apt */}
+            <div className="w-full">
+              <label className="text-themeDarkGray text-xs">Apt</label>
 
-                {/* Input Field */}
-                <input
-                  disabled={notAllowed}
-                  type="text"
-                  id="pickup_street_address_2"
-                  className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                  value={rest?.state?.pickup?.location?.street_address_2}
-                  onChange={(e) =>
-                    stateChanger({
-                      ...rest?.state,
-                      pickup: {
-                        ...rest?.state?.pickup,
-                        location: {
-                          ...rest.state?.pickup?.location,
-                          street_address_2: e.target.value,
-                        },
+              {/* Input Field */}
+              <input
+                type="text"
+                id="pickup_street_address_2"
+                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                value={rest?.state?.pickup?.location?.street_address_2}
+                onChange={(e) =>
+                  stateChanger({
+                    ...rest?.state,
+                    pickup: {
+                      ...rest?.state?.pickup,
+                      location: {
+                        ...rest.state?.pickup?.location,
+                        street_address_2: e.target.value,
                       },
-                    })
-                  }
-                />
-              </div>
-
-              {/* Access code */}
-              <div className="w-full">
-                <label className="text-themeDarkGray text-xs">
-                  Access code
-                </label>
-
-                {/* Input Field */}
-                <input
-                  disabled={notAllowed}
-                  type="text"
-                  id="pickup_access_code"
-                  className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                  value={rest?.state?.pickup?.access_code}
-                  onChange={(e) =>
-                    stateChanger({
-                      ...rest?.state,
-                      pickup: {
-                        ...rest?.state?.pickup,
-                        access_code: e.target.value,
-                      },
-                    })
-                  }
-                />
-              </div>
+                    },
+                  })
+                }
+              />
             </div>
-          ) : null}
+
+            {/* Access code */}
+            <div className="w-full">
+              <label className="text-themeDarkGray text-xs">Access code</label>
+
+              {/* Input Field */}
+              <input
+                type="text"
+                id="pickup_access_code"
+                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                value={rest?.state?.pickup?.access_code}
+                onChange={(e) =>
+                  stateChanger({
+                    ...rest?.state,
+                    pickup: {
+                      ...rest?.state?.pickup,
+                      access_code: e.target.value,
+                    },
+                  })
+                }
+              />
+            </div>
+          </div>
 
           {/* Courier Note */}
           <div className="w-full col-span-2">
@@ -326,7 +276,6 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
 
             {/* Input Field */}
             <input
-              disabled={notAllowed}
               type="text"
               id="pickup_note"
               value={rest?.state?.pickup?.note}
@@ -351,7 +300,6 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
 
             <div className="flex items-center gap-1.5 mt-1">
               <input
-                disabled={notAllowed}
                 id="pickup_picture"
                 type="checkbox"
                 className="accent-themeLightOrangeTwo"

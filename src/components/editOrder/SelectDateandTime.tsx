@@ -9,12 +9,16 @@ import { isCompleted, initialState } from "../reusable/functions";
 import clipart from "../../assets/timeframeClipArt.svg";
 import { useConfig, url } from "../../hooks/useConfig";
 
-const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
+const SelectDateandTime = ({ stateChanger, ...rest }) => {
+  //console.log(rest?.state.timeframe);
   const [fastest, setFastest] = useState({});
   const [selectedDate, setSelectedDate] = useState(
     moment().format("YYYY-MM-DD")
   );
+
   //set to fastest service
+  //rest?.state?.timeframe?.service_id
+  // Data
   const config = useConfig();
   const [timeframes, setTimeframes] = useState([]);
   const addTodoMutation = useMutation({
@@ -31,57 +35,24 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
         start_time: data?.data[0]?.slots[0]?.start_time,
         end_time: data?.data[0]?.slots[0]?.end_time,
       }),
-        setTimeframes(data?.data),
-        rest?.state?.status == "new_order"
-          ? stateChanger({
-              ...rest?.state,
-              timeframe: {
-                service: data?.data[0]?.service,
-                service_id: 0,
-                start_time: data?.data[0]?.slots[0]?.start_time,
-                end_time: data?.data[0]?.slots[0]?.end_time,
-              },
-            })
-          : setTimeframes([
-              {
-                service: "1-hour",
-                slots: [
-                  {
-                    start_time: rest?.state?.timeframe?.start_time,
-                    end_time: rest?.state?.timeframe?.end_time,
-                  },
-                ],
-              },
-            ]);
+        setTimeframes(data?.data);
+      stateChanger({
+        ...rest?.state,
+        timeframe: {
+          service: data?.data[0]?.service,
+          service_id: 0,
+          start_time: data?.data[0]?.slots[0]?.start_time,
+          end_time: data?.data[0]?.slots[0]?.end_time,
+        },
+      });
     },
     onError: (error) => {},
   });
-
-  //initial date for timeframe in edit
   useEffect(() => {
-    setSelectedDate(
-      moment(rest?.state?.timeframe?.start_time).format("YYYY-MM-DD")
-    );
-  }, [rest?.state.timeframe]);
-
-  //reloading timeframe
-  useEffect(() => {
-    //when all other fields are completed
-    if (isCompleted(rest?.state).pickup && isCompleted(rest?.state).delivery) {
-      //if its a new order or edited order changed address
-      if (
-        rest?.state?.status == "new_order" ||
-        !timeframes[0] ||
-        (rest?.state?.status == "processing" &&
-          rest?.state?.pickup?.location?.address_id !=
-            data?.pickup?.location?.address_id)
-      ) {
-        addTodoMutation.mutate(rest?.state);
-      }
-    }
-    //setTimeframes([]);
+    isCompleted(rest?.state).pickup && isCompleted(rest?.state).delivery
+      ? addTodoMutation.mutate(rest?.state)
+      : setTimeframes([]);
   }, [rest?.state.pickup && rest?.state.delivery]);
-
   return (
     <div className="w-full bg-white rounded-2xl my-5">
       {/* Header */}
@@ -129,7 +100,7 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
             Time-frame <span className="text-themeRed">*</span>
           </label>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center gap-20">
             {timeframes?.map((item, index) => (
               <p
                 onClick={() =>

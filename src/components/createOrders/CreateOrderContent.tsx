@@ -28,16 +28,19 @@ const CreateOrderContent = () => {
         name: res?.data?.account?.store_name,
         note: res?.data?.account?.note,
         tip: res?.data?.defaults?.tip,
+        access_code: res?.data?.account?.access_code,
+        autofill: res?.data?.defaults?.autofill,
         location: {
+          address_id: res?.data?.account?.location?.address_id,
           full: res?.data?.account?.location?.street_address_1,
           street_address_1: res?.data?.account?.location?.street_address_1,
           street_address_2: res?.data?.account?.location?.street_address_2,
-          access_code: res?.data?.account?.location?.access_code,
           city: res?.data?.account?.location?.city,
           state: res?.data?.account?.location?.state,
           zip: res?.data?.account?.location?.zip,
           lat: res?.data?.account?.location?.lat,
           lon: res?.data?.account?.location?.lon,
+          zone: res?.data?.account?.location?.zone,
         },
         pickup_proof: res?.data?.defaults?.pickup_proof,
         delivery_proof: res?.data?.defaults?.delivery_proof,
@@ -46,6 +49,7 @@ const CreateOrderContent = () => {
     },
   });
   const [newOrderValues, setNewOrderValues] = useState({
+    status: "new_order",
     pickup: {
       phone: "",
       name: "",
@@ -145,6 +149,17 @@ const CreateOrderContent = () => {
     <ContentBox2>
       <div className="flex h-[calc(100%-60px)] justify-between gap-2.5 bg-contentBg">
         <div className="overflow-auto px-themePadding w-3/4">
+          <div className="pt-5 px-2.5 flex items-center justify-between gap-2.5">
+            <p className="text-2xl text-black font-bold heading">New Order</p>
+            {/* Upload Btn */}
+            <div
+              className="flex items-center justify-end gap-2.5 cursor-pointer"
+              onClick={() => contextValue?.setShowImageUploaderPopup(true)}
+            >
+              <img src={UploadSmallIcon} alt="upload-icon" />
+              <p className="text-sm text-secondaryBtnBorder">Upload</p>
+            </div>
+          </div>
           {/* Pickup FOrm */}
           <PickupForm
             state={newOrderValues}
@@ -167,6 +182,14 @@ const CreateOrderContent = () => {
         <Map state={newOrderValues} />
       </div>
       <PricePopup state={newOrderValues} />
+
+      {/* Overlay For the price popup */}
+      {contextValue?.showImageUploaderPopup === true ? (
+        <BlackOverlay closeFunc={closePopup} />
+      ) : null}
+
+      {/* Image Uploader Popup */}
+      <ImageUploader />
     </ContentBox2>
   );
 };

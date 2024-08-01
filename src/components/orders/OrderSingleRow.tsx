@@ -38,7 +38,7 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
     useClickOutside<HTMLDivElement>(false);
 
   // Destructuring The Objects Data
-  const { delivery, timeframe, last_updated, order_id, pickup, status } = item;
+  const { delivery, last_updated, order_id, pickup, status, timeframe } = item;
   // Naviagte to other page
   const navigate = useNavigate();
 

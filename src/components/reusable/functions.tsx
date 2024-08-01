@@ -1,4 +1,5 @@
-export const stadia = "fdcd2695-e5e1-4888-b985-4ffc0cccc317";
+//export const stadia = "fdcd2695-e5e1-4888-b985-4ffc0cccc317";
+export const stadia = "";
 export function isCompleted(input) {
   return {
     pickup:
@@ -98,6 +99,7 @@ export const initialState = {
     phone: "",
     name: "",
     note: "",
+    access_code: "",
     location: {
       full: "",
       street_address_1: "",
@@ -118,6 +120,7 @@ export const initialState = {
     name: "",
     note: "",
     tip: 0,
+    access_code: "",
     external_order_id: "",
     location: {
       street_address_1: "",
@@ -148,3 +151,87 @@ export const initialState = {
     end_time: "",
   },
 };
+
+/** 
+  //google autofill
+  let autocomplete;
+  let address1Field = document.getElementById("pickup_street_address_1");
+  if (address1Field)
+    (autocomplete = new google.maps.places.Autocomplete(address1Field, {
+      componentRestrictions: { country: ["us", "ca"] },
+      fields: ["address_components", "geometry"],
+      types: ["address"],
+    })),
+      autocomplete.addListener("place_changed", fillInAddress);
+  function fillInAddress() {
+    // Get the place details from the autocomplete object.
+    const place = this.getPlace();
+    let full = "";
+    let street_address_1 = "";
+    let city = "";
+    let state = "";
+    let zip = "";
+    let building = "";
+    for (const component of place.address_components) {
+      // @ts-ignore remove once typings fixed
+      const componentType = component.types[0];
+      switch (componentType) {
+        case "street_number": {
+          building = `${component.long_name} ${street_address_1}`;
+          full = `${component.long_name} ${street_address_1}`;
+          street_address_1 = `${component.long_name} ${street_address_1}`;
+          break;
+        }
+
+        case "route": {
+          full += component.short_name;
+          street_address_1 += component.short_name;
+          break;
+        }
+
+        case "locality":
+          full += ", " + component.long_name;
+          city = component.long_name;
+          break;
+
+        case "administrative_area_level_1": {
+          full += ", " + component.short_name;
+          state = component.short_name;
+          break;
+        }
+        case "postal_code": {
+          full += " " + component.long_name;
+          zip = component.long_name;
+          break;
+        }
+      }
+    }
+    if (building) {
+      stateChanger({
+        ...rest.state,
+        pickup: {
+          ...rest?.state?.pickup,
+          location: {
+            ...rest?.state?.pickup?.location,
+            full: full,
+            street_address_1: street_address_1,
+            city: city,
+            state: state,
+            zip: zip,
+            lat: place.geometry.location.lat(),
+            lon: place.geometry.location.lng(),
+          },
+        },
+      });
+    } else {
+      stateChanger({
+        ...rest.state,
+        pickup: {
+          ...rest?.state?.pickup,
+          location: {
+            ...initialState.pickup.location,
+          },
+        },
+      });
+    }
+  }*/

@@ -17,6 +17,8 @@ import DispatchRoutes from "../pages/DispatchRoutes";
 import DispatchStops from "../pages/DispatchStops";
 import DispatchOrders from "../pages/DispatchOrders";
 
+import EditOrder from "../pages/EditOrder";
+
 import Auth from "../pages/Auth";
 import LoginContext from "../components/auth/LoginContext";
 import SignupContext from "../components/auth/SignupContext";
@@ -48,6 +50,7 @@ const Router = () => {
         <Route path="" element={<Home />} />
         <Route path="orders" element={<Orders />} />
         <Route path="orders/tracking/:id" element={<OrderTracking />} />
+        <Route path="orders/edit/:id" element={<EditOrder />} />
         <Route path="automations" element={<Automations />} />
         <Route path="invoices" element={<Invoices />} />
         <Route path="invoices/:id" element={<SingleInvoice />} />

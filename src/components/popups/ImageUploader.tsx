@@ -12,19 +12,14 @@ const ImageUploader = () => {
     contextValue?.setShowImageUploaderPopup(false);
   };
 
-  // Photo uploder input State
-  const [photoUpload, setPhotoUpload] = useState<string | null>(null);
+  // uploder input State
+  const [upload, setUpload] = useState<string | null>(null);
 
   // Photo uploader input Function
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        setPhotoUpload(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
+    const file = e.target.files?.[0].name;
+    console.log(file);
+    if (file) setUpload(file);
   };
 
   return (
@@ -56,18 +51,15 @@ const ImageUploader = () => {
       <div>
         <input
           type="file"
+          accept=".csv"
           id="imageUploader"
           className="hidden"
           onChange={handlePhotoUpload}
         />
         <label htmlFor="imageUploader">
-          {photoUpload ? (
+          {upload ? (
             <div className="w-full h-full rounded-2xl overflow-hidden">
-              <img
-                src={photoUpload}
-                alt="uploaded-image"
-                className="w-full h-full object-cover"
-              />
+              {upload}
             </div>
           ) : (
             <div

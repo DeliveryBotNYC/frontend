@@ -47,7 +47,7 @@ const ProcessingInfo = ({ items }) => {
                     }`}
                   >
                     {item.log === "processing"
-                      ? "Order created - " + items?.source
+                      ? "Order created - " + item.by
                       : item.log == "assigned"
                       ? "Driver assigned"
                       : item.log == "arrived_at_pickup"

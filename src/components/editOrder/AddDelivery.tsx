@@ -16,91 +16,9 @@ import {
   isEmpty,
 } from "../reusable/functions";
 import { url, useConfig } from "../../hooks/useConfig";
-const items = [
-  { key: "box", value: "Box" },
-  { key: "bag", value: "Bag" },
-  { key: "garment", value: "Garment" },
-  { key: "1-hander", value: "1-hander" },
-  { key: "2-hander", value: "2-hander" },
-  { key: "envelope", value: "Envelope" },
-  { key: "other", value: "Other" },
-];
 const AddDelivery = ({ data, stateChanger, ...rest }) => {
-  const notAllowed = [
-    "new_order",
-    "processing",
-    "assigned",
-    "arrived_at_pickup",
-    "picked_up",
-  ].includes(rest?.state?.status)
-    ? false
-    : true;
-  const notAllowedAddress = ["new_order", "processing"].includes(
-    rest?.state?.status
-  )
-    ? false
-    : true;
-
   const config = useConfig();
   const [autoFillDropdown, setaAutoFillDropdown] = useState([]);
-  const [tip, setTip] = useState(rest?.state?.delivery?.tip / 100);
-
-  //plus minus
-  function minus(index2) {
-    if (rest?.state?.delivery?.items[index2].quantity == 1) return;
-    stateChanger({
-      ...rest?.state,
-      delivery: {
-        ...rest?.state?.delivery,
-        items: [
-          ...rest?.state?.delivery?.items?.slice(0, index2),
-          {
-            ...rest?.state?.delivery?.items[index2],
-            quantity: rest?.state?.delivery?.items[index2].quantity - 1,
-          },
-          ...rest?.state?.delivery?.items?.slice(index2 + 1),
-        ],
-      },
-    });
-  }
-
-  function plus(index2) {
-    stateChanger({
-      ...rest?.state,
-      delivery: {
-        ...rest?.state?.delivery,
-        items: [
-          ...rest?.state?.delivery?.items?.slice(0, index2),
-          {
-            ...rest?.state?.delivery?.items[index2],
-            quantity: rest?.state?.delivery?.items[index2].quantity + 1,
-          },
-          ...rest?.state?.delivery?.items?.slice(index2 + 1),
-        ],
-      },
-    });
-  }
-
-  //phone autofill
-  const checkPhoneExist = useMutation({
-    mutationFn: (newTodo: string) =>
-      axios.get(url + "/customer?phone=" + rest?.state?.delivery.phone, config),
-    onSuccess: (phone_customer) => {
-      if (phone_customer.data)
-        stateChanger({
-          ...rest.state,
-          delivery: {
-            ...rest.state?.delivery,
-            name: phone_customer?.data.name,
-            location: phone_customer?.data.location,
-          },
-        });
-    },
-    onError: (error) => {
-      console.log(error);
-      //accessTokenRef.current = data.token;
-    },
-  });
 
   //address autofill
   const checkAddressExist = useMutation({
@@ -128,15 +46,8 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
         phone: phone,
         items: data?.items,
         required_verification: data?.delivery_proof,
-        tip: data?.tip,
       },
     });
-    if (
-      data?.autofill &&
-      /^(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(phone)
-    ) {
-      checkPhoneExist.mutate(phone);
-    }
   }
 
   //address autofill
@@ -186,8 +97,7 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
 
         {/* Right Side */}
         <div>
-          {isEmpty(rest?.state).delivery &&
-          rest?.state?.status == "new_order" ? (
+          {isEmpty(rest?.state).delivery ? (
             <img
               onClick={() => {
                 stateChanger({
@@ -204,7 +114,7 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
               src={homeIcon}
               alt="home-icon"
             />
-          ) : rest?.state?.status == "new_order" ? (
+          ) : (
             <img
               onClick={() => {
                 stateChanger({
@@ -214,21 +124,20 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
                     ...initialState.delivery,
                     items: data?.items,
                     required_verification: data?.delivery_proof,
-                    tip: data?.tip,
                   },
                 });
               }}
               src={RefreshIcon}
               alt="refresh-icon"
             />
-          ) : null}
+          )}
         </div>
       </div>
 
       {/* delivery Forms Data */}
       {!/^(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(
         rest?.state?.delivery?.phone
-      ) && rest?.state?.status == "new_order" ? (
+      ) ? (
         <div className="w-full grid grid-cols-1 gap-2.5 px-5 pb-3">
           <div className="w-full">
             <label className="text-themeDarkGray text-xs">
@@ -255,20 +164,25 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
 
             {/* Input Field */}
             <input
-              disabled={notAllowed}
               className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
               id="delivery_phone"
               value={rest?.state?.delivery?.phone}
               onKeyUp={(e) => formatToPhone(e)}
               onKeyDown={(e) => enforceFormat(e)}
               onChange={(e) => {
-                stateChanger({
-                  ...rest?.state,
-                  delivery: {
-                    ...rest?.state?.delivery,
-                    phone: e.target.value,
-                  },
-                });
+                if (
+                  /^(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(
+                    e.target.value
+                  )
+                )
+                  stateChanger({
+                    ...rest?.state,
+                    delivery: {
+                      ...rest?.state?.delivery,
+                      phone: e.target.value,
+                    },
+                  });
+                else phone_input(e.target.value);
               }}
             />
           </div>
@@ -279,7 +193,6 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
 
             {/* Input Field */}
             <input
-              disabled={notAllowed}
               type="text"
               id="delivery_name"
               className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
@@ -297,17 +210,12 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
           </div>
 
           {/* Address */}
-          <div
-            className={`w-full ${
-              !rest?.state?.delivery?.location?.lat ? "col-span-2" : ""
-            }`}
-          >
+          <div className="w-full">
             <label className="text-themeDarkGray text-xs">
               Address <span className="text-themeRed">*</span>
             </label>
 
             <input
-              disabled={notAllowedAddress}
               value={rest?.state?.delivery?.location?.street_address_1}
               type="search"
               className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
@@ -321,62 +229,60 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
               ))}
             </datalist>
           </div>
+
           {/* Apt, Access code */}
-          {rest?.state?.delivery?.location?.lat ? (
-            <div className="w-full flex items-center justify-between gap-2.5">
-              {/* Apt */}
-              <div className="w-full">
-                <label className="text-themeDarkGray text-xs">Apt</label>
+          <div className="w-full flex items-center justify-between gap-2.5">
+            {/* Apt */}
+            <div className="w-full">
+              <label className="text-themeDarkGray text-xs">Apt</label>
 
-                {/* Input Field */}
-                <input
-                  type="number"
-                  id="delivery_street_address_2"
-                  className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                  value={rest?.state?.delivery?.location?.street_address_2}
-                  onChange={(e) =>
-                    stateChanger({
-                      ...rest?.state,
-                      delivery: {
-                        ...rest?.state?.delivery,
-                        location: {
-                          ...rest.state?.delivery?.location,
-                          street_address_2: e.target.value,
-                        },
+              {/* Input Field */}
+              <input
+                type="number"
+                id="delivery_street_address_2"
+                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                value={rest?.state?.delivery?.location?.street_address_2}
+                onChange={(e) =>
+                  stateChanger({
+                    ...rest?.state,
+                    delivery: {
+                      ...rest?.state?.delivery,
+                      location: {
+                        ...rest.state?.delivery?.location,
+                        street_address_2: e.target.value,
                       },
-                    })
-                  }
-                />
-              </div>
-
-              {/* Access code */}
-              <div className="w-full">
-                <label className="text-themeDarkGray text-xs">
-                  Access code
-                </label>
-
-                {/* Input Field */}
-                <input
-                  type="password"
-                  id="delivery_access_code"
-                  className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                  value={rest?.state?.delivery?.location?.access_code}
-                  onChange={(e) =>
-                    stateChanger({
-                      ...rest?.state,
-                      delivery: {
-                        ...rest?.state?.delivery,
-                        location: {
-                          ...rest?.state?.delivery?.location,
-                          access_code: e.target.value,
-                        },
-                      },
-                    })
-                  }
-                />
-              </div>
+                    },
+                  })
+                }
+              />
             </div>
-          ) : null}
+
+            {/* Access code */}
+            <div className="w-full">
+              <label className="text-themeDarkGray text-xs">Access code</label>
+
+              {/* Input Field */}
+              <input
+                type="password"
+                id="delivery_access_code"
+                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                value={rest?.state?.delivery?.location?.access_code}
+                onChange={(e) =>
+                  stateChanger({
+                    ...rest?.state,
+                    delivery: {
+                      ...rest?.state?.delivery,
+                      location: {
+                        ...rest?.state?.delivery?.location,
+                        access_code: e.target.value,
+                      },
+                    },
+                  })
+                }
+              />
+            </div>
+          </div>
+
           {/* Courier Note */}
           <div className="w-full col-span-2">
             <label className="text-themeDarkGray text-xs">Courier note</label>
@@ -399,13 +305,13 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
             />
           </div>
           {/* Picture Box */}
-          <div className="">
+          <div>
             <label className="text-themeDarkGray text-xs">
               Proof of delivery
             </label>
 
             {/* Proofs */}
-            <div className="w-full flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5">
               {/* Picture */}
               <div className="flex items-center gap-1.5 mt-1">
                 <input
@@ -500,14 +406,8 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
               </div>
             </div>
           </div>
-          <div className="w-full flex col-span-2">
-            <p className="text xl text-black font-bold heading py-3">
-              Order information
-            </p>
-          </div>
-
           {/* Order Information Boxes */}
-          <div className="w-full flex items-center justify-between gap-2.5 col-span-2">
+          <div className="grid grid-cols-4 gap-2.5">
             {/* Tip */}
             <div className="w-full">
               <label className="text-themeDarkGray text-xs">Tip</label>
@@ -517,18 +417,16 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
                 type="number"
                 step=".01"
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                value={tip}
-                onBlur={(e) => {
-                  setTip(parseFloat(e.target.value).toFixed(2));
+                value={rest?.state?.delivery?.tip / 100}
+                onChange={(e) =>
                   stateChanger({
                     ...rest?.state,
                     delivery: {
                       ...rest?.state?.delivery,
-                      tip: parseInt(100 * e.target.value),
+                      tip: 100 * parseFloat(e.target.value).toFixed(2),
                     },
-                  });
-                }}
-                onChange={(e) => setTip(parseFloat(e.target.value))}
+                  })
+                }
               />
             </div>
 
@@ -554,52 +452,35 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
                 }
               />
             </div>
-          </div>
-          {/* Items */}
-          {rest?.state?.delivery?.items?.map((item, index2) => (
-            <Fragment key={index2}>
-              <div className="w-full flex items-center justify-between gap-2.5 col-span-2">
-                {/* Quantity Field */}
-                <div className="">
+
+            {rest?.state?.delivery?.items?.map((item, index2) => (
+              <Fragment key={index2}>
+                <div className="w-full">
                   <label className="text-themeDarkGray text-xs">
                     Quantity <span className="text-themeRed">*</span>
                   </label>
-                  <div className="flex items-center justify-between gap-2.5">
-                    <span className="minus" onClick={() => minus(index2)}>
-                      -
-                    </span>
-
-                    <input
-                      type="number"
-                      step={1}
-                      className="text-center text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        stateChanger({
-                          ...rest?.state,
-                          delivery: {
-                            ...rest?.state?.delivery,
-                            items: [
-                              ...rest?.state?.delivery?.items?.slice(0, index2),
-                              {
-                                quantity: e.target.value,
-                                type: item.type,
-                              },
-                              ...rest?.state?.delivery?.items?.slice(
-                                index2 + 1
-                              ),
-                            ],
-                          },
-                        })
-                      }
-                    />
-                    <span className="plus" onClick={() => plus(index2)}>
-                      +
-                    </span>
-                  </div>
+                  <input
+                    type="number"
+                    className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                    value={item.quantity}
+                    onChange={(e) =>
+                      stateChanger({
+                        ...rest?.state,
+                        delivery: {
+                          ...rest?.state?.delivery,
+                          items: [
+                            ...rest?.state?.delivery?.items?.slice(0, index2),
+                            {
+                              quantity: e.target.value,
+                              type: item.type,
+                            },
+                            ...rest?.state?.delivery?.items?.slice(index2 + 1),
+                          ],
+                        },
+                      })
+                    }
+                  />
                 </div>
-
-                {/* Type Field */}
                 <div className="w-full">
                   <label className="text-themeDarkGray text-xs">
                     Item type <span className="text-themeRed">*</span>
@@ -625,22 +506,14 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
                       })
                     }
                   >
-                    {items.map((item2) =>
-                      rest?.state?.delivery?.items.some(
-                        (e) => e.type == item2.key
-                      ) && item.type != item2.key ? null : (
-                        <option value={item2.key}>{item2.value}</option>
-                      )
-                    )}
+                    <option value="box">Box</option>
+                    <option value="1-hander">Packets</option>
+                    <option value="bag">Catoon</option>
                   </select>
                 </div>
-              </div>
-              {/* Remove/Add items */}
-              <div className="w-full flex items-center justify-between gap-2.5 col-span-2">
-                {/* Remove Item Field */}
                 {rest?.state?.delivery?.items?.length > 1 ? (
                   <div
-                    className="w-full"
+                    className="col-span-4 flex items-center justify-end gap-2.5 py-2.5"
                     onClick={() =>
                       stateChanger({
                         ...rest?.state,
@@ -659,34 +532,32 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
                     </p>
                   </div>
                 ) : null}
-                {/* Add Item Field */}
-                {rest?.state?.delivery?.items?.length == index2 + 1 ? (
-                  <div
-                    className="w-full text-right"
-                    onClick={() =>
-                      stateChanger({
-                        ...rest?.state,
-                        delivery: {
-                          ...rest?.state?.delivery,
-                          items: [
-                            ...rest?.state?.delivery?.items?.slice(
-                              0,
-                              rest?.state?.delivery?.items?.length
-                            ),
-                            initialState.delivery.items[0],
-                          ],
-                        },
-                      })
-                    }
-                  >
-                    <p className="text-xs text-themeDarkGray cursor-pointer">
-                      Additional item +
-                    </p>
-                  </div>
-                ) : null}
-              </div>
-            </Fragment>
-          ))}
+              </Fragment>
+            ))}
+            {/* Add barcode or Additional Item */}
+            <div
+              className="col-span-4 flex items-center justify-end gap-2.5 py-2.5"
+              onClick={() =>
+                stateChanger({
+                  ...rest?.state,
+                  delivery: {
+                    ...rest?.state?.delivery,
+                    items: [
+                      ...rest?.state?.delivery?.items?.slice(
+                        0,
+                        rest?.state?.delivery?.items?.length
+                      ),
+                      initialState.delivery.items[0],
+                    ],
+                  },
+                })
+              }
+            >
+              <p className="text-xs text-themeDarkGray cursor-pointer">
+                Additional item +
+              </p>
+            </div>
+          </div>
         </div>
       )}
     </div>

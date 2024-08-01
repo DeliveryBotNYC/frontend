@@ -7,7 +7,11 @@ import { url, useConfig } from "../../hooks/useConfig";
 
 const PricePopup = ({ stateChanger, ...rest }) => {
   const config = useConfig();
-  const [givenQuote, setGivenQuote] = useState({ price: "", tip: "" });
+  const [givenQuote, setGivenQuote] = useState({
+    price: "",
+    original_price: "",
+    tip: "",
+  });
   const navigate = useNavigate();
   const addTodoMutation = useMutation({
     mutationFn: (newTodo: string) =>
@@ -25,7 +29,13 @@ const PricePopup = ({ stateChanger, ...rest }) => {
     mutationFn: (newQuote: string) =>
       axios.post(url + "/orders/quote", rest.state, config),
     onSuccess: (quote) => {
-      setGivenQuote({ price: quote.data.price, tip: quote.data.delivery.tip });
+      setGivenQuote({
+        price: quote.data.price,
+        tip: quote.data.tip,
+        original_price: quote.data.original_price
+          ? quote.data.original_price
+          : null,
+      });
     },
     onError: (error) => {
       console.log(error);
@@ -39,13 +49,19 @@ const PricePopup = ({ stateChanger, ...rest }) => {
       isCompleted(rest?.state).delivery &&
       isCompleted(rest?.state).timeframe
     )
-      createQuote.mutate(rest?.state);
+      setGivenQuote({
+        price: "",
+        tip: "",
+        original_price: "",
+      });
+    createQuote.mutate(rest?.state);
   }, [rest?.state]);
   return (
     <div className="w-full z-10 sticky left-0 bottom-0 bg-white shadow-dropdownShadow py-2.5 px-4 flex items-center justify-between gap-2.5">
       {isCompleted(rest?.state).pickup &&
       isCompleted(rest?.state).delivery &&
-      isCompleted(rest?.state).timeframe ? (
+      isCompleted(rest?.state).timeframe &&
+      !isNaN(parseInt(givenQuote.price) / 100) ? (
         <>
           <div>
             <p className="text-sm">
@@ -53,9 +69,13 @@ const PricePopup = ({ stateChanger, ...rest }) => {
               <span className="text-secondaryBtnBorder font-bold">
                 Total:
               </span>{" "}
-              <span className="line-through">$8.65</span> $
-              {(parseInt(givenQuote.price) / 100).toFixed(2)} + $
-              {givenQuote.tip} tip
+              {givenQuote.original_price ? (
+                <span className="line-through">
+                  ${(parseInt(givenQuote.original_price) / 100).toFixed(2)}
+                </span>
+              ) : null}{" "}
+              ${(parseInt(givenQuote.price) / 100).toFixed(2)} + $
+              {(parseInt(givenQuote.tip) / 100).toFixed(2)} tip
             </p>
           </div>
           <button
