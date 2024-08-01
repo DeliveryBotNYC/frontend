@@ -6,8 +6,10 @@ import { url, useConfig } from "../hooks/useConfig";
 
 const AccountsGeneral = () => {
   const config = useConfig();
+  const [autoFillDropdown, setaAutoFillDropdown] = useState([]);
   const { accounstData, setaccountsData } = useOutletContext();
   const [updatedGeneralData, setaUpdatedGeneralData] = useState({});
+  console.log(updatedGeneralData);
   function handleChange(e) {
     accounstData.account[e.target.id] != e.target.value
       ? setaUpdatedGeneralData({
@@ -29,6 +31,50 @@ const AccountsGeneral = () => {
       //accessTokenRef.current = data.token;
     },
   });
+
+  //address autofill
+  const checkAddressExist = useMutation({
+    mutationFn: (newTodo: string) =>
+      axios.post(
+        url + "/address/autocomplete",
+        { address: updatedGeneralData?.location?.street_address_1 },
+        config
+      ),
+    onSuccess: (location) => {
+      if (location)
+        setaUpdatedGeneralData({
+          location: {
+            full: location.account.location.full,
+            address_id: location.account.location.address_id,
+            street_address_1: location.account.location.street_address_1,
+            street_address_2: location.account.location.street_address_2,
+          },
+        });
+    },
+    onError: (error) => {
+      console.log(error);
+    },
+  });
+
+  //address autofill
+  function address_input(address: string) {
+    for (var i = 0; i < autoFillDropdown.length; i++) {
+      if (autoFillDropdown[i].full === address) {
+        setaUpdatedGeneralData({
+          location: {
+            full: autoFillDropdown[i]?.full,
+          },
+        });
+        return;
+      }
+    }
+    setaUpdatedGeneralData({
+      location: {
+        street_address_1: autoFillDropdown[i]?.street_address_1,
+      },
+    });
+    checkAddressExist.mutate(address);
+  }
   return (
     <div className="w-full h-full bg-white p-themePadding rounded-2xl">
       <div className="w-full h-full bg-white rounded-2xl flex flex-col justify-between items-center">
@@ -139,21 +185,25 @@ const AccountsGeneral = () => {
 
               {/* Input Field */}
               <input
-                type="text"
-                id="street_address_1"
                 defaultValue={accounstData?.account?.location?.street_address_1}
-                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none bg-transparent"
-                disabled
+                type="search"
+                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                list="delivery_autofill"
+                onChange={(e) => address_input(e.target.value)}
               />
+
+              <datalist id="delivery_autofill">
+                {autoFillDropdown.map((item, key) => (
+                  <option key={key} value={item.full} />
+                ))}
+              </datalist>
             </div>
 
             {/* Apt, Access code */}
             <div className="w-full flex items-center justify-between gap-2.5">
               {/* Apt */}
               <div className="w-full">
-                <label className="text-themeDarkGray text-xs">
-                  Apt <span className="text-themeRed">*</span>
-                </label>
+                <label className="text-themeDarkGray text-xs">Apt</label>
 
                 {/* Input Field */}
                 <input
@@ -163,23 +213,20 @@ const AccountsGeneral = () => {
                     accounstData?.account?.location?.street_address_2
                   }
                   className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none bg-transparent"
-                  disabled
                 />
               </div>
 
               {/* Access code */}
               <div className="w-full">
                 <label className="text-themeDarkGray text-xs">
-                  Access code <span className="text-themeRed">*</span>
+                  Access code
                 </label>
 
                 {/* Input Field */}
                 <input
-                  type="password"
                   id="access_code"
                   defaultValue={accounstData?.account?.location?.access_code}
                   className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                  disabled
                 />
               </div>
             </div>

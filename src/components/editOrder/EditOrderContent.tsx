@@ -24,9 +24,56 @@ const EditOrderContent = () => {
         .get(url + "/orders?order_id=" + orderId, config)
         .then((res) => ({
           status: res?.data?.status,
-          pickup: res?.data?.pickup,
-          delivery: res?.data?.delivery,
-          timeframe: res?.data?.timeframe,
+          pickup: {
+            phone: res?.data?.pickup?.phone,
+            name: res?.data?.pickup?.name,
+            note: res?.data?.pickup?.note,
+            location: {
+              address_id: res?.data?.pickup?.location?.address_id,
+              full: res?.data?.pickup?.location?.full,
+              street_address_1: res?.data?.pickup?.location?.street_address_1,
+              street_address_2: res?.data?.pickup?.location?.street_address_2,
+              access_code: res?.data?.pickup?.location?.access_code,
+              city: res?.data?.pickup?.location?.city,
+              state: res?.data?.pickup?.location?.state,
+              zip: res?.data?.pickup?.location?.zip,
+              lat: res?.data?.pickup?.location?.lat,
+              lon: res?.data?.pickup?.location?.lon,
+            },
+            required_verification: {
+              picture: res?.data?.pickup?.required_verification?.picture,
+            },
+          },
+          delivery: {
+            phone: res?.data?.delivery?.phone,
+            name: res?.data?.delivery?.name,
+            note: res?.data?.delivery?.note,
+            tip: res?.data?.delivery?.tip,
+            location: {
+              address_id: res?.data?.delivery?.location?.address_id,
+              full: res?.data?.delivery?.location?.full,
+              street_address_1: res?.data?.delivery?.location?.street_address_1,
+              street_address_2: res?.data?.delivery?.location?.street_address_2,
+              access_code: res?.data?.delivery?.location?.access_code,
+              city: res?.data?.delivery?.location?.city,
+              state: res?.data?.delivery?.location?.state,
+              zip: res?.data?.delivery?.location?.zip,
+              lat: res?.data?.delivery?.location?.lat,
+              lon: res?.data?.delivery?.location?.lon,
+            },
+            required_verification: {
+              picture: res?.data?.delivery?.required_verification?.picture,
+              recipient: res?.data?.delivery?.required_verification?.recipient,
+              signature: res?.data?.delivery?.required_verification?.signature,
+            },
+            items: res?.data?.delivery?.items,
+          },
+          timeframe: {
+            service: res?.data?.timeframe?.service,
+            service_id: 0,
+            start_time: res?.data?.timeframe?.start_time,
+            end_time: res?.data?.timeframe?.end_time,
+          },
         }));
     },
   });
@@ -39,6 +86,7 @@ const EditOrderContent = () => {
       name: "",
       note: "",
       location: {
+        address_id: "",
         full: "",
         street_address_1: "",
         street_address_2: "",
@@ -59,6 +107,8 @@ const EditOrderContent = () => {
       note: "",
       tip: 0,
       location: {
+        address_id: "",
+        full: "",
         street_address_1: "",
         street_address_2: "",
         access_code: "",
@@ -93,10 +143,7 @@ const EditOrderContent = () => {
     if (data?.pickup)
       setNewOrderValues({
         ...newOrderValues,
-        status: data?.status,
-        pickup: data?.pickup,
-        delivery: data?.delivery,
-        timeframe: data?.timeframe,
+        ...data,
       });
   }, [isSuccess]);
 

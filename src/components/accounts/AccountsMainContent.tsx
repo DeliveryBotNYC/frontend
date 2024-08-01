@@ -18,6 +18,8 @@ const AccountsMainContent = () => {
       store_name: "",
       phone: "",
       location: {
+        address_id: "",
+        full: "",
         street_address_1: "",
         street_address_2: "",
         access_code: "",

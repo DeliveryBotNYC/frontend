@@ -5,7 +5,6 @@ import homeIcon from "../../assets/store-bw.svg";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import "https://maps.googleapis.com/maps/api/js?key=AIzaSyAxbAIczxXk3xoL3RH85z3eAZLncLZAuGg&libraries=places";
 import clipart from "../../assets/pickupClipArt.svg";
 import {
   enforceFormat,

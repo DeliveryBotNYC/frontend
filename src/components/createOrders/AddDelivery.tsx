@@ -6,7 +6,6 @@ import homeIcon from "../../assets/store-bw.svg";
 import { useState, useEffect, Fragment } from "react";
 import axios from "axios";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import "https://maps.googleapis.com/maps/api/js?key=AIzaSyAxbAIczxXk3xoL3RH85z3eAZLncLZAuGg&libraries=places";
 import clipart from "../../assets/deliveryClipArt.svg";
 import {
   enforceFormat,
@@ -572,6 +571,7 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
                     <input
                       type="number"
                       step={1}
+                      key={"quantity" + index2}
                       className="text-center text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
                       value={item.quantity}
                       onChange={(e) =>
@@ -606,6 +606,7 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
                   </label>
                   {/* Select Field */}
                   <select
+                    key={"type" + index2}
                     className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
                     value={item.type}
                     onChange={(e) =>
@@ -629,7 +630,9 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
                       rest?.state?.delivery?.items.some(
                         (e) => e.type == item2.key
                       ) && item.type != item2.key ? null : (
-                        <option value={item2.key}>{item2.value}</option>
+                        <option key={item2.key} value={item2.key}>
+                          {item2.value}
+                        </option>
                       )
                     )}
                   </select>

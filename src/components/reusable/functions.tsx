@@ -95,12 +95,14 @@ export const formatToPhone = (event) => {
 };
 
 export const initialState = {
+  status: "delivered",
   pickup: {
     phone: "",
     name: "",
     note: "",
     access_code: "",
     location: {
+      address_id: "",
       full: "",
       street_address_1: "",
       street_address_2: "",
@@ -123,6 +125,8 @@ export const initialState = {
     access_code: "",
     external_order_id: "",
     location: {
+      address_id: "",
+      full: "",
       street_address_1: "",
       street_address_2: "",
       access_code: "",

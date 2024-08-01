@@ -14,16 +14,13 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
   const [selectedDate, setSelectedDate] = useState(
     moment().format("YYYY-MM-DD")
   );
+  console.log(rest.state.timeframe);
   //set to fastest service
   const config = useConfig();
   const [timeframes, setTimeframes] = useState([]);
   const addTodoMutation = useMutation({
     mutationFn: (getTimeframes: string) =>
-      axios.post(
-        url + "/timeframe?date=" + moment(selectedDate).format("MM-DD-YYYY"),
-        rest?.state,
-        config
-      ),
+      axios.post(url + "/timeframe?date=" + selectedDate, rest?.state, config),
     onSuccess: (data) => {
       setFastest({
         service: data?.data[0]?.service,
@@ -31,7 +28,6 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
         start_time: data?.data[0]?.slots[0]?.start_time,
         end_time: data?.data[0]?.slots[0]?.end_time,
       }),
-        setTimeframes(data?.data),
         rest?.state?.status == "new_order"
           ? stateChanger({
               ...rest?.state,
@@ -42,9 +38,12 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
                 end_time: data?.data[0]?.slots[0]?.end_time,
               },
             })
+          : moment().isBefore(moment(rest?.state?.timeframe?.start_time))
+          ? setTimeframes(data?.data)
           : setTimeframes([
               {
-                service: "1-hour",
+                service: rest?.state?.timeframe?.service,
+                service_id: 0,
                 slots: [
                   {
                     start_time: rest?.state?.timeframe?.start_time,
@@ -144,7 +143,7 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
                     },
                   })
                 }
-                key={item?.index}
+                key={index}
                 className={`text-sm text-themeLightPurple cursor-pointer ${
                   rest?.state?.timeframe?.service === item?.service
                     ? "font-bold"
@@ -167,7 +166,7 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
             <input
               type="date"
               className="w-full"
-              value={moment(selectedDate).format("yyyy-MM-DD")}
+              value={selectedDate}
               onChange={(e) => {
                 setSelectedDate(e.target.value);
                 addTodoMutation.mutate(rest?.state);
@@ -205,7 +204,10 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
             >
               {timeframes[rest?.state?.timeframe?.service_id]?.slots?.map(
                 (item) => (
-                  <option value={item.start_time + ";" + item.end_time}>
+                  <option
+                    key={item.start_time + ";" + item.end_time}
+                    value={item.start_time + ";" + item.end_time}
+                  >
                     {moment(item.start_time).format("hh:mm A") +
                       " - " +
                       moment(item.end_time).format("hh:mm A")}

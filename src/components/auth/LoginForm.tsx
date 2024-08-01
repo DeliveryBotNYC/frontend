@@ -41,7 +41,8 @@ const LoginForm = () => {
       }),
     onSuccess: (data) => {
       const accessToken = data?.data?.token;
-      const roles = data?.data?.roles;
+      //const roles = data?.data?.roles;
+      const roles = [2001];
       setAuth({ user, pwd, roles, accessToken });
       localStorage.setItem("aT", accessToken);
       localStorage.setItem("roles", JSON.stringify(roles));
