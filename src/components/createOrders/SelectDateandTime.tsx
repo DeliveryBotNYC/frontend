@@ -14,13 +14,16 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
   const [selectedDate, setSelectedDate] = useState(
     moment().format("YYYY-MM-DD")
   );
-  console.log(rest.state.timeframe);
   //set to fastest service
   const config = useConfig();
   const [timeframes, setTimeframes] = useState([]);
   const addTodoMutation = useMutation({
     mutationFn: (getTimeframes: string) =>
-      axios.post(url + "/timeframe?date=" + selectedDate, rest?.state, config),
+      axios.post(
+        url + "/timeframe?date=" + moment(selectedDate).format("MM-DD-YYYY"),
+        rest?.state,
+        config
+      ),
     onSuccess: (data) => {
       setFastest({
         service: data?.data[0]?.service,
@@ -29,7 +32,7 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
         end_time: data?.data[0]?.slots[0]?.end_time,
       }),
         rest?.state?.status == "new_order"
-          ? stateChanger({
+          ? (stateChanger({
               ...rest?.state,
               timeframe: {
                 service: data?.data[0]?.service,
@@ -37,7 +40,8 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
                 start_time: data?.data[0]?.slots[0]?.start_time,
                 end_time: data?.data[0]?.slots[0]?.end_time,
               },
-            })
+            }),
+            setTimeframes(data?.data))
           : moment().isBefore(moment(rest?.state?.timeframe?.start_time))
           ? setTimeframes(data?.data)
           : setTimeframes([
@@ -58,9 +62,11 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
 
   //initial date for timeframe in edit
   useEffect(() => {
-    setSelectedDate(
-      moment(rest?.state?.timeframe?.start_time).format("YYYY-MM-DD")
-    );
+    rest?.state?.status != "new_order"
+      ? setSelectedDate(
+          moment(rest?.state?.timeframe?.start_time).format("YYYY-MM-DD")
+        )
+      : null;
   }, [rest?.state.timeframe]);
 
   //reloading timeframe
@@ -104,7 +110,8 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
         {/* Right Side */}
         {rest?.state.timeframe.start_time != fastest?.start_time &&
         isCompleted(rest?.state).pickup &&
-        isCompleted(rest?.state).delivery ? (
+        isCompleted(rest?.state).delivery &&
+        rest?.state?.status == "new_order" ? (
           <div>
             <img
               onClick={() => {

@@ -11,6 +11,9 @@ import UseGetOrderId from "../../hooks/UseGetOrderId";
 import { url, useConfig } from "../../hooks/useConfig";
 import { Link, useLocation } from "react-router-dom";
 
+import BlackOverlay from "../popups/BlackOverlay";
+import PricePopup from "../popups/PricePopup";
+
 const EditOrderContent = () => {
   const config = useConfig();
   const contextValue = useContext(ThemeContext);
@@ -23,6 +26,7 @@ const EditOrderContent = () => {
       return axios
         .get(url + "/orders?order_id=" + orderId, config)
         .then((res) => ({
+          order_id: orderId,
           status: res?.data?.status,
           pickup: {
             phone: res?.data?.pickup?.phone,
@@ -80,6 +84,7 @@ const EditOrderContent = () => {
 
   //DEFAULT STATE
   const [newOrderValues, setNewOrderValues] = useState({
+    order_id: "",
     status: "delivered",
     pickup: {
       phone: "",
@@ -189,9 +194,7 @@ const EditOrderContent = () => {
         {/* Content Box */}
         <Map state={newOrderValues} />
       </div>
-      {
-        //**<PricePopup state={newOrderValues} />   */
-      }
+      {<PricePopup state={newOrderValues} data={data} />}
     </ContentBox2>
   );
 };

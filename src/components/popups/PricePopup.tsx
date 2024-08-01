@@ -5,11 +5,17 @@ import axios from "axios";
 import { isCompleted } from "../reusable/functions";
 import { url, useConfig } from "../../hooks/useConfig";
 
-const PricePopup = ({ stateChanger, ...rest }) => {
+const PricePopup = ({ data, stateChanger, ...rest }) => {
   const config = useConfig();
   const [givenQuote, setGivenQuote] = useState({
     price: "",
     original_price: "",
+    tip: "",
+  });
+  const [patchQuote, setPatchQuote] = useState({
+    previous_price: "",
+    price: "",
+    previous_tip: "",
     tip: "",
   });
   const navigate = useNavigate();
@@ -43,53 +49,96 @@ const PricePopup = ({ stateChanger, ...rest }) => {
     },
   });
 
+  const createPatchQuote = useMutation({
+    mutationFn: (patchQuote: string) =>
+      axios.post(
+        url + "/orders/quote?order_id=" + data?.order_id,
+        rest.state,
+        config
+      ),
+    onSuccess: (quote) => {
+      setPatchQuote({
+        price: quote.data.price,
+        tip: quote.data.tip,
+        previous_price: quote.data.previous_price,
+        previous_tip: quote.data.previous_tip,
+      });
+    },
+    onError: (error) => {
+      console.log(error);
+      //accessTokenRef.current = data.token;
+    },
+  });
+
   useEffect(() => {
     if (
       isCompleted(rest?.state).pickup &&
       isCompleted(rest?.state).delivery &&
       isCompleted(rest?.state).timeframe
-    )
-      setGivenQuote({
-        price: "",
-        tip: "",
-        original_price: "",
-      });
-    createQuote.mutate(rest?.state);
+    ) {
+      if (rest.state?.status == "new_order") createQuote.mutate(rest?.state);
+      else if (JSON.stringify(rest?.state) != JSON.stringify(data))
+        createPatchQuote.mutate(rest?.state);
+      else
+        setPatchQuote({
+          previous_price: "",
+          price: "",
+          previous_tip: "",
+          tip: "",
+        });
+    }
   }, [rest?.state]);
   return (
     <div className="w-full z-10 sticky left-0 bottom-0 bg-white shadow-dropdownShadow py-2.5 px-4 flex items-center justify-between gap-2.5">
       {isCompleted(rest?.state).pickup &&
       isCompleted(rest?.state).delivery &&
       isCompleted(rest?.state).timeframe &&
-      !isNaN(parseInt(givenQuote.price) / 100) ? (
+      (!isNaN(parseInt(givenQuote.price) / 100) ||
+        !isNaN(parseInt(patchQuote.price) / 100)) ? (
         <>
           <div>
             <p className="text-sm">
-              {" "}
               <span className="text-secondaryBtnBorder font-bold">
-                Total:
+                {rest.state?.status == "Total:" ? "Request" : "Additional:"}
               </span>{" "}
               {givenQuote.original_price ? (
                 <span className="line-through">
                   ${(parseInt(givenQuote.original_price) / 100).toFixed(2)}
                 </span>
               ) : null}{" "}
-              ${(parseInt(givenQuote.price) / 100).toFixed(2)} + $
-              {(parseInt(givenQuote.tip) / 100).toFixed(2)} tip
+              {givenQuote?.price
+                ? "$" +
+                  (parseInt(givenQuote.price) / 100).toFixed(2) +
+                  " + $" +
+                  (parseInt(givenQuote.tip) / 100).toFixed(2) +
+                  " tip"
+                : "+$" +
+                  (
+                    (parseInt(patchQuote.price) +
+                      parseInt(patchQuote.tip) -
+                      (parseInt(patchQuote.previous_price) +
+                        parseInt(patchQuote.previous_tip))) /
+                    100
+                  ).toFixed(2) +
+                  " ($" +
+                  (parseInt(patchQuote.price) / 100).toFixed(2) +
+                  " + $" +
+                  (parseInt(patchQuote.tip) / 100).toFixed(2) +
+                  " tip)"}
             </p>
           </div>
           <button
             className="bg-themeGreen py-2 px-themePadding text-white font-bold"
             onClick={() => addTodoMutation.mutate(rest.state)}
           >
-            Request
+            {rest.state?.status == "new_order" ? "Request" : "Update"}
           </button>
         </>
       ) : (
         <>
           <div></div>
           <button className="bg-themeLightGray py-2 px-themePadding text-white font-bold">
-            Request
+            {rest.state?.status == "new_order" ? "Request" : "Update"}
           </button>
         </>
       )}
