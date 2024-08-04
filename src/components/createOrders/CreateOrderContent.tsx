@@ -21,6 +21,7 @@ const CreateOrderContent = () => {
   const contextValue = useContext(ThemeContext);
   const { isLoading, data, error, isSuccess } = useQuery({
     queryKey: ["profile"],
+    refetchOnWindowFocus: false,
     queryFn: () => {
       return axios.get(url + "/retail/profile", config).then((res) => ({
         default: res?.data?.defaults?.store_default,

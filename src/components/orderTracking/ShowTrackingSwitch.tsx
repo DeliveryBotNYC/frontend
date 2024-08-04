@@ -8,7 +8,9 @@ const ShowTrackingSwitch = () => {
   return (
     <div
       onClick={() => contextValue?.setActiveSwitch((prev) => !prev)}
-      className={`cursor-pointer relative bg-themeGreen w-9 h-5 block rounded-full`}
+      className={`cursor-pointer relative ${
+        contextValue?.activeSwitch === true ? "bg-themeGreen" : "bg-themeGray"
+      } w-9 h-5 block rounded-full`}
     >
       <span
         className={`w-4 h-4 bg-white absolute rounded-full ${

@@ -1,5 +1,5 @@
-export const stadia = "fdcd2695-e5e1-4888-b985-4ffc0cccc317";
-//export const stadia = "";
+//export const stadia = "fdcd2695-e5e1-4888-b985-4ffc0cccc317";
+export const stadia = "";
 export function isCompleted(input) {
   return {
     pickup:

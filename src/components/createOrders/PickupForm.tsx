@@ -178,8 +178,8 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
               className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
               id="pickup_phone"
               value={rest?.state?.pickup?.phone}
-              onKeyUp={(e) => formatToPhone(e)}
-              onKeyDown={(e) => enforceFormat(e)}
+              onKeyUp={(e) => (formatToPhone(e), phone_input(e.target.value))}
+              onKeyDown={(e) => (enforceFormat(e), phone_input(e.target.value))}
               onChange={(e) => phone_input(e.target.value)}
             />
           </div>
@@ -324,9 +324,8 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
             <label className="text-themeDarkGray text-xs">Courier note</label>
 
             {/* Input Field */}
-            <input
+            <textarea
               disabled={notAllowed}
-              type="text"
               id="pickup_note"
               value={rest?.state?.pickup?.note}
               onChange={(e) =>

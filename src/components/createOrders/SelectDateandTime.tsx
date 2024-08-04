@@ -81,10 +81,10 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
           rest?.state?.pickup?.location?.address_id !=
             data?.pickup?.location?.address_id)
       ) {
+        setTimeframes([]);
         addTodoMutation.mutate(rest?.state);
       }
-    }
-    //setTimeframes([]);
+    } else setTimeframes([]);
   }, [rest?.state.pickup && rest?.state.delivery]);
 
   return (

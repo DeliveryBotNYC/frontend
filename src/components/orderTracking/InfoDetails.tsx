@@ -27,7 +27,7 @@ const ProcessingInfo = ({ items }) => {
                 {/* Dot */}
                 <div
                   className={`w-3.5 h-3.5 rounded-full border-2 ${
-                    item.isCompleted === true
+                    item.is_completed === true
                       ? "bg-themeOrange border-transparent"
                       : "bg-white border-themeOrange"
                   }`}
@@ -35,19 +35,19 @@ const ProcessingInfo = ({ items }) => {
                 <div>
                   <p
                     className={`text-xs text-${
-                      item.log === "processing" && item.isCompleted === true
+                      item.log === "processing" && item.is_completed === true
                         ? "themeOrange font-bold"
-                        : item.log == "assigned" && item.isCompleted === true
+                        : item.log == "assigned" && item.is_completed === true
                         ? "themeBlue font-bold"
-                        : item.log == "picked_up" && item.isCompleted === true
+                        : item.log == "picked_up" && item.is_completed === true
                         ? "black font-bold"
-                        : item.log == "delivered" && item.isCompleted === true
+                        : item.log == "delivered" && item.is_completed === true
                         ? "themeDarkGreen font-bold"
                         : "black"
                     }`}
                   >
                     {item.log === "processing"
-                      ? "Order created - " + item.by
+                      ? "Order created (" + item.by + ")"
                       : item.log == "assigned"
                       ? "Driver assigned"
                       : item.log == "arrived_at_pickup"
@@ -94,7 +94,7 @@ const ProcessingInfo = ({ items }) => {
                 </p>
 
                 <p className="text-xs">
-                  {item.isCompleted === true
+                  {item.is_completed
                     ? moment(item.datetime).format("h:mm a")
                     : moment(item.datetime.start).format("h:mm a") +
                       " - " +
@@ -106,7 +106,7 @@ const ProcessingInfo = ({ items }) => {
             {index != 0 ? (
               <div
                 className={`w-full h-[calc(100%-0.8rem)] border-l-2 border-l-themeOrange ${
-                  items.logs[index - 1]?.isCompleted === true
+                  items.logs[index - 1]?.is_completed === true
                     ? "border-solid"
                     : "border-dashed"
                 } absolute left-1.5 bottom-3.5 z-10`}

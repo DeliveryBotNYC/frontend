@@ -32,6 +32,12 @@ interface ThemeContextValue {
   showSmsPopup: boolean;
   setShowSmsPopup: React.Dispatch<React.SetStateAction<boolean>>;
 
+  showCancelPopup: boolean;
+  setShowCancelPopup: React.Dispatch<React.SetStateAction<boolean>>;
+
+  showReportPOD: boolean;
+  setShowReportPOD: React.Dispatch<React.SetStateAction<boolean>>;
+
   cleanCloud: boolean;
   setCleanCloud: React.Dispatch<React.SetStateAction<boolean>>;
 
@@ -79,6 +85,12 @@ export const ThemeProvider: React.FC<ThemeContextProps> = ({ children }) => {
   // Show SMS popup
   const [showSmsPopup, setShowSmsPopup] = useState<boolean>(false);
 
+  // Show cancel order popup
+  const [showCancelPopup, setShowCancelPopup] = useState<boolean>(false);
+
+  // Show report POD popup
+  const [showReportPOD, setShowReportPOD] = useState<boolean>(false);
+
   // cleancloud edit
   const [cleanCloud, setCleanCloud] = useState<boolean>(false);
 
@@ -116,6 +128,10 @@ export const ThemeProvider: React.FC<ThemeContextProps> = ({ children }) => {
     setShowGeneratedApiKey,
     showSmsPopup,
     setShowSmsPopup,
+    showCancelPopup,
+    setShowCancelPopup,
+    showReportPOD,
+    setShowReportPOD,
     cleanCloud,
     setCleanCloud,
     cleanCloudUpdate,

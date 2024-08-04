@@ -18,6 +18,8 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
     previous_tip: "",
     tip: "",
   });
+
+  const [error, setError] = useState({ message: "" });
   const navigate = useNavigate();
   const addTodoMutation = useMutation({
     mutationFn: (newTodo: string) =>
@@ -34,6 +36,14 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
   const createQuote = useMutation({
     mutationFn: (newQuote: string) =>
       axios.post(url + "/orders/quote", rest.state, config),
+    onMutate: () => {
+      setError({ message: "" });
+      setGivenQuote({
+        price: "",
+        original_price: "",
+        tip: "",
+      });
+    },
     onSuccess: (quote) => {
       setGivenQuote({
         price: quote.data.price,
@@ -44,8 +54,7 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
       });
     },
     onError: (error) => {
-      console.log(error);
-      //accessTokenRef.current = data.token;
+      setError({ message: error.response.data.message });
     },
   });
 
@@ -79,15 +88,16 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
       if (rest.state?.status == "new_order") createQuote.mutate(rest?.state);
       else if (JSON.stringify(rest?.state) != JSON.stringify(data))
         createPatchQuote.mutate(rest?.state);
-      else
+      else {
         setPatchQuote({
           previous_price: "",
           price: "",
           previous_tip: "",
           tip: "",
         });
-    }
-  }, [rest?.state]);
+      }
+    } else setError({ message: "" });
+  }, [rest?.state?.delivery?.location?.address_id]);
   return (
     <div className="w-full z-10 sticky left-0 bottom-0 bg-white shadow-dropdownShadow py-2.5 px-4 flex items-center justify-between gap-2.5">
       {isCompleted(rest?.state).pickup &&
@@ -100,7 +110,7 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
             <p className="text-sm">
               <span className="text-secondaryBtnBorder font-bold">
                 {rest.state?.status == "Total:" ? "Request" : "Additional:"}
-              </span>{" "}
+              </span>
               {givenQuote.original_price ? (
                 <span className="line-through">
                   ${(parseInt(givenQuote.original_price) / 100).toFixed(2)}
@@ -136,7 +146,11 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
         </>
       ) : (
         <>
-          <div></div>
+          <div>
+            <p className="text-sm text-themeRed">
+              {error.message ? error.message : null}
+            </p>
+          </div>
           <button className="bg-themeLightGray py-2 px-themePadding text-white font-bold">
             {rest.state?.status == "new_order" ? "Request" : "Update"}
           </button>

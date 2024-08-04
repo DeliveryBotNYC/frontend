@@ -237,8 +237,8 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
               className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
               id="delivery_phone"
               value={rest?.state?.delivery?.phone}
-              onKeyUp={(e) => formatToPhone(e)}
-              onKeyDown={(e) => enforceFormat(e)}
+              onKeyUp={(e) => (formatToPhone(e), phone_input(e.target.value))}
+              onKeyDown={(e) => (enforceFormat(e), phone_input(e.target.value))}
               onChange={(e) => phone_input(e.target.value)}
             />
           </div>
@@ -329,7 +329,7 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
 
                 {/* Input Field */}
                 <input
-                  type="number"
+                  type="text"
                   id="delivery_street_address_2"
                   className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
                   value={rest?.state?.delivery?.location?.street_address_2}
@@ -356,7 +356,7 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
 
                 {/* Input Field */}
                 <input
-                  type="password"
+                  type="text"
                   id="delivery_access_code"
                   className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
                   value={rest?.state?.delivery?.location?.access_code}
@@ -381,8 +381,7 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
             <label className="text-themeDarkGray text-xs">Courier note</label>
 
             {/* Input Field */}
-            <input
-              type="text"
+            <textarea
               id="delivery_note"
               value={rest?.state?.delivery?.note}
               onChange={(e) =>
