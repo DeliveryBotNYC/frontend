@@ -17,7 +17,7 @@ const LoginForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || "/";
-
+  const admin = "/auth/admin/login" ? true : false;
   const userRef = useRef();
   const errRef = useRef();
 
@@ -35,14 +35,14 @@ const LoginForm = () => {
 
   const addTodoMutation = useMutation({
     mutationFn: (newTodo: string) =>
-      axios.post(url + "/retail/login", {
+      axios.post(admin ? url + "/admin/login" : url + "/retail/login", {
         email: user,
         password: pwd,
       }),
     onSuccess: (data) => {
       const accessToken = data?.data?.token;
       //const roles = data?.data?.roles;
-      const roles = [2001];
+      const roles = admin ? [2001, 5150] : [2001];
       setAuth({ user, pwd, roles, accessToken });
       localStorage.setItem("aT", accessToken);
       localStorage.setItem("roles", JSON.stringify(roles));

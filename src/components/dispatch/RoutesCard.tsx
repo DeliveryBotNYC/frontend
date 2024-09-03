@@ -3,17 +3,22 @@ import RouteBar from "../reusable/RouteBar";
 
 interface OrderItem {
   route_id: string;
-  timeframe: string;
+  type: string;
+  status: string;
+  time_frame: string;
+  value: number;
+  text: string;
+  color: string;
   driver: {
-    name?: string;
-    phone?: string;
-  };
-  status: {
-    value: string;
-    text: string;
+    name: string;
+    phone: string;
+    location: { lat: string; lon: string };
   };
 }
 const RoutesCard = ({ item }: { item: OrderItem }) => {
+  //{data.map((item) => (
+  //<Outlet context={{ item }} />
+  //))}
   // Getting the pathname from URL bar
   const { pathname } = useLocation();
   const pathSegments = pathname.split("/");
@@ -23,7 +28,7 @@ const RoutesCard = ({ item }: { item: OrderItem }) => {
     <Link to={`/dispatch/route/${item.route_id}`}>
       <div
         className={`${
-          route_id === item.route_id ? "bg-contentBg" : "bg-white"
+          route_id === item?.route_id ? "bg-contentBg" : "bg-white"
         } py-3.5 px-themePadding border-b-2 border-b-themeLightGray cursor-pointer flex gap-2.5`}
       >
         <div className="w-full">
@@ -32,8 +37,10 @@ const RoutesCard = ({ item }: { item: OrderItem }) => {
             {/* ID */}
             <div className="w-full">
               <p>
-                <span className="text-themeOrange">DBX</span>
-                {item.route_id}
+                <span className="text-themeOrange">
+                  RB{item?.type == "advanced" ? "A" : "I"}
+                </span>
+                {item?.route_id}
               </p>
             </div>
 
@@ -46,7 +53,7 @@ const RoutesCard = ({ item }: { item: OrderItem }) => {
           {/* Bottom */}
           <div className="flex items-center justify-between gap-2.5">
             <p className="text-xs text-themeDarkGray w-full">
-              {item?.timeframe}
+              {item?.time_frame}
             </p>
 
             {/* delivery */}
@@ -59,7 +66,7 @@ const RoutesCard = ({ item }: { item: OrderItem }) => {
         </div>
         <div className="w-3/5">
           {/* Status Btn w-full h-full */}
-          <RouteBar type={item.status.value} text={item.status.text} />
+          <RouteBar data={item} />
         </div>
       </div>
     </Link>

@@ -1,4 +1,9 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useOutletContext,
+} from "react-router-dom";
 import Home from "../pages/Home";
 //import Register from "../pages/Register";
 //import SetupCompany from "../pages/SetupCompany";
@@ -13,9 +18,7 @@ import AccountsGeneral from "../pages/AccountsGeneral";
 import AccountsDefault from "../pages/AccountsDefault";
 import AccountsBilling from "../pages/AccountsBilling";
 import Dispatch from "../pages/Dispatch";
-import DispatchRoutes from "../pages/DispatchRoutes";
-import DispatchStops from "../pages/DispatchStops";
-import DispatchOrders from "../pages/DispatchOrders";
+import SideBarRoutes from "../components/dispatch/SideBarRoutes";
 
 import EditOrder from "../pages/EditOrder";
 
@@ -34,6 +37,7 @@ const Router = () => {
     User: 2001,
     Admin: 5150,
   };
+
   return (
     <Routes>
       <Route path="/auth" element={<Auth />}>
@@ -43,6 +47,9 @@ const Router = () => {
           <Route path="login" element={<LoginForm />} />
           <Route path="forgot-password" element={<ForgotPasswordForm />} />
           <Route path="reset-password/:id" element={<ResetPasswordForm />} />
+        </Route>
+        <Route path="admin" element={<LoginContext />}>
+          <Route path="login" element={<LoginForm />} />
         </Route>
       </Route>
 
@@ -63,7 +70,10 @@ const Router = () => {
         </Route>
       </Route>
       <Route element={<RequireAuth allowedRoles={[ROLES.Admin]} />}>
-        <Route path="dispatch" element={<Dispatch />} />
+        <Route path="dispatch" element={<Dispatch />}>
+          <Route path="" element={<SideBarRoutes />} />
+          <Route path="route/:id" element={<SideBarRoutes />} />
+        </Route>
       </Route>
     </Routes>
   );
