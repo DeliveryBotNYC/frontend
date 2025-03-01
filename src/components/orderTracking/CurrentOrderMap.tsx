@@ -76,10 +76,10 @@ const CurrentOrderMap = ({ data }) => {
         let bounds = [];
         Array.isArray(data?.stops) && data?.stops?.length > 0
           ? bounds.push(data?.stops)
-          : data.delivery?.lat
-          ? betweensPoly.push(
-              [data.delivery?.lat, data.delivery?.lon],
-              [data.pickup?.lat, data.pickup?.lon]
+          : data.pickup?.address?.lat && data.delivery?.address?.lat
+          ? bounds.push(
+              [data.delivery?.address?.lat, data.delivery?.address?.lon],
+              [data.pickup?.address?.lat, data.pickup?.address?.lon]
             )
           : bounds.push([40.84, -73.91], [40.63, -74.02]);
 
@@ -112,7 +112,7 @@ const CurrentOrderMap = ({ data }) => {
             stadia
           }
         />
-        {data?.delivery?.location?.lat ? (
+        {data?.delivery?.address?.lat ? (
           <Polyline
             pathOptions={{ color: "rgba(238, 182, 120, 0.4)" }}
             positions={betweensPoly}
@@ -123,33 +123,30 @@ const CurrentOrderMap = ({ data }) => {
             pathOptions={{ color: "#EEB678" }}
             positions={
               [
-                [data?.pickup?.location?.lat, data?.pickup?.location?.lon],
-                [data.driver?.location?.lat, data.driver?.location.lon],
+                [data?.pickup?.address?.lat, data?.pickup?.address?.lon],
+                [data.driver?.address?.lat, data.driver?.address.lon],
               ] as LatLngExpression[]
             }
           />
         ) : null}
 
         {/* Pickup Marker */}
-        {data?.pickup?.location?.lat ? (
+        {data?.pickup?.address?.lat ? (
           <Marker
             icon={pickupMarker}
             key={1}
-            position={[
-              data?.pickup?.location?.lat,
-              data?.pickup?.location?.lon,
-            ]}
+            position={[data?.pickup?.address?.lat, data?.pickup?.address?.lon]}
           ></Marker>
         ) : null}
 
         {/* Delivered Marker */}
-        {data?.delivery?.location?.lat ? (
+        {data?.delivery?.address?.lat ? (
           <Marker
             icon={deliveryMarker}
             key={2}
             position={[
-              data?.delivery?.location?.lat,
-              data?.delivery?.location?.lon,
+              data?.delivery?.address?.lat,
+              data?.delivery?.address?.lon,
             ]}
           ></Marker>
         ) : null}
@@ -165,8 +162,8 @@ const CurrentOrderMap = ({ data }) => {
         ) : null}
         {/* Multiple Delivery Markers */}
         {data.stops?.map((item, index) => {
-          return item.address_id != data?.delivery?.location?.address_id &&
-            item.address_id != data?.pickup?.location?.address_id ? (
+          return item.o_order != data?.delivery?.o_order &&
+            item.o_order != data?.pickup?.o_order ? (
             <Marker
               key={index}
               icon={BetweenMarker}

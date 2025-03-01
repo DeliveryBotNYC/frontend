@@ -10,17 +10,20 @@ import clipart from "../../assets/timeframeClipArt.svg";
 import { useConfig, url } from "../../hooks/useConfig";
 
 const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
-  const [fastest, setFastest] = useState({});
+  const [fastest, setFastest] = useState([]);
   const [selectedDate, setSelectedDate] = useState(
-    moment().format("YYYY-MM-DD")
+    moment().hours() > 18
+      ? moment().add(1, "days").format("YYYY-MM-DD")
+      : moment().format("YYYY-MM-DD")
   );
   //set to fastest service
   const config = useConfig();
   const [timeframes, setTimeframes] = useState([]);
+  console.log(timeframes);
   const addTodoMutation = useMutation({
     mutationFn: (getTimeframes: string) =>
       axios.post(
-        url + "/timeframe?date=" + moment(selectedDate).format("MM-DD-YYYY"),
+        url + "/slots?date=" + moment(selectedDate).format("MM-DD-YYYY"),
         rest?.state,
         config
       ),
@@ -47,7 +50,6 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
           : setTimeframes([
               {
                 service: rest?.state?.timeframe?.service,
-                service_id: 0,
                 slots: [
                   {
                     start_time: rest?.state?.timeframe?.start_time,
@@ -62,11 +64,22 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
 
   //initial date for timeframe in edit
   useEffect(() => {
-    rest?.state?.status != "new_order"
-      ? setSelectedDate(
-          moment(rest?.state?.timeframe?.start_time).format("YYYY-MM-DD")
-        )
-      : null;
+    if (rest?.state?.status != "new_order") {
+      setSelectedDate(
+        moment(rest?.state?.timeframe?.start_time).format("YYYY-MM-DD")
+      );
+      setTimeframes([
+        {
+          service: rest?.state?.timeframe?.service,
+          slots: [
+            {
+              start_time: rest?.state?.timeframe?.start_time,
+              end_time: rest?.state?.timeframe?.end_time,
+            },
+          ],
+        },
+      ]);
+    }
   }, [rest?.state.timeframe]);
 
   //reloading timeframe
@@ -84,6 +97,18 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
         setTimeframes([]);
         addTodoMutation.mutate(rest?.state);
       }
+    } else if (rest?.state?.status != "new_order") {
+      setTimeframes([
+        {
+          service: rest?.state?.timeframe?.service,
+          slots: [
+            {
+              start_time: rest?.state?.timeframe?.start_time,
+              end_time: rest?.state?.timeframe?.end_time,
+            },
+          ],
+        },
+      ]);
     } else setTimeframes([]);
   }, [rest?.state.pickup && rest?.state.delivery]);
 
@@ -152,7 +177,9 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
                 }
                 key={index}
                 className={`text-sm text-themeLightPurple cursor-pointer ${
-                  rest?.state?.timeframe?.service === item?.service
+                  !item.slots || item.slots.length < 1
+                    ? "text-decoration-line: line-through cursor-not-allowed"
+                    : rest?.state?.timeframe?.service === item?.service
                     ? "font-bold"
                     : "font-normal"
                 }`}

@@ -15,16 +15,19 @@ const AccountsMainContent = () => {
       firstname: "",
       lastname: "",
       email: "",
-      store_name: "",
+      default_pickup_note: "",
+      default_delivery_note: "",
+    },
+    customer: {
+      name: "",
       phone: "",
-      location: {
+      apt: "",
+      access_code: "",
+      address: {
         address_id: "",
-        full: "",
-        street_address_1: "",
-        street_address_2: "",
-        access_code: "",
+        formatted: "",
+        street: "",
       },
-      note: "",
     },
     defaults: {
       quantity: "",

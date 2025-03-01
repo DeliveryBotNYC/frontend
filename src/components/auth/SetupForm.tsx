@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import "https://maps.googleapis.com/maps/api/js?key=AIzaSyAxbAIczxXk3xoL3RH85z3eAZLncLZAuGg&libraries=places";
 import { url } from "../../hooks/useConfig";
 import axios from "axios";
 import { enforceFormat, formatToPhone } from "../reusable/functions";
@@ -77,48 +76,13 @@ const SetupForm = () => {
     })),
       autocomplete.addListener("place_changed", fillInAddress);
   function fillInAddress() {
-    // Get the place details from the autocomplete object.
-    const place = this.getPlace();
     let full = "";
     let street_address_1 = "";
     let city = "";
     let state = "";
     let zip = "";
     let building = "";
-    for (const component of place.address_components) {
-      // @ts-ignore remove once typings fixed
-      const componentType = component.types[0];
-      switch (componentType) {
-        case "street_number": {
-          building = `${component.long_name} ${street_address_1}`;
-          full = `${component.long_name} ${street_address_1}`;
-          street_address_1 = `${component.long_name} ${street_address_1}`;
-          break;
-        }
 
-        case "route": {
-          full += component.short_name;
-          street_address_1 += component.short_name;
-          break;
-        }
-
-        case "locality":
-          full += ", " + component.long_name;
-          city = component.long_name;
-          break;
-
-        case "administrative_area_level_1": {
-          full += ", " + component.short_name;
-          state = component.short_name;
-          break;
-        }
-        case "postal_code": {
-          full += " " + component.long_name;
-          zip = component.long_name;
-          break;
-        }
-      }
-    }
     if (building) {
       setCompanySetupData({
         ...companySetupData,

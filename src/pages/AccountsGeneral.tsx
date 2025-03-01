@@ -3,31 +3,52 @@ import axios from "axios";
 import { useState, useEffect } from "react";
 import { useOutletContext } from "react-router-dom";
 import { url, useConfig } from "../hooks/useConfig";
+import { enforceFormat, formatToPhone } from "../components/reusable/functions";
 
 const AccountsGeneral = () => {
   const config = useConfig();
   const [autoFillDropdown, setaAutoFillDropdown] = useState([]);
   const { accounstData, setaccountsData } = useOutletContext();
-  const [updatedGeneralData, setaUpdatedGeneralData] = useState({});
-  console.log(updatedGeneralData);
+  const [updatedaccounstData, setaUpdatedAccounstData] = useState({});
+  const [updatedCustomerData, setaCustomerData] = useState({});
+  const [error, setError] = useState({ message: "" });
+  console.log(error);
   function handleChange(e) {
     accounstData.account[e.target.id] != e.target.value
-      ? setaUpdatedGeneralData({
-          ...updatedGeneralData,
+      ? setaUpdatedAccounstData({
+          ...updatedaccounstData,
           [e.target.id]: e.target.value,
         })
-      : (delete updatedGeneralData?.[e.target.id],
-        setaUpdatedGeneralData(updatedGeneralData));
+      : (delete updatedaccounstData?.[e.target.id],
+        setaUpdatedAccounstData(updatedaccounstData));
   }
+
+  function handleChange2(e) {
+    accounstData.store[e.target.id] != e.target.value
+      ? setaCustomerData({
+          ...updatedCustomerData,
+          [e.target.id]: e.target.value,
+        })
+      : (delete updatedCustomerData?.[e.target.id],
+        setaCustomerData(updatedCustomerData));
+  }
+
   const addTodoMutation = useMutation({
-    mutationFn: (newTodo: string) =>
-      axios.patch(url + "/retail/profile", updatedGeneralData, config),
+    mutationFn: (newTodo: Array) =>
+      axios.patch(url + "/retail/profile", newTodo, config),
     onSuccess: (data) => {
-      setaUpdatedGeneralData({});
-      setaccountsData({ ...accounstData, account: data.data.account });
+      setError({ message: "" });
+      setaUpdatedAccounstData({});
+      setaCustomerData({});
+      setaccountsData({
+        ...accounstData,
+        account: data.data.account,
+        store: data.data.store,
+      });
     },
     onError: (error) => {
-      console.log(error);
+      console.log(error.response.data);
+      setError({ message: error.response.data.message });
       //accessTokenRef.current = data.token;
     },
   });
@@ -35,21 +56,14 @@ const AccountsGeneral = () => {
   //address autofill
   const checkAddressExist = useMutation({
     mutationFn: (newTodo: string) =>
-      axios.post(
-        url + "/address/autocomplete",
-        { address: updatedGeneralData?.location?.street_address_1 },
+      axios.get(
+        url +
+          "/address?address=" +
+          encodeURI(updatedCustomerData?.address.street),
         config
       ),
-    onSuccess: (location) => {
-      if (location)
-        setaUpdatedGeneralData({
-          location: {
-            full: location.account.location.full,
-            address_id: location.account.location.address_id,
-            street_address_1: location.account.location.street_address_1,
-            street_address_2: location.account.location.street_address_2,
-          },
-        });
+    onSuccess: (address) => {
+      if (address) setaAutoFillDropdown(address.data);
     },
     onError: (error) => {
       console.log(error);
@@ -57,21 +71,19 @@ const AccountsGeneral = () => {
   });
 
   //address autofill
-  function address_input(address: string) {
+  function address_input(e) {
+    let address = e.target.value;
     for (var i = 0; i < autoFillDropdown.length; i++) {
-      if (autoFillDropdown[i].full === address) {
-        setaUpdatedGeneralData({
-          location: {
-            full: autoFillDropdown[i]?.full,
-          },
+      if (autoFillDropdown[i].formatted === address) {
+        handleChange2({
+          target: { id: "address", value: autoFillDropdown[i] },
         });
+        e.target.value = autoFillDropdown[i].street;
         return;
       }
     }
-    setaUpdatedGeneralData({
-      location: {
-        street_address_1: autoFillDropdown[i]?.street_address_1,
-      },
+    handleChange2({
+      target: { id: "address", value: { street: address } },
     });
     checkAddressExist.mutate(address);
   }
@@ -154,10 +166,10 @@ const AccountsGeneral = () => {
               <input
                 type="text"
                 id="store_name"
-                defaultValue={accounstData?.account?.store_name}
+                defaultValue={accounstData?.store?.name}
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none bg-transparent"
                 disabled
-                onChange={(e) => handleChange(e)}
+                onChange={(e) => handleChange2(e)}
               />
             </div>
 
@@ -169,11 +181,14 @@ const AccountsGeneral = () => {
 
               {/* Input Field */}
               <input
+                autoComplete="new-password"
                 type="text"
                 id="phone"
-                defaultValue={accounstData?.account?.phone}
+                defaultValue={accounstData?.store?.phone_formatted}
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                onChange={(e) => handleChange(e)}
+                onKeyUp={(e) => (formatToPhone(e), handleChange2(e))}
+                onKeyDown={(e) => (enforceFormat(e), handleChange2(e))}
+                onChange={(e) => handleChange2(e)}
               />
             </div>
 
@@ -185,16 +200,18 @@ const AccountsGeneral = () => {
 
               {/* Input Field */}
               <input
-                defaultValue={accounstData?.account?.location?.street_address_1}
+                autoComplete="new-password"
+                defaultValue={accounstData?.store?.address?.street}
+                id="address"
                 type="search"
                 className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
                 list="delivery_autofill"
-                onChange={(e) => address_input(e.target.value)}
+                onChange={(e) => address_input(e)}
               />
 
               <datalist id="delivery_autofill">
                 {autoFillDropdown.map((item, key) => (
-                  <option key={key} value={item.full} />
+                  <option key={key} value={item.formatted} />
                 ))}
               </datalist>
             </div>
@@ -208,11 +225,10 @@ const AccountsGeneral = () => {
                 {/* Input Field */}
                 <input
                   type="number"
-                  id="street_address_2"
-                  defaultValue={
-                    accounstData?.account?.location?.street_address_2
-                  }
+                  id="apt"
+                  defaultValue={accounstData?.store?.apt}
                   className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none bg-transparent"
+                  onChange={(e) => handleChange2(e)}
                 />
               </div>
 
@@ -225,40 +241,69 @@ const AccountsGeneral = () => {
                 {/* Input Field */}
                 <input
                   id="access_code"
-                  defaultValue={accounstData?.account?.location?.access_code}
+                  defaultValue={accounstData?.store?.access_code}
                   className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                  onChange={(e) => handleChange2(e)}
                 />
               </div>
             </div>
-          </div>
-
-          {/* Courier Note */}
-          <div className="w-full col-span-2">
-            <label className="text-themeDarkGray text-xs">Courier note</label>
-
-            {/* Input Field */}
-            <input
-              type="text"
-              id="note"
-              defaultValue={accounstData?.account?.note}
-              className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-              onChange={(e) => handleChange(e)}
-            />
+            {/* Courier Note */}
+            <div className="w-full col-span-2">
+              <label className="text-themeDarkGray text-xs">
+                Pickup courier note
+              </label>
+              {/* Input Field */}
+              <input
+                type="text"
+                id="default_pickup_note"
+                defaultValue={accounstData?.store?.default_pickup_note}
+                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                onChange={(e) => handleChange2(e)}
+              />
+            </div>
+            {/* Courier Note */}
+            <div className="w-full col-span-2">
+              <label className="text-themeDarkGray text-xs">
+                Delivery courier note
+              </label>
+              {/* Input Field */}
+              <input
+                type="text"
+                id="default_delivery_note"
+                defaultValue={accounstData?.store?.default_delivery_note}
+                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                onChange={(e) => handleChange2(e)}
+              />
+            </div>
           </div>
         </div>
 
         {/* Submit Button */}
         <div className="w-full flex items-center justify-center">
           <button
-            disabled={Object.keys(updatedGeneralData).length < 1}
-            onClick={() => addTodoMutation.mutate(updatedGeneralData)}
+            disabled={
+              Object.keys(updatedaccounstData).length < 1 &&
+              Object.keys(updatedCustomerData).length < 1
+            }
+            onClick={() =>
+              addTodoMutation.mutate({
+                account: updatedaccounstData,
+                store: updatedCustomerData,
+              })
+            }
             className={`w-[352px] py-2.5 text-white shadow-btnShadow rounded-lg hover:scale-95 duration-200 bg-theme${
-              Object.keys(updatedGeneralData).length > 0 ? "Green" : "LightGray"
+              Object.keys(updatedaccounstData).length > 0 ||
+              Object.keys(updatedCustomerData).length > 0
+                ? "Green"
+                : "LightGray"
             }`}
           >
             Save
           </button>
         </div>
+        <p className="text-sm text-themeRed">
+          {error.message ? error.message : null}
+        </p>
       </div>
     </div>
   );

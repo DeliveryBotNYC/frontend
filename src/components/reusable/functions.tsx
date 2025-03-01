@@ -7,9 +7,9 @@ export function isCompleted(input) {
         input.pickup.phone
       ) ||
       input.pickup.name === "" ||
-      input.pickup.location.street_address_1 === "" ||
-      input.pickup.location.lat === "" ||
-      input.pickup.location.lon === ""
+      input.pickup.address.street === "" ||
+      input.pickup.address.lat === "" ||
+      input.pickup.address.lon === ""
         ? false
         : true,
     delivery:
@@ -17,9 +17,9 @@ export function isCompleted(input) {
         input.delivery.phone
       ) ||
       input.delivery.name === "" ||
-      input.delivery.location.street_address_1 === "" ||
-      input.delivery.location.lat === "" ||
-      input.delivery.location.lon === ""
+      input.delivery.address.street === "" ||
+      input.delivery.address.lat === "" ||
+      input.delivery.address.lon === ""
         ? false
         : true,
     timeframe:
@@ -30,22 +30,35 @@ export function isCompleted(input) {
         : true,
   };
 }
+
+export function itemCompleted(items) {
+  let value = true;
+  for (let i = 0; i < items.length; ++i) {
+    if (items[i].description === "") {
+      value = false;
+      break;
+    }
+  }
+
+  return value;
+}
+
 export function isEmpty(input) {
   return {
     pickup:
       input.pickup.phone === "" &&
       input.pickup.name === "" &&
-      input.pickup.location.street_address_1 === "" &&
-      input.pickup.location.lat === "" &&
-      input.pickup.location.lon === ""
+      input.pickup.address.street === "" &&
+      input.pickup.address.lat === "" &&
+      input.pickup.address.lon === ""
         ? true
         : false,
     delivery:
       input.delivery.phone === "" &&
       input.delivery.name === "" &&
-      input.delivery.location.street_address_1 === "" &&
-      input.delivery.location.lat === "" &&
-      input.delivery.location.lon === ""
+      input.delivery.address.street === "" &&
+      input.delivery.address.lat === "" &&
+      input.delivery.address.lon === ""
         ? true
         : false,
   };
@@ -101,12 +114,11 @@ export const initialState = {
     name: "",
     note: "",
     access_code: "",
-    location: {
+    apt: "",
+    address: {
       address_id: "",
-      full: "",
-      street_address_1: "",
-      street_address_2: "",
-      access_code: "",
+      formatted: "",
+      street: "",
       city: "",
       state: "",
       zip: "",
@@ -124,12 +136,11 @@ export const initialState = {
     tip: 0,
     access_code: "",
     external_order_id: "",
-    location: {
+    apt: "",
+    address: {
       address_id: "",
-      full: "",
-      street_address_1: "",
-      street_address_2: "",
-      access_code: "",
+      formatted: "",
+      street: "",
       city: "",
       state: "",
       zip: "",
@@ -144,7 +155,8 @@ export const initialState = {
     items: [
       {
         quantity: 1,
-        type: "box",
+        description: "box",
+        size: "xsmall",
       },
     ],
   },

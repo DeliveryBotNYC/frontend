@@ -40,7 +40,6 @@ const OrdersTable = () => {
       return axios.get(url + "/orders", config).then((res) => res.data);
     },
   });
-  console.log(data);
   return (
     <>
       <div
@@ -84,6 +83,20 @@ const OrdersTable = () => {
               )}
           </tbody>
         </table>
+        {isLoading ? (
+          <div className="h-full w-full justify-center text-center">
+            Loading..
+          </div>
+        ) : (
+          ""
+        )}
+        {error ? (
+          <div className="h-full w-full justify-center text-center">
+            {error.response ? error.response.data.reason : error.message}
+          </div>
+        ) : (
+          ""
+        )}
       </div>
       {/* Pagination */}
       <div>

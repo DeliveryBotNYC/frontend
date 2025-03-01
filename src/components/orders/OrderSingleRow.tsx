@@ -1,6 +1,9 @@
+import { useContext } from "react";
+import { ThemeContext } from "../../context/ThemeContext";
 import StatusBtn from "../reusable/StatusBtn";
 import OrderDropdown from "./OrderDropdown";
-
+import CancelOrderPopup from "../popups/CancelOrderPopup";
+import BlackOverlay from "../popups/BlackOverlay";
 import DotIcon from "../../assets/dot.svg";
 import CloseIcon from "../../assets/closeIcon.svg";
 import useClickOutside from "../../hooks/useHandleOutsideClick";
@@ -12,15 +15,15 @@ interface OrderItem {
   status: string;
   pickup: {
     name: string;
-    location: {
-      street_address_1: string;
+    address: {
+      street: string;
       state: string;
     };
   };
   delivery: {
     name: string;
-    location: {
-      street_address_1: string;
+    address: {
+      street: string;
       state: string;
     };
   };
@@ -47,7 +50,7 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
       state: item,
     });
   };
-
+  const contextValue = useContext(ThemeContext);
   return (
     <tr className="bg-white hover:bg-contentBg cursor-pointer duration-200">
       {/* Order */}
@@ -79,7 +82,7 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
         className="border-b border-b-themeLightGray min-w-[170px] xl:min-w-[auto]"
       >
         <div className="px-2.5">
-          <p className="text-xs">{pickup.location.street_address_1}</p>
+          <p className="text-xs">{pickup.address.street}</p>
           <p className="leading-none mt-1">{pickup.name}</p>
         </div>
       </td>
@@ -90,7 +93,7 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
         className="border-b border-b-themeLightGray min-w-[170px] xl:min-w-[auto]"
       >
         <div className="px-2.5">
-          <p className="text-xs">{delivery.location.street_address_1}</p>
+          <p className="text-xs">{delivery.address.street}</p>
           <p className="leading-none mt-1">{delivery.name}</p>
         </div>
       </td>
@@ -140,7 +143,6 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
             />
           )}
         </div>
-
         {/* Popup */}
         {isOpen === true ? (
           <OrderDropdown

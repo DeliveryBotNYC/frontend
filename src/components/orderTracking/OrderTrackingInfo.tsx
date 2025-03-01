@@ -67,7 +67,7 @@ const OrderTrackingInfo = ({ data }) => {
                 {/* Pickup */}
                 <div>
                   <p className="text-xs text-themeDarkGray">
-                    {data?.pickup?.location.street_address_1}
+                    {data?.pickup?.address.street}
                   </p>
                   <p className="text-xs text-themeDarkGray">
                     {data?.pickup?.name}
@@ -77,7 +77,7 @@ const OrderTrackingInfo = ({ data }) => {
                 {/* delivery */}
                 <div className="text-right">
                   <p className="text-xs text-themeDarkGray">
-                    {data?.delivery?.location.street_address_1}
+                    {data?.delivery?.address.street}
                   </p>
                   <p className="text-xs text-themeDarkGray">
                     {data?.delivery?.name}

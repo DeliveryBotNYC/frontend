@@ -18,17 +18,17 @@ const HomeMap = (state) => {
     useEffect(() => {
       if (!map) return;
       {
-        state?.state?.pickup?.location?.lat &&
-        state?.state?.delivery?.location?.lat
+        state?.state?.pickup?.address?.lat &&
+        state?.state?.delivery?.address?.lat
           ? map.fitBounds(
               [
                 [
-                  state?.state?.pickup?.location?.lat,
-                  state?.state?.pickup?.location?.lon,
+                  state?.state?.pickup?.address?.lat,
+                  state?.state?.pickup?.address?.lon,
                 ],
                 [
-                  state?.state?.delivery?.location?.lat,
-                  state?.state?.delivery?.location?.lon,
+                  state?.state?.delivery?.address?.lat,
+                  state?.state?.delivery?.address?.lon,
                 ],
               ],
               { padding: [50, 50] }
@@ -42,12 +42,12 @@ const HomeMap = (state) => {
       map,
       [
         [
-          state?.state?.pickup?.location?.lat,
-          state?.state?.pickup?.location?.lon,
+          state?.state?.pickup?.address?.lat,
+          state?.state?.pickup?.address?.lon,
         ],
         [
-          state?.state?.delivery?.location?.lat,
-          state?.state?.delivery?.location?.lon,
+          state?.state?.delivery?.address?.lat,
+          state?.state?.delivery?.address?.lon,
         ],
       ],
     ]);
@@ -122,23 +122,23 @@ const HomeMap = (state) => {
           positions={samedaypolyline}
         />
 
-        {state?.state?.pickup?.location?.lat ? (
+        {state?.state?.pickup?.address?.lat ? (
           <Marker
             key="pickup"
             icon={customPickupIcon}
             position={[
-              state?.state?.pickup?.location?.lat,
-              state?.state?.pickup?.location?.lon,
+              state?.state?.pickup?.address?.lat,
+              state?.state?.pickup?.address?.lon,
             ]}
           ></Marker>
         ) : null}
-        {state?.state?.delivery?.location?.lat ? (
+        {state?.state?.delivery?.address?.lat ? (
           <Marker
             key="delivery"
             icon={customDeliveryIcon}
             position={[
-              state?.state?.delivery?.location?.lat,
-              state?.state?.delivery?.location?.lon,
+              state?.state?.delivery?.address?.lat,
+              state?.state?.delivery?.address?.lon,
             ]}
           ></Marker>
         ) : null}

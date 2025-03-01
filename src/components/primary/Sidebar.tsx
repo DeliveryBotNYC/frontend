@@ -17,6 +17,8 @@ import SettingsActiveIcon from "../../assets/sidebar/settings-active.svg";
 import LogoutIcon from "../../assets/logout.svg";
 import DispatchIcon from "../../assets/sidebar/dispatch.svg";
 import DispatchActiveIcon from "../../assets/sidebar/dispatch-active.svg";
+import BookIcon from "../../assets/sidebar/book.svg";
+import BookActiveIcon from "../../assets/sidebar/book-active.svg";
 import useAuth from "../../hooks/useAuth";
 const Sidebar = () => {
   // Context
@@ -54,20 +56,27 @@ const Sidebar = () => {
         },
         {
           id: 4,
+          initialIcon: BookIcon,
+          activeIcon: BookActiveIcon,
+          title: "Address Book",
+          target: "/address-book",
+        },
+        {
+          id: 5,
           initialIcon: InvoicesIcon,
           activeIcon: InvoicesActiveIcon,
           title: "Invoices",
           target: "/invoices",
         },
         {
-          id: 5,
+          id: 6,
           initialIcon: AutomationIcon,
           activeIcon: AutomationActiveIcon,
           title: "Automation",
           target: "/automations",
         },
         {
-          id: 6,
+          id: 7,
           initialIcon: SettingsIcon,
           activeIcon: SettingsActiveIcon,
           title: "Account",
@@ -91,20 +100,27 @@ const Sidebar = () => {
         },
         {
           id: 4,
+          initialIcon: BookIcon,
+          activeIcon: BookActiveIcon,
+          title: "Customers",
+          target: "/address-book",
+        },
+        {
+          id: 5,
           initialIcon: InvoicesIcon,
           activeIcon: InvoicesActiveIcon,
           title: "Invoices",
           target: "/invoices",
         },
         {
-          id: 5,
+          id: 6,
           initialIcon: AutomationIcon,
           activeIcon: AutomationActiveIcon,
           title: "Automation",
           target: "/automations",
         },
         {
-          id: 6,
+          id: 7,
           initialIcon: SettingsIcon,
           activeIcon: SettingsActiveIcon,
           title: "Account",

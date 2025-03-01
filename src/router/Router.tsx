@@ -11,6 +11,8 @@ import Orders from "../pages/Orders";
 import OrderTracking from "../pages/OrderTracking";
 import CreateOrder from "../pages/CreateOrder";
 import Invoices from "../pages/Invoices";
+import Customers from "../pages/Customers";
+import SingleCustomer from "../pages/SingleCustomer";
 import SingleInvoice from "../pages/SingleInvoice";
 import Automations from "../pages/Automations";
 import Accounts from "../pages/Accounts";
@@ -32,6 +34,8 @@ import ResetPasswordForm from "../components/auth/ResetPasswordForm";
 
 import RequireAuth from "../components/auth/RequireAuth";
 
+import Orientation from "../pages/Orientation";
+
 const Router = () => {
   const ROLES = {
     User: 2001,
@@ -40,6 +44,7 @@ const Router = () => {
 
   return (
     <Routes>
+      <Route path="/orientation/:token" element={<Orientation />} />
       <Route path="/auth" element={<Auth />}>
         <Route path="signup/setup" element={<SetupContext />} />
         <Route path="signup" element={<SignupContext />} />
@@ -62,6 +67,9 @@ const Router = () => {
         <Route path="invoices" element={<Invoices />} />
         <Route path="invoices/:id" element={<SingleInvoice />} />
         <Route path="create-order" element={<CreateOrder />} />
+        <Route path="create-order/:id" element={<CreateOrder />} />
+        <Route path="address-book" element={<Customers />} />
+        <Route path="address-book/:id" element={<SingleCustomer />} />
         {/* Account Routes */}
         <Route path="accounts" element={<Accounts />}>
           <Route path="general" element={<AccountsGeneral />} />

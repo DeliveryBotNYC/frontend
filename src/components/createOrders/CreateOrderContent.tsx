@@ -9,57 +9,44 @@ import { useContext, useState, useEffect } from "react";
 import { ThemeContext } from "../../context/ThemeContext";
 import BlackOverlay from "../popups/BlackOverlay";
 import PricePopup from "../popups/PricePopup";
+import PickupIconToDo from "../../assets/pickupToDo.svg";
+import DeliveredBwIcon from "../../assets/delivery-bw.svg";
+import TimeIcon from "../../assets/time.svg";
+import UseGetOrderId from "../../hooks/UseGetOrderId";
 
 import PlusIcon from "../../assets/plus-icon.svg";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import axios from "axios";
 
 import { url, useConfig } from "../../hooks/useConfig";
 
 const CreateOrderContent = () => {
   const config = useConfig();
+  const orderId = UseGetOrderId();
+  const searchUrl =
+    orderId == "create-order"
+      ? url + "/retail/profile"
+      : url + "/orders?order_id=" + orderId;
   const contextValue = useContext(ThemeContext);
   const { isLoading, data, error, isSuccess } = useQuery({
     queryKey: ["profile"],
     refetchOnWindowFocus: false,
     queryFn: () => {
-      return axios.get(url + "/retail/profile", config).then((res) => ({
-        default: res?.data?.defaults?.store_default,
-        phone: res?.data?.account?.phone,
-        name: res?.data?.account?.store_name,
-        note: res?.data?.account?.note,
-        tip: res?.data?.defaults?.tip,
-        access_code: res?.data?.account?.access_code,
-        autofill: res?.data?.defaults?.autofill,
-        location: {
-          address_id: res?.data?.account?.location?.address_id,
-          full: res?.data?.account?.location?.street_address_1,
-          street_address_1: res?.data?.account?.location?.street_address_1,
-          street_address_2: res?.data?.account?.location?.street_address_2,
-          city: res?.data?.account?.location?.city,
-          state: res?.data?.account?.location?.state,
-          zip: res?.data?.account?.location?.zip,
-          lat: res?.data?.account?.location?.lat,
-          lon: res?.data?.account?.location?.lon,
-          zone: res?.data?.account?.location?.zone,
-        },
-        pickup_proof: res?.data?.defaults?.pickup_proof,
-        delivery_proof: res?.data?.defaults?.delivery_proof,
-        items: [{ quantity: 1, type: res?.data?.defaults?.item_type }],
-      }));
+      return axios.get(searchUrl, config).then((res) => res?.data);
     },
   });
+
   const [newOrderValues, setNewOrderValues] = useState({
     status: "new_order",
     pickup: {
       phone: "",
       name: "",
       note: "",
-      location: {
-        full: "",
-        street_address_1: "",
-        street_address_2: "",
-        access_code: "",
+      apt: "",
+      access_code: "",
+      address: {
+        formatted: "",
+        street: "",
         city: "",
         state: "",
         zip: "",
@@ -75,10 +62,11 @@ const CreateOrderContent = () => {
       name: "",
       note: "",
       tip: 0,
-      location: {
-        street_address_1: "",
-        street_address_2: "",
-        access_code: "",
+      apt: "",
+      access_code: "",
+      address: {
+        formatted: "",
+        street: "",
         city: "",
         state: "",
         zip: "",
@@ -93,12 +81,13 @@ const CreateOrderContent = () => {
       items: [
         {
           quantity: 1,
-          type: "box",
+          description: "box",
+          size: "xsmall",
         },
       ],
     },
     timeframe: {
-      service: "1-hour",
+      service: "",
       service_id: 0,
       start_time: "",
       end_time: "",
@@ -106,37 +95,77 @@ const CreateOrderContent = () => {
   });
   //update state when default data
   useEffect(() => {
-    if (data?.default == "pickup")
+    if (orderId != "create-order" && data?.pickup) {
       setNewOrderValues({
         ...newOrderValues,
         pickup: {
-          phone: data.phone,
-          name: data.name,
-          note: data.note,
-          location: data.location,
-          required_verification: data.pickup_proof,
+          phone: data.pickup.phone_formatted,
+          name: data.pickup.name,
+          note: data.pickup.note,
+          apt: data.pickup.apt,
+          access_code: data.pickup.access_code,
+          address: data.pickup.address,
+          required_verification: data.pickup.required_verification,
+        },
+        delivery: {
+          phone: data.delivery.phone_formatted,
+          name: data.delivery.name,
+          note: data.delivery.note,
+          apt: data.delivery.apt,
+          access_code: data.delivery.access_code,
+          address: data.delivery.address,
+          required_verification: data.delivery.required_verification,
+          items: data.delivery.items.items,
+          tip: data.delivery.tip,
+        },
+      });
+    } else if (data?.defaults.store_default == "pickup")
+      setNewOrderValues({
+        ...newOrderValues,
+        pickup: {
+          phone: data.account.phone_formatted,
+          name: data.account.store_name,
+          note: data.defaults.pickup_note,
+          apt: data.account.apt,
+          access_code: data.account.access_code,
+          address: data.account.address,
+          required_verification: data.defaults.pickup_proof,
         },
         delivery: {
           ...newOrderValues?.delivery,
-          required_verification: data.delivery_proof,
-          items: data.items,
-          tip: data.tip,
+          required_verification: data.defaults.delivery_proof,
+          items: [
+            {
+              quantity: data.defaults.item_quantity,
+              description: data.defaults.item_type,
+              size: "xsmall",
+            },
+          ],
+          tip: data.defaults.tip,
         },
       });
-    else if (data?.default == "delivery")
+    else if (data?.defaults.store_default == "delivery")
       setNewOrderValues({
         ...newOrderValues,
         pickup: {
           ...newOrderValues?.pickup,
-          required_verification: data.pickup_proof,
+          required_verification: data.defaults.pickup_proof,
         },
         delivery: {
-          phone: data.phone,
-          name: data.name,
-          note: data.note,
-          location: data.location,
-          required_verification: data.delivery_proof,
-          items: data.items,
+          phone: data.account.phone_formatted,
+          name: data.account.store_name,
+          note: data.defaults.delivery_note,
+          apt: data.account.apt,
+          access_code: data.account.access_code,
+          address: data.account.address,
+          required_verification: data.defaults.delivery_proof,
+          items: [
+            {
+              quantity: data.defaults.item_quantity,
+              description: data.defaults.item_type,
+              size: "xsmall",
+            },
+          ],
           tip: data.tip,
         },
       });
@@ -161,23 +190,62 @@ const CreateOrderContent = () => {
               <p className="text-sm text-secondaryBtnBorder">Upload</p>
             </div>
           </div>
-          {/* Pickup FOrm */}
-          <PickupForm
-            state={newOrderValues}
-            stateChanger={setNewOrderValues}
-            data={data}
-          />
-          {/* Time */}
+          {/* Form */}
+          {isSuccess ? (
+            <>
+              <PickupForm
+                state={newOrderValues}
+                stateChanger={setNewOrderValues}
+                data={data}
+              />
+              <AddDelivery
+                state={newOrderValues}
+                stateChanger={setNewOrderValues}
+                data={data}
+              />
+              <SelectDateandTime
+                state={newOrderValues}
+                stateChanger={setNewOrderValues}
+              />
+            </>
+          ) : (
+            <>
+              {[...Array(3)].map((e, i) => (
+                <div
+                  className="w-full bg-white rounded-2xl my-5 min-h-[25%]"
+                  key={i}
+                >
+                  <div
+                    role="status"
+                    className="max-w-sm animate-pulse py-5 px-2.5 items-center justify-between gap-2.5 h-full"
+                  >
+                    <div className="flex items-center gap-2.5 pb-3">
+                      <img
+                        src={
+                          i == 0
+                            ? PickupIconToDo
+                            : i == 1
+                            ? DeliveredBwIcon
+                            : TimeIcon
+                        }
+                        alt="icon"
+                      />
 
-          <AddDelivery
-            state={newOrderValues}
-            stateChanger={setNewOrderValues}
-            data={data}
-          />
-          <SelectDateandTime
-            state={newOrderValues}
-            stateChanger={setNewOrderValues}
-          />
+                      <p className="text-2xl text-black font-bold heading">
+                        {i == 0 ? "Pickup" : i == 1 ? "Delivery" : "Time-frame"}
+                      </p>
+                    </div>
+                    <div className="h-2.5 bg-themeDarkGray rounded-full dark:bg-themeDarkGray w-48 mb-4"></div>
+                    <div className="h-2.5 bg-themeDarkGray rounded-full dark:bg-themeDarkGray  max-w-[360px] mb-2.5"></div>
+                    <div className="h-2.5 bg-themeDarkGray rounded-full dark:bg-themeDarkGray mb-2.5"></div>
+                    <div className="h-2.5 bg-themeDarkGray rounded-full dark:bg-themeDarkGray max-w-[330px] mb-2.5"></div>
+                    <div className="h-2.5 bg-themeDarkGray rounded-full dark:bg-themeDarkGray max-w-[300px] mb-2.5"></div>
+                  </div>
+                </div>
+              ))}
+              <span className="sr-only">Loading...</span>
+            </>
+          )}
         </div>
         {/* Content Box */}
         <Map state={newOrderValues} />

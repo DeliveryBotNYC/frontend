@@ -97,7 +97,7 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
         });
       }
     } else setError({ message: "" });
-  }, [rest?.state?.delivery?.location?.address_id]);
+  }, [rest?.state]);
   return (
     <div className="w-full z-10 sticky left-0 bottom-0 bg-white shadow-dropdownShadow py-2.5 px-4 flex items-center justify-between gap-2.5">
       {isCompleted(rest?.state).pickup &&
@@ -109,7 +109,7 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
           <div>
             <p className="text-sm">
               <span className="text-secondaryBtnBorder font-bold">
-                {rest.state?.status == "Total:" ? "Request" : "Additional:"}
+                {rest.state?.status == "new_order" ? "Total:" : "Additional:"}
               </span>
               {givenQuote.original_price ? (
                 <span className="line-through">

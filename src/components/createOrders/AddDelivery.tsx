@@ -2,7 +2,9 @@ import DeliveredIcon from "../../assets/delivered.svg";
 import DeliveredBwIcon from "../../assets/delivery-bw.svg";
 import DeliveredBwFilledIcon from "../../assets/delivery-bw-filled.svg";
 import RefreshIcon from "../../assets/refresh-icon.svg";
+import TashIcon from "../../assets/trash-icn.svg";
 import homeIcon from "../../assets/store-bw.svg";
+import PlusIcon from "../../assets/plus-icon.svg";
 import { useState, useEffect, Fragment } from "react";
 import axios from "axios";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -11,18 +13,24 @@ import {
   enforceFormat,
   formatToPhone,
   isCompleted,
+  itemCompleted,
   initialState,
   isEmpty,
 } from "../reusable/functions";
 import { url, useConfig } from "../../hooks/useConfig";
-const items = [
-  { key: "box", value: "Box" },
-  { key: "bag", value: "Bag" },
-  { key: "garment", value: "Garment" },
-  { key: "1-hander", value: "1-hander" },
-  { key: "2-hander", value: "2-hander" },
-  { key: "envelope", value: "Envelope" },
-  { key: "other", value: "Other" },
+const items = {
+  Box: "small",
+  Bag: "small",
+  Plant: "medium",
+  Flower: "medium",
+  Envelope: "xsmall",
+  hanger: "medium",
+};
+const sizes = [
+  { key: "xsmall", value: "Extra Small - Fits in an envelope" },
+  { key: "small", value: "Small - Fits in a shoe box" },
+  { key: "medium", value: "Medium - Fits in a large backpack" },
+  { key: "large", value: "Large - Fits in a car trunk" },
 ];
 const AddDelivery = ({ data, stateChanger, ...rest }) => {
   const notAllowed = [
@@ -45,6 +53,19 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
   const [tip, setTip] = useState(rest?.state?.delivery?.tip / 100);
 
   //plus minus
+  function remove(index2) {
+    stateChanger({
+      ...rest?.state,
+      delivery: {
+        ...rest?.state?.delivery,
+        items: [
+          ...rest?.state?.delivery?.items?.slice(0, index2),
+          ...rest?.state?.delivery?.items?.slice(index2 + 1),
+        ],
+      },
+    });
+  }
+
   function minus(index2) {
     if (rest?.state?.delivery?.items[index2].quantity == 1) return;
     stateChanger({
@@ -91,7 +112,9 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
           delivery: {
             ...rest.state?.delivery,
             name: phone_customer?.data.name,
-            location: phone_customer?.data.location,
+            address: phone_customer?.data.address,
+            apt: phone_customer?.data.apt,
+            access_code: phone_customer?.data.access_code,
           },
         });
     },
@@ -104,13 +127,14 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
   //address autofill
   const checkAddressExist = useMutation({
     mutationFn: (newTodo: string) =>
-      axios.post(
-        url + "/address/autocomplete",
-        { address: rest?.state?.delivery.location.street_address_1 },
+      axios.get(
+        url +
+          "/address?address=" +
+          encodeURI(rest?.state?.delivery.address.street),
         config
       ),
-    onSuccess: (location) => {
-      if (location) setaAutoFillDropdown(location.data);
+    onSuccess: (address) => {
+      if (address) setaAutoFillDropdown(address.data);
     },
     onError: (error) => {
       console.log(error);
@@ -119,19 +143,26 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
 
   //autofill phone or reset when changed
   function phone_input(phone) {
+    setTip(parseFloat(data.defaults.tip / 100).toFixed(2));
     stateChanger({
       ...rest?.state,
       timeframe: initialState.timeframe,
       delivery: {
         ...initialState.delivery,
         phone: phone,
-        items: data?.items,
-        required_verification: data?.delivery_proof,
-        tip: data?.tip,
+        required_verification: data.defaults.delivery_proof,
+        items: [
+          {
+            quantity: data.defaults.item_quantity,
+            description: data.defaults.item_type,
+            size: "xsmall",
+          },
+        ],
+        tip: data.defaults.tip,
       },
     });
     if (
-      data?.autofill &&
+      data?.defaults?.autofill &&
       /^(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(phone)
     ) {
       checkPhoneExist.mutate(phone);
@@ -141,14 +172,26 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
   //address autofill
   function address_input(address: string) {
     for (var i = 0; i < autoFillDropdown.length; i++) {
-      if (autoFillDropdown[i].full === address) {
-        stateChanger({
-          ...rest?.state,
-          delivery: {
-            ...rest?.state?.delivery,
-            location: autoFillDropdown[i],
-          },
-        });
+      if (autoFillDropdown[i].formatted === address) {
+        autoFillDropdown[i].delivery
+          ? stateChanger({
+              ...rest?.state,
+              delivery: {
+                ...rest?.state?.delivery,
+                address: autoFillDropdown[i],
+              },
+            })
+          : stateChanger({
+              ...rest?.state,
+              delivery: {
+                ...rest?.state?.delivery,
+                address: {
+                  ...initialState.delivery.address,
+                  street: autoFillDropdown[i].street,
+                  delivery: false,
+                },
+              },
+            });
         return;
       }
     }
@@ -156,9 +199,9 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
       ...rest?.state,
       delivery: {
         ...rest?.state?.delivery,
-        location: {
-          ...initialState.delivery.location,
-          street_address_1: address,
+        address: {
+          ...initialState.delivery.address,
+          street: address,
         },
       },
     });
@@ -173,7 +216,8 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
         <div className="flex items-center gap-2.5">
           <img
             src={
-              isCompleted(rest?.state).delivery
+              isCompleted(rest?.state).delivery &&
+              itemCompleted(rest?.state?.delivery?.items)
                 ? DeliveredBwFilledIcon
                 : DeliveredBwIcon
             }
@@ -185,18 +229,22 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
 
         {/* Right Side */}
         <div>
-          {isEmpty(rest?.state).delivery &&
-          rest?.state?.status == "new_order" ? (
+          {rest?.state?.status == "new_order" &&
+          isEmpty(rest?.state).delivery ? (
             <img
               onClick={() => {
+                setTip(parseFloat(data.defaults.tip / 100).toFixed(2));
                 stateChanger({
                   ...rest.state,
                   delivery: {
                     ...rest.state.delivery,
-                    phone: data.phone,
-                    name: data.name,
-                    note: data.note,
-                    location: data.location,
+                    phone: data.account.phone_formatted,
+                    name: data.account.store_name,
+                    note: data.defaults.pickup_note,
+                    apt: data.account.apt,
+                    access_code: data.account.access_code,
+                    address: data.account.address,
+                    tip: data.defaults.tip,
                   },
                 });
               }}
@@ -206,14 +254,20 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
           ) : rest?.state?.status == "new_order" ? (
             <img
               onClick={() => {
+                setTip(parseFloat(data.defaults.tip / 100).toFixed(2));
                 stateChanger({
                   ...rest?.state,
                   timeframe: initialState.timeframe,
                   delivery: {
                     ...initialState.delivery,
-                    items: data?.items,
-                    required_verification: data?.delivery_proof,
-                    tip: data?.tip,
+                    required_verification: data.defaults.delivery_proof,
+                    items: [
+                      {
+                        quantity: data.defaults.item_quantity,
+                        description: data.defaults.item_type,
+                      },
+                    ],
+                    tip: data.defaults.tip,
                   },
                 });
               }}
@@ -298,7 +352,7 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
           {/* Address */}
           <div
             className={`w-full ${
-              !rest?.state?.delivery?.location?.lat ? "col-span-2" : ""
+              !rest?.state?.delivery?.address?.lat ? "col-span-2" : ""
             }`}
           >
             <label className="text-themeDarkGray text-xs">
@@ -306,8 +360,9 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
             </label>
 
             <input
+              autoComplete="new-password"
               disabled={notAllowedAddress}
-              value={rest?.state?.delivery?.location?.street_address_1}
+              value={rest?.state?.delivery?.address?.street}
               type="search"
               className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
               list="delivery_autofill"
@@ -316,12 +371,15 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
 
             <datalist id="delivery_autofill">
               {autoFillDropdown.map((item, key) => (
-                <option key={key} value={item.full} />
+                <option key={key} value={item.formatted} />
               ))}
             </datalist>
+            {rest.state.delivery.address.delivery == false ? (
+              <p className="text-themeRed text-xs">Address outside of radus.</p>
+            ) : null}
           </div>
           {/* Apt, Access code */}
-          {rest?.state?.delivery?.location?.lat ? (
+          {rest?.state?.delivery?.address?.lat ? (
             <div className="w-full flex items-center justify-between gap-2.5">
               {/* Apt */}
               <div className="w-full">
@@ -330,18 +388,15 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
                 {/* Input Field */}
                 <input
                   type="text"
-                  id="delivery_street_address_2"
+                  id="delivery_apt"
                   className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                  value={rest?.state?.delivery?.location?.street_address_2}
+                  value={rest?.state?.delivery?.apt || ""}
                   onChange={(e) =>
                     stateChanger({
                       ...rest?.state,
                       delivery: {
                         ...rest?.state?.delivery,
-                        location: {
-                          ...rest.state?.delivery?.location,
-                          street_address_2: e.target.value,
-                        },
+                        apt: e.target.value,
                       },
                     })
                   }
@@ -359,16 +414,13 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
                   type="text"
                   id="delivery_access_code"
                   className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                  value={rest?.state?.delivery?.location?.access_code}
+                  value={rest?.state?.delivery?.access_code || ""}
                   onChange={(e) =>
                     stateChanger({
                       ...rest?.state,
                       delivery: {
                         ...rest?.state?.delivery,
-                        location: {
-                          ...rest?.state?.delivery?.location,
-                          access_code: e.target.value,
-                        },
+                        access_code: e.target.value,
                       },
                     })
                   }
@@ -511,25 +563,28 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
               <label className="text-themeDarkGray text-xs">Tip</label>
 
               {/* Input Field */}
-              <input
-                type="number"
-                step=".01"
-                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                value={tip}
-                onBlur={(e) => {
-                  setTip(parseFloat(e.target.value).toFixed(2));
-                  stateChanger({
-                    ...rest?.state,
-                    delivery: {
-                      ...rest?.state?.delivery,
-                      tip: parseInt(100 * e.target.value),
-                    },
-                  });
-                }}
-                onChange={(e) => setTip(parseFloat(e.target.value))}
-              />
+              <div className="w-full flex justify-between gap-2.5">
+                <i className="pb-[4px]">$</i>
+                <input
+                  type="number"
+                  step=".01"
+                  min="0"
+                  className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                  value={tip}
+                  onBlur={(e) => {
+                    setTip(parseFloat(e.target.value).toFixed(2));
+                    stateChanger({
+                      ...rest?.state,
+                      delivery: {
+                        ...rest?.state?.delivery,
+                        tip: parseInt(100 * e.target.value),
+                      },
+                    });
+                  }}
+                  onChange={(e) => setTip(parseFloat(e.target.value))}
+                />
+              </div>
             </div>
-
             {/* Order ID */}
             <div className="w-full">
               <label className="text-themeDarkGray text-xs">
@@ -557,21 +612,114 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
           {rest?.state?.delivery?.items?.map((item, index2) => (
             <Fragment key={index2}>
               <div className="w-full flex items-center justify-between gap-2.5 col-span-2">
+                {/* Type Field */}
+                <div className="w-full">
+                  <label className="text-themeDarkGray text-xs">
+                    Item name <span className="text-themeRed">*</span>
+                  </label>
+                  {/* Select Field */}
+                  <input
+                    value={item.description}
+                    key={"description" + index2}
+                    type="search"
+                    className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                    list={"type" + index2}
+                    onChange={(e) =>
+                      stateChanger({
+                        ...rest?.state,
+                        delivery: {
+                          ...rest?.state?.delivery,
+                          items: [
+                            ...rest?.state?.delivery?.items?.slice(0, index2),
+                            {
+                              quantity: item.quantity,
+                              description: e.target.value,
+                              size: items[e.target.value],
+                            },
+                            ...rest?.state?.delivery?.items?.slice(index2 + 1),
+                          ],
+                        },
+                      })
+                    }
+                  />
+
+                  <datalist id={"type" + index2}>
+                    {Object.keys(items).map((item2, i) => (
+                      <option key={item2} value={item2} />
+                    ))}
+                  </datalist>
+                </div>
+
+                {/* Size Field */}
+                <div className="w-full">
+                  <label className="text-themeDarkGray text-xs">
+                    Size <span className="text-themeRed">*</span>
+                  </label>
+
+                  <div className="flex items-center gap-1 border-b border-b-contentBg pb-1">
+                    {/* One */}
+                    {/* Select Field */}
+                    <select
+                      className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                      id="size"
+                      value={item.size}
+                      onChange={(e) =>
+                        stateChanger({
+                          ...rest?.state,
+                          delivery: {
+                            ...rest?.state?.delivery,
+                            items: [
+                              ...rest?.state?.delivery?.items?.slice(0, index2),
+                              {
+                                quantity: item.quantity,
+                                description: item.description,
+                                size: e.target.value,
+                              },
+                              ...rest?.state?.delivery?.items?.slice(
+                                index2 + 1
+                              ),
+                            ],
+                          },
+                        })
+                      }
+                    >
+                      {sizes?.map((size) => (
+                        <option key={size.key} value={size.key}>
+                          {size.value}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
                 {/* Quantity Field */}
                 <div className="">
                   <label className="text-themeDarkGray text-xs">
                     Quantity <span className="text-themeRed">*</span>
                   </label>
                   <div className="flex items-center justify-between gap-2.5">
-                    <span className="minus" onClick={() => minus(index2)}>
-                      -
-                    </span>
+                    {item.quantity == 1 &&
+                    rest?.state?.delivery?.items.length > 1 ? (
+                      <span
+                        className="quantity-btn"
+                        onClick={() => remove(index2)}
+                      >
+                        <img src={TashIcon} width="10px;"></img>
+                      </span>
+                    ) : (
+                      <span
+                        className="quantity-btn"
+                        onClick={() => minus(index2)}
+                      >
+                        -
+                      </span>
+                    )}
 
                     <input
                       type="number"
                       step={1}
                       key={"quantity" + index2}
-                      className="text-center text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+                      className="text-center text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 outline-none w-[60px]"
                       value={item.quantity}
                       onChange={(e) =>
                         stateChanger({
@@ -582,7 +730,8 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
                               ...rest?.state?.delivery?.items?.slice(0, index2),
                               {
                                 quantity: e.target.value,
-                                type: item.type,
+                                description: item.description,
+                                size: item.size,
                               },
                               ...rest?.state?.delivery?.items?.slice(
                                 index2 + 1
@@ -592,79 +741,18 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
                         })
                       }
                     />
-                    <span className="plus" onClick={() => plus(index2)}>
+                    <span className="quantity-btn" onClick={() => plus(index2)}>
                       +
                     </span>
                   </div>
                 </div>
-
-                {/* Type Field */}
-                <div className="w-full">
-                  <label className="text-themeDarkGray text-xs">
-                    Item type <span className="text-themeRed">*</span>
-                  </label>
-                  {/* Select Field */}
-                  <select
-                    key={"type" + index2}
-                    className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                    value={item.type}
-                    onChange={(e) =>
-                      stateChanger({
-                        ...rest?.state,
-                        delivery: {
-                          ...rest?.state?.delivery,
-                          items: [
-                            ...rest?.state?.delivery?.items?.slice(0, index2),
-                            {
-                              quantity: item.quantity,
-                              type: e.target.value,
-                            },
-                            ...rest?.state?.delivery?.items?.slice(index2 + 1),
-                          ],
-                        },
-                      })
-                    }
-                  >
-                    {items.map((item2) =>
-                      rest?.state?.delivery?.items.some(
-                        (e) => e.type == item2.key
-                      ) && item.type != item2.key ? null : (
-                        <option key={item2.key} value={item2.key}>
-                          {item2.value}
-                        </option>
-                      )
-                    )}
-                  </select>
-                </div>
               </div>
               {/* Remove/Add items */}
-              <div className="w-full flex items-center justify-between gap-2.5 col-span-2">
-                {/* Remove Item Field */}
-                {rest?.state?.delivery?.items?.length > 1 ? (
-                  <div
-                    className="w-full"
-                    onClick={() =>
-                      stateChanger({
-                        ...rest?.state,
-                        delivery: {
-                          ...rest?.state?.delivery,
-                          items: [
-                            ...rest?.state?.delivery?.items?.slice(0, index2),
-                            ...rest?.state?.delivery?.items?.slice(index2 + 1),
-                          ],
-                        },
-                      })
-                    }
-                  >
-                    <p className="text-xs text-themeDarkGray cursor-pointer">
-                      Remove item -
-                    </p>
-                  </div>
-                ) : null}
+              <div className="w-full flex justify-between gap-2.5 col-span-2 text-center">
                 {/* Add Item Field */}
                 {rest?.state?.delivery?.items?.length == index2 + 1 ? (
-                  <div
-                    className="w-full text-right"
+                  <button
+                    className="bg-newOrderBtnBg py-1.5 px-themePadding rounded-[30px] text-white text-sm flex items-center gap-2"
                     onClick={() =>
                       stateChanger({
                         ...rest?.state,
@@ -681,10 +769,9 @@ const AddDelivery = ({ data, stateChanger, ...rest }) => {
                       })
                     }
                   >
-                    <p className="text-xs text-themeDarkGray cursor-pointer">
-                      Additional item +
-                    </p>
-                  </div>
+                    <img src={PlusIcon} alt="plus-icon" />
+                    Add item
+                  </button>
                 ) : null}
               </div>
             </Fragment>

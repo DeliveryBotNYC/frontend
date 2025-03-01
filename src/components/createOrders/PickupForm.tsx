@@ -40,7 +40,7 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
           pickup: {
             ...rest.state?.pickup,
             name: phone_customer?.data.name,
-            location: phone_customer?.data.location,
+            address: phone_customer?.data?.address,
           },
         });
     },
@@ -52,13 +52,14 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
   //address autofill
   const checkAddressExist = useMutation({
     mutationFn: (newTodo: string) =>
-      axios.post(
-        url + "/address/autocomplete",
-        { address: rest?.state?.pickup.location.street_address_1 },
+      axios.get(
+        url +
+          "/address?address=" +
+          encodeURI(rest?.state?.pickup?.address?.street),
         config
       ),
-    onSuccess: (location) => {
-      if (location) setaAutoFillDropdown(location.data);
+    onSuccess: (address) => {
+      if (address) setaAutoFillDropdown(address.data);
     },
     onError: (error) => {
       console.log(error);
@@ -86,15 +87,27 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
 
   //address autofill
   function address_input(address: string) {
-    for (var i = 0; i < autoFillDropdown.length; i++) {
-      if (autoFillDropdown[i].full === address) {
-        stateChanger({
-          ...rest?.state,
-          pickup: {
-            ...rest?.state?.pickup,
-            location: autoFillDropdown[i],
-          },
-        });
+    for (let i = 0; i < autoFillDropdown.length; i++) {
+      if (autoFillDropdown[i].formatted === address) {
+        autoFillDropdown[i].pickup
+          ? stateChanger({
+              ...rest?.state,
+              pickup: {
+                ...rest?.state?.pickup,
+                address: autoFillDropdown[i],
+              },
+            })
+          : stateChanger({
+              ...rest?.state,
+              pickup: {
+                ...rest?.state?.pickup,
+                address: {
+                  ...initialState.pickup.address,
+                  street: autoFillDropdown[i].street,
+                  pickup: false,
+                },
+              },
+            });
         return;
       }
     }
@@ -102,9 +115,9 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
       ...rest?.state,
       pickup: {
         ...rest?.state?.pickup,
-        location: {
-          ...initialState.pickup.location,
-          street_address_1: address,
+        address: {
+          ...initialState.pickup.address,
+          street: address,
         },
       },
     });
@@ -130,17 +143,19 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
 
         {/* Right Side */}
         <div>
-          {isEmpty(rest?.state).pickup && rest?.state?.status == "new_order" ? (
+          {rest?.state?.status == "new_order" && isEmpty(rest?.state).pickup ? (
             <img
               onClick={() => {
                 stateChanger({
                   ...rest.state,
                   pickup: {
                     ...rest.state.pickup,
-                    phone: data.phone,
-                    name: data.name,
-                    note: data.note,
-                    location: data.location,
+                    phone: data.account.phone_formatted,
+                    name: data.account.store_name,
+                    note: data.defaults.pickup_note,
+                    apt: data.account.apt,
+                    access_code: data.account.access_code,
+                    address: data.account.address,
                   },
                 });
               }}
@@ -154,7 +169,7 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
                   ...rest?.state,
                   pickup: {
                     ...initialState.pickup,
-                    required_verification: data.pickup_proof,
+                    required_verification: data.defaults.pickup_proof,
                   },
                 });
               }}
@@ -240,7 +255,7 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
           {/* Address */}
           <div
             className={`w-full ${
-              !rest?.state?.pickup?.location?.lat ? "col-span-2" : ""
+              !rest?.state?.pickup?.address?.lat ? "col-span-2" : ""
             }`}
           >
             <label className="text-themeDarkGray text-xs">
@@ -248,8 +263,9 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
             </label>
             {/* Input Field */}
             <input
+              autoComplete="new-password"
               disabled={notAllowedAddress}
-              value={rest?.state?.pickup?.location?.street_address_1}
+              value={rest?.state?.pickup?.address?.street}
               type="search"
               className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
               list="pickup_autofill"
@@ -258,13 +274,18 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
 
             <datalist id="pickup_autofill">
               {autoFillDropdown.map((item, key) => (
-                <option key={key} value={item.full} />
+                <option key={key} value={item.formatted} />
               ))}
             </datalist>
+            {rest?.state?.pickup?.address?.pickup == false ? (
+              <p className="text-themeRed text-xs">
+                Pickup address must be in Manhattan.
+              </p>
+            ) : null}
           </div>
 
           {/* Apt, Access code */}
-          {rest?.state?.pickup?.location?.lat ? (
+          {rest?.state?.pickup?.address?.lat ? (
             <div className="w-full flex items-center justify-between gap-2.5">
               {/* Apt */}
               <div className="w-full">
@@ -276,16 +297,13 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
                   type="text"
                   id="pickup_street_address_2"
                   className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                  value={rest?.state?.pickup?.location?.street_address_2}
+                  value={rest?.state?.pickup?.apt || ""}
                   onChange={(e) =>
                     stateChanger({
                       ...rest?.state,
                       pickup: {
                         ...rest?.state?.pickup,
-                        location: {
-                          ...rest.state?.pickup?.location,
-                          street_address_2: e.target.value,
-                        },
+                        apt: e.target.value,
                       },
                     })
                   }
@@ -304,7 +322,7 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
                   type="text"
                   id="pickup_access_code"
                   className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                  value={rest?.state?.pickup?.access_code}
+                  value={rest?.state?.pickup?.access_code || ""}
                   onChange={(e) =>
                     stateChanger({
                       ...rest?.state,
@@ -367,7 +385,7 @@ const PickupForm = ({ data, stateChanger, ...rest }) => {
                 }
               />
               <label
-                htmlFor="picture"
+                htmlFor="pickup_picture"
                 className="text-black text-sm leading-none pt-[3px] cursor-pointer"
               >
                 Picture

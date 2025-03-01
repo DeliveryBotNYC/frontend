@@ -17,7 +17,7 @@ const LoginForm = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || "/";
-  const admin = "/auth/admin/login" ? true : false;
+  const admin = location.pathname == "/auth/admin/login" ? true : false;
   const userRef = useRef();
   const errRef = useRef();
 

@@ -20,6 +20,9 @@ interface ThemeContextValue {
   invoiceSearch: string;
   setInvoiceSearch: React.Dispatch<React.SetStateAction<string>>;
 
+  customerSearch: string;
+  setCustomerSearch: React.Dispatch<React.SetStateAction<string>>;
+
   editApi: boolean;
   setEditApi: React.Dispatch<React.SetStateAction<boolean>>;
 
@@ -72,6 +75,9 @@ export const ThemeProvider: React.FC<ThemeContextProps> = ({ children }) => {
   // Invoices Page Search Input value
   const [invoiceSearch, setInvoiceSearch] = useState<string>("");
 
+  // Customers Page Search Input value
+  const [customerSearch, setCustomerSearch] = useState<string>("");
+
   // api edit state
   const [editApi, setEditApi] = useState<boolean>(false);
 
@@ -118,6 +124,8 @@ export const ThemeProvider: React.FC<ThemeContextProps> = ({ children }) => {
     setActiveSwitch,
     invoiceSearch,
     setInvoiceSearch,
+    customerSearch,
+    setCustomerSearch,
     showPopupStyles,
     hidePopupStyles,
     editApi,
