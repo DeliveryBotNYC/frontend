@@ -1,6 +1,7 @@
 import Logo from "../assets/logo.svg";
 import Forward from "../assets/arrow-next.svg";
 import DownArrow from "../assets/filter-icon-down.svg";
+import UpArrow from "../assets/filter-icon-up.svg";
 import Clock from "../assets/round-clock.svg";
 import Checkbox from "../assets/round-checbox.svg";
 
@@ -13,6 +14,8 @@ import { url } from "../hooks/useConfig";
 const Orientation = () => {
   const [items, setItems] = useState([]);
   const [error, setError] = useState({});
+  const [isOpen, setIsOpen] = useState(false);
+
   const token = UseGetOrderId();
 
   useQuery({
@@ -54,10 +57,32 @@ const Orientation = () => {
         </div>
 
         {/* Help Button */}
-        <button className="bg-white text-black px-3 py-1 rounded-full flex items-center gap-4">
-          Help
-          <img src={DownArrow} alt="DownArrow" />
-        </button>
+        <div className="relative inline-block">
+          {/* Help Button */}
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="bg-white text-black px-3 py-1 rounded-full flex items-center gap-4 shadow-md focus:outline-none"
+          >
+            Help
+            <img src={isOpen ? UpArrow : DownArrow} alt="DownArrow" />
+          </button>
+
+          {/* Dropdown */}
+          {isOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg">
+              <ul className="py-2 text-gray-700">
+                <li>
+                  <a
+                    href="mailto:driver@dbx.delivery?subject=Orientation%20Inquiry"
+                    className="block px-4 py-2 hover:bg-gray-100"
+                  >
+                    Email Driver Support
+                  </a>
+                </li>
+              </ul>
+            </div>
+          )}
+        </div>
       </nav>
 
       <div className="pt-24 py-1.5 px-4 grid grid-cols-1 gap-4 text-white">
