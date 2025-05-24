@@ -7,16 +7,16 @@ import ContentBox from "../reusable/ContentBox";
 const HomeContext = () => {
   return (
     <ContentBox isHomePage={true}>
-      <div className="3xl:h-1/2">
+      <div className="flex flex-col h-full">
         {/* Overview */}
         <Overview />
 
         {/* Open Orders */}
         <OpenOrdersContainer />
-      </div>
 
-      {/* Map */}
-      <HomeMap />
+        {/* Map */}
+        <HomeMap />
+      </div>
     </ContentBox>
   );
 };

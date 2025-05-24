@@ -42,7 +42,7 @@ const HomeMap = () => {
   });
 
   return (
-    <div className="w-full mt-5 3xl:pb-0 xl:pb-4 h-1/2">
+    <div className="w-full mt-5 3xl:pb-0 xl:pb-4 flex-1">
       <MapContainer
         className="h-full"
         center={[40.7540497, -73.9843973]}

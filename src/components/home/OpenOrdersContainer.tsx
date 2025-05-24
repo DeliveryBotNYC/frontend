@@ -21,7 +21,7 @@ const OpenOrdersContainer = () => {
     },
   });
   return (
-    <div className="mt-3 pt-[15px] bg-white rounded-primaryRadius">
+    <div className="mt-3 pt-[15px] bg-white rounded-primaryRadius h-2/6">
       {/* header */}
       <div className="px-12 pb-2.5">
         <p className="text-lg font-semibold">Open Orders</p>

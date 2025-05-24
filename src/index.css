@@ -61,21 +61,6 @@ input[type="number"] {
   transition: all 0.4s ease;
 }
 
-.parent::after {
-  content: "";
-  position: fixed;
-  top: 63px;
-  right: 40px;
-  width: 45px;
-  height: 45px;
-  background: transparent;
-  border-radius: 50%;
-  box-shadow: -15px 14px 0 #eeb678;
-  rotate: 178deg;
-  z-index: -1;
-  transition: all 0.4s ease;
-}
-
 .parent:hover::before {
   content: "";
   position: absolute;

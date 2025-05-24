@@ -1,82 +1,110 @@
-import { useContext } from "react";
+import { useContext, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+
 import { ThemeContext } from "../../context/ThemeContext";
 import TrackingOrderCard from "./TrackingOrderCard";
-import OrdersData from "../../data/OrdersData.json";
-import axios from "axios";
-import { useQuery } from "@tanstack/react-query";
 import { useConfig, url } from "../../hooks/useConfig";
 import SearchIcon from "../../assets/search.svg";
 
-const AllOrders = () => {
+const AllOrders = ({ activeOrderId }) => {
   const config = useConfig();
-  // Context to grab the search input state
-  const contextValue = useContext(ThemeContext);
+  const { searchInput, setSearchInput } = useContext(ThemeContext) || {};
 
-  // Get orders data
-  const { isLoading, data, error } = useQuery({
+  // Fetch all orders
+  const {
+    isLoading,
+    data: orders,
+    error,
+  } = useQuery({
     queryKey: ["orders"],
-    queryFn: () => {
-      return axios.get(url + "/orders", config).then((res) => res.data);
+    queryFn: async () => {
+      const response = await axios.get(`${url}/order/all`, config);
+      return response.data.data.orders;
     },
+    staleTime: 60000, // Consider data fresh for 1 minute to reduce unnecessary fetches
   });
 
-  return (
-    <div className="min-w-[400px] h-full bg-white rounded-2xl hidden md:block">
-      {/* SearchBox */}
-      <div className="w-full h-[110px]  py-5 bg-white rounded-tr-2xl rounded-tl-2xl">
-        <div className="w-full border-b border-b-primaryBorder flex items-center gap-2 pb-2 px-2.5">
-          <img src={SearchIcon} alt="searchbox" />
+  // Filter orders based on search input
+  const filteredOrders = useMemo(() => {
+    if (!orders) return [];
 
-          {/* Search Input */}
-          <input
-            type="text"
-            className="w-full bg-transparent outline-none border-none placeholder:text-textLightBlack text-themeLightBlack"
-            placeholder="Search..."
-            value={contextValue?.searchInput || ""}
-            onChange={(e) =>
-              contextValue?.setSearchInput &&
-              contextValue.setSearchInput(e.target.value)
-            }
-          />
+    // If no search input, return all orders
+    if (!searchInput) return orders;
+
+    const searchLower = searchInput.toLowerCase();
+
+    return orders.filter((item) => {
+      // Search through various fields
+      return (
+        (item?.order_id && item.order_id.toLowerCase().includes(searchLower)) ||
+        (item?.pickup?.name &&
+          item.pickup.name.toLowerCase().includes(searchLower)) ||
+        (item?.pickup?.address?.city &&
+          item.pickup.address.city.toLowerCase().includes(searchLower)) ||
+        (item?.delivery?.name &&
+          item.delivery.name.toLowerCase().includes(searchLower)) ||
+        (item?.delivery?.address?.city &&
+          item.delivery.address.city.toLowerCase().includes(searchLower))
+      );
+    });
+  }, [orders, searchInput]);
+
+  return (
+    <div className="flex flex-col h-full bg-white rounded-l-2xl">
+      {/* Header Section */}
+      <div className="flex flex-col border-b border-gray-100">
+        {/* Search Box */}
+        <div className="p-5">
+          <div className="border-b border-gray-300 hover:!border-gray-500 flex items-center gap-2 pb-1">
+            <img src={SearchIcon} width={18} alt="searchbox" />
+
+            <input
+              type="text"
+              className="bg-transparent outline-none border-none placeholder:text-textLightBlack text-themeLightBlack text-sm transition-all duration-300 ease-in-out w-full"
+              placeholder="Search..."
+              value={searchInput}
+              onChange={(e) => setSearchInput?.(e.target.value)}
+            />
+          </div>
         </div>
 
         {/* Heading */}
-        <div className="bg-contentBg px-7 py-2.5 text-center">
-          <p className="text-lg font-semibold text-black">Order</p>
+        <div className="bg-gray-50 px-5 py-3">
+          <h2 className="text-lg font-semibold text-gray-800 text-center">
+            Orders
+          </h2>
         </div>
       </div>
 
-      {/* Orders Card Container */}
-      <div
-        style={{
-          height: "calc(100% - 110px)",
-        }}
-        className="overflow-auto"
-      >
-        {data?.map((item) =>
-          contextValue?.searchInput == "" ||
-          (item?.order_id &&
-            item?.order_id
-              .toLowerCase()
-              .includes(contextValue?.searchInput.toLowerCase())) ||
-          (item?.pickup?.name &&
-            item?.pickup?.name
-              .toLowerCase()
-              .includes(contextValue?.searchInput.toLowerCase())) ||
-          (item?.pickup?.location?.street_address_1 &&
-            item?.pickup?.location?.street_address_1
-              .toLowerCase()
-              .includes(contextValue?.searchInput.toLowerCase())) ||
-          (item?.delivery?.name &&
-            item?.delivery?.name
-              .toLowerCase()
-              .includes(contextValue?.searchInput.toLowerCase())) ||
-          (item?.delivery?.location?.street_address_1 &&
-            item?.delivery?.location?.street_address_1
-              .toLowerCase()
-              .includes(contextValue?.searchInput.toLowerCase())) ? (
-            <TrackingOrderCard key={item.order_id} item={item} />
-          ) : null
+      {/* Orders List */}
+      <div className="flex-1 overflow-auto">
+        {isLoading ? (
+          <div className="p-4 text-center text-gray-500">
+            <div className="animate-pulse">Loading orders...</div>
+          </div>
+        ) : error ? (
+          <div className="p-4 text-center text-red-500 bg-red-50 m-4 rounded-lg">
+            {error.response?.data?.reason ||
+              error.message ||
+              "Failed to load orders"}
+          </div>
+        ) : filteredOrders.length === 0 ? (
+          <div className="p-6 text-center text-gray-500">
+            {searchInput
+              ? "No orders match your search"
+              : "No orders available"}
+          </div>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {filteredOrders.map((order) => (
+              <TrackingOrderCard
+                key={order.order_id}
+                item={order}
+                isActive={order.order_id === activeOrderId}
+              />
+            ))}
+          </ul>
         )}
       </div>
     </div>

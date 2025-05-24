@@ -58,8 +58,8 @@ const Sidebar = () => {
           id: 4,
           initialIcon: BookIcon,
           activeIcon: BookActiveIcon,
-          title: "Address Book",
-          target: "/address-book",
+          title: "Customers",
+          target: "/customers",
         },
         {
           id: 5,
@@ -103,7 +103,7 @@ const Sidebar = () => {
           initialIcon: BookIcon,
           activeIcon: BookActiveIcon,
           title: "Customers",
-          target: "/address-book",
+          target: "/customers",
         },
         {
           id: 5,

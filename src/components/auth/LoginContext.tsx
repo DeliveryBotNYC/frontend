@@ -5,6 +5,7 @@ import FormBtn from "../reusable/FormBtn";
 import RightBoxImage from "../../assets/login-right-image.svg";
 
 const LoginContext = () => {
+  const admin = location.pathname == "/auth/admin/login" ? true : false;
   return (
     <div
       className="w-[95%] max-w-[1240px] mx-auto flex items-center py-20"
@@ -18,35 +19,39 @@ const LoginContext = () => {
         <Outlet />
 
         {/* Right Side */}
-        <div className="sm:w-[45%] md:w-[40%] bg-themeOrange py-10">
-          {/* Upper Part */}
-          <div className="px-8 md:px-10">
-            <h3 className="text-xl md:text-2xl text-white font-bold heading">
-              Simplest way to manage <br className="xl:block hidden" /> your
-              deliveries
-            </h3>
+        {admin ? null : (
+          <div className="sm:w-[45%] md:w-[40%] bg-themeOrange py-10">
+            {/* Upper Part */}
+            <div className="px-8 md:px-10">
+              <h3 className="text-xl md:text-2xl text-white font-bold heading">
+                Simplest way to manage <br className="xl:block hidden" /> your
+                deliveries
+              </h3>
 
-            <p className="text-xs sm:text-sm lg:text-base text-white mt-1">
-              Enter your credentials to access your account
-            </p>
+              <p className="text-xs sm:text-sm lg:text-base text-white mt-1">
+                Enter your credentials to access your account
+              </p>
+            </div>
+
+            {/* Middle Image */}
+            <div className="pl-8 sm:pl-10 pr-5 mt-5">
+              <img src={RightBoxImage} alt="right_image" className="w-full" />
+            </div>
+
+            {/* Bottom Part */}
+            <div className="mt-[30px] px-8 md:px-10">
+              <Link to={"/auth/signup"}>
+                <FormBtn title="Sign-up" hasBg={false} />
+              </Link>
+
+              <Link to={"/"}>
+                <p className="text-white text-xs text-center mt-5">
+                  Learn more
+                </p>
+              </Link>
+            </div>
           </div>
-
-          {/* Middle Image */}
-          <div className="pl-8 sm:pl-10 pr-5 mt-5">
-            <img src={RightBoxImage} alt="right_image" className="w-full" />
-          </div>
-
-          {/* Bottom Part */}
-          <div className="mt-[30px] px-8 md:px-10">
-            <Link to={"/auth/signup"}>
-              <FormBtn title="Sign-up" hasBg={false} />
-            </Link>
-
-            <Link to={"/"}>
-              <p className="text-white text-xs text-center mt-5">Learn more</p>
-            </Link>
-          </div>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -9,6 +9,6 @@ export const useConfig = () => {
     },
   };
 };
-const local_url = "http://localhost:3000";
+const local_url = "http://localhost:3001";
 const production_url = "https://api.dbx.delivery";
 export const url = local_url;

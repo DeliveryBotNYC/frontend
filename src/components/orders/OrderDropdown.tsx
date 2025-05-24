@@ -19,7 +19,7 @@ const OrderDropdown = ({
   return (
     <div
       ref={dropdownRef}
-      className="w-max bg-white rounded-lg absolute z-50 right-16 top-16 shadow-dropdownShadow"
+      className="w-max bg-white rounded-lg absolute z-50 right-0 top-0 shadow-dropdownShadow"
     >
       {/* View Tracking Btn */}
       <div className="px-6 py-3">

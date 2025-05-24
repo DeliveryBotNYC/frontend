@@ -68,8 +68,8 @@ const Router = () => {
         <Route path="invoices/:id" element={<SingleInvoice />} />
         <Route path="create-order" element={<CreateOrder />} />
         <Route path="create-order/:id" element={<CreateOrder />} />
-        <Route path="address-book" element={<Customers />} />
-        <Route path="address-book/:id" element={<SingleCustomer />} />
+        <Route path="customers" element={<Customers />} />
+        <Route path="customers/edit/:id" element={<SingleCustomer />} />
         {/* Account Routes */}
         <Route path="accounts" element={<Accounts />}>
           <Route path="general" element={<AccountsGeneral />} />

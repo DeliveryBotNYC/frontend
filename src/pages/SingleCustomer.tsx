@@ -6,7 +6,7 @@ const SingleCustomer = () => {
   return (
     <div className="w-full">
       {/* navbar */}
-      <PrimaryNav title="Address Book" />
+      <PrimaryNav title="Customers" />
 
       {/* Content Box */}
       <div className="bg-themeOrange relative z-40">

@@ -1,6 +1,5 @@
 import FilterIcon from "../../assets/filter-icon.svg";
 import StatusBtn from "../reusable/StatusBtn";
-import OrdersTablePagination from "../orders/OrdersTablePagination";
 import { useNavigate } from "react-router-dom";
 import { useContext } from "react";
 import { ThemeContext } from "../../context/ThemeContext";
@@ -137,9 +136,7 @@ const InvoicesTable = () => {
         )}
       </div>
 
-      <div className="rounded-br-2xl rounded-bl-2xl ">
-        <OrdersTablePagination />
-      </div>
+      <div className="rounded-br-2xl rounded-bl-2xl "></div>
     </>
   );
 };

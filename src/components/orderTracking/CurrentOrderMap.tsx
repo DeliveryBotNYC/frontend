@@ -6,172 +6,281 @@ import {
   TileLayer,
   useMap,
 } from "react-leaflet";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Icon, LatLngExpression, divIcon } from "leaflet";
 
+// Assets
 import CRIcon from "../../assets/current-loc.svg";
 import BetweenIcon from "../../assets/mapBetweenMarker.svg";
 import PickupIcon from "../../assets/pickupMapIcon.svg";
 import PickUpCompletedIcom from "../../assets/pickupCompletedMapIcon.svg";
 import DeliveryIcon from "../../assets/deliveryMapIcon.svg";
 import DeliveryCompletedIcon from "../../assets/deliveryMapCompletedIcon.svg";
-import { stadia } from "../reusable/functions";
-const CurrentOrderMap = ({ data }) => {
-  // Location Markers
-  console.log(data);
-  var betweensPoly = [];
-  data.driver?.location?.lat && data.status != "delivered"
-    ? betweensPoly.push([
-        data.driver?.location?.lat,
-        data.driver?.location?.lon,
-      ])
-    : null;
-  data.stops?.map((item) => {
-    betweensPoly.push([item.lat, item.lon]);
-  });
+import { stadia, mapStyle } from "../reusable/functions";
 
+// Make sure Leaflet CSS is imported somewhere in your application
+// import "leaflet/dist/leaflet.css";
+
+const CurrentOrderMap = ({ data }) => {
+  const [mapReady, setMapReady] = useState(false);
+  const mapRef = useRef(null);
+
+  // Initialize polyline array for route visualization
+  const betweensPoly = [];
+
+  // Add driver location to polyline if available and order not delivered
+  if (data?.driver?.location?.lat && data.status !== "delivered") {
+    betweensPoly.push([data.driver?.location?.lat, data.driver?.location?.lon]);
+  }
+
+  // Add stops to polyline if available
+  if (data?.stops && Array.isArray(data.stops)) {
+    data.stops.forEach((item) => {
+      if (item.lat && item.lon) {
+        betweensPoly.push([item.lat, item.lon]);
+      }
+    });
+  } else {
+    // If no stops array, add pickup and delivery locations
+    if (data?.pickup?.address?.lat && data?.pickup?.address?.lon) {
+      betweensPoly.push([data.pickup.address.lat, data.pickup.address.lon]);
+    }
+    if (data?.delivery?.address?.lat && data?.delivery?.address?.lon) {
+      betweensPoly.push([data.delivery.address.lat, data.delivery.address.lon]);
+    }
+  }
+
+  // Icon definitions
   const currentLocationIcon = new Icon({
     iconUrl: CRIcon,
     iconSize: [40, 40],
+    iconAnchor: [20, 20], // Center the icon
   });
+
+  // Fixed divIcon implementations with proper positioning
   const deliveryMarker = new divIcon({
     className: "delivery-icon",
-    html: `<img src= '${
-      data?.status == "delivered" ? DeliveryCompletedIcon : DeliveryIcon
-    }'/><span style="position: fixed;top:16px;width: 41px;text-align: center;left: -3px;color: white;"> ${
-      data?.status == "assigned" ||
-      data?.status == "arrived_at_pickup" ||
-      data?.status == "picked_up" ||
-      data?.status == "arrived_at_delivery"
-        ? data.delivery?.stop
+    html: `<img src="${
+      data?.status === "delivered" ? DeliveryCompletedIcon : DeliveryIcon
+    }" /><span style="position: absolute; top: 16px; width: 41px; text-align: center; left: -3px; color: white;"> ${
+      data?.status === "assigned" ||
+      data?.status === "arrived_at_pickup" ||
+      data?.status === "picked_up" ||
+      data?.status === "arrived_at_delivery"
+        ? data?.delivery?.stop || ""
         : ""
     } </span>`,
+    iconSize: [41, 41],
+    iconAnchor: [20, 40],
   });
 
   const pickupMarker = new divIcon({
-    className: "delivery-icon",
-    html: `<img src= '${
-      data?.status == "processing" ||
-      data?.status == "assigned" ||
-      data?.status == "arrived_at_pickup"
+    className: "pickup-icon",
+    html: `<img src="${
+      data?.status === "processing" ||
+      data?.status === "assigned" ||
+      data?.status === "arrived_at_pickup"
         ? PickupIcon
         : PickUpCompletedIcom
-    }'/><span style="position: fixed;top:8px;width: 41px;text-align: center;left: 3px;color: white;"> ${
-      data?.status == "assigned" || data?.status == "arrived_at_pickup"
-        ? data.pickup?.stop
+    }" /><span style="position: absolute; top: 8px; width: 41px; text-align: center; left: 3px; color: white;"> ${
+      data?.status === "assigned" || data?.status === "arrived_at_pickup"
+        ? data?.pickup?.stop || ""
         : ""
     } </span>`,
+    iconSize: [41, 41],
+    iconAnchor: [20, 40],
   });
 
-  const BetweenMarker = new Icon({
+  const betweenMarker = new Icon({
     iconUrl: BetweenIcon,
     iconSize: [15, 15],
+    iconAnchor: [7, 7], // Center the icon
   });
 
-  function Bounds() {
-    var map = useMap();
+  // Enhanced MapController component to replace Bounds
+  function MapController() {
+    const map = useMap();
+
+    // Initial map setup and bounds fitting
     useEffect(() => {
       if (!map) return;
-      {
-        let bounds = [];
-        Array.isArray(data?.stops) && data?.stops?.length > 0
-          ? bounds.push(data?.stops)
-          : data.pickup?.address?.lat && data.delivery?.address?.lat
-          ? bounds.push(
-              [data.delivery?.address?.lat, data.delivery?.address?.lon],
-              [data.pickup?.address?.lat, data.pickup?.address?.lon]
-            )
-          : bounds.push([40.84, -73.91], [40.63, -74.02]);
 
-        data.driver?.location?.lat
-          ? bounds.push([
-              data.driver?.location?.lat,
-              data.driver?.location?.lon,
-            ])
-          : null;
-        map.fitBounds(bounds, {
-          padding: [50, 0],
-          paddingBottomRight: [400, 0],
-        });
-      }
+      // Set a timeout to ensure the map container is fully rendered
+      const timer = setTimeout(() => {
+        // Force map to recalculate dimensions
+        map.invalidateSize({ animate: true });
+
+        let bounds = [];
+
+        // Determine bounds based on available data
+        if (Array.isArray(data?.stops) && data?.stops?.length > 0) {
+          // Add stops to bounds
+          data.stops.forEach((stop) => {
+            if (stop.lat && stop.lon) {
+              bounds.push([stop.lat, stop.lon]);
+            }
+          });
+        } else if (data?.pickup?.address?.lat && data?.delivery?.address?.lat) {
+          // Add pickup and delivery locations
+          bounds.push(
+            [data.delivery?.address?.lat, data.delivery?.address?.lon],
+            [data.pickup?.address?.lat, data.pickup?.address?.lon]
+          );
+        } else {
+          // Default bounds for NYC if no locations available
+          bounds.push([40.84, -73.91], [40.63, -74.02]);
+        }
+
+        // Add driver location to bounds if available
+        if (data?.driver?.location?.lat && data?.driver?.location?.lon) {
+          bounds.push([data.driver.location.lat, data.driver.location.lon]);
+        }
+
+        // Fit map to bounds with padding
+        if (bounds.length > 0) {
+          map.fitBounds(bounds, {
+            padding: [50, 50],
+            paddingBottomRight: [400, 50],
+            animate: true,
+          });
+        }
+
+        setMapReady(true);
+      }, 300);
+
+      return () => clearTimeout(timer);
+    }, [map, data]);
+
+    // Handle window resize events
+    useEffect(() => {
+      if (!map) return;
+
+      const handleResize = () => {
+        map.invalidateSize({ animate: true });
+      };
+
+      window.addEventListener("resize", handleResize);
+
+      return () => {
+        window.removeEventListener("resize", handleResize);
+      };
     }, [map]);
+
+    return null;
   }
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full relative">
+      {/* Loading overlay */}
+      {!mapReady && (
+        <div className="absolute inset-0 bg-gray-100 flex items-center justify-center z-10">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-themeOrange"></div>
+        </div>
+      )}
+
       <MapContainer
-        className="h-full"
-        center={[40.7540497, -73.9843973]}
+        ref={mapRef}
+        className="h-full w-full"
+        center={[40.7540497, -73.9843973]} // Default to NYC
         zoom={13}
-        zoomControl={false}
+        zoomControl={true}
+        zoomControlPosition="topright"
+        scrollWheelZoom={true}
+        style={{ height: "100%", width: "100%" }}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url={
-            "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=" +
-            stadia
-          }
+          url={mapStyle}
+          detectRetina={true}
+          maxZoom={18}
+          minZoom={10}
+          subdomains={"abcd"}
+          maxNativeZoom={19}
         />
-        {data?.delivery?.address?.lat ? (
+
+        {/* Polyline for route */}
+        {betweensPoly.length > 1 && (
           <Polyline
-            pathOptions={{ color: "rgba(238, 182, 120, 0.4)" }}
+            pathOptions={{ color: "rgba(238, 182, 120, 0.4)", weight: 4 }}
             positions={betweensPoly}
           />
-        ) : null}
-        {data?.driver?.location?.histry ? (
-          <Polyline
-            pathOptions={{ color: "#EEB678" }}
-            positions={
-              [
-                [data?.pickup?.address?.lat, data?.pickup?.address?.lon],
-                [data.driver?.address?.lat, data.driver?.address.lon],
-              ] as LatLngExpression[]
-            }
-          />
-        ) : null}
+        )}
+
+        {/* Historical driver path */}
+        {data?.driver?.location?.history &&
+          data?.pickup?.address?.lat &&
+          data?.pickup?.address?.lon && (
+            <Polyline
+              pathOptions={{ color: "#EEB678", weight: 3 }}
+              positions={
+                [
+                  [data.pickup.address.lat, data.pickup.address.lon],
+                  [data.driver.location.lat, data.driver.location.lon],
+                ] as LatLngExpression[]
+              }
+            />
+          )}
 
         {/* Pickup Marker */}
-        {data?.pickup?.address?.lat ? (
+        {data?.pickup?.address?.lat && data?.pickup?.address?.lon && (
           <Marker
             icon={pickupMarker}
-            key={1}
-            position={[data?.pickup?.address?.lat, data?.pickup?.address?.lon]}
-          ></Marker>
-        ) : null}
+            key="pickup-marker"
+            position={[data.pickup.address.lat, data.pickup.address.lon]}
+          >
+            <Popup>Pickup Location: {data.pickup?.address?.street || ""}</Popup>
+          </Marker>
+        )}
 
-        {/* Delivered Marker */}
-        {data?.delivery?.address?.lat ? (
+        {/* Delivery Marker */}
+        {data?.delivery?.address?.lat && data?.delivery?.address?.lon && (
           <Marker
             icon={deliveryMarker}
-            key={2}
-            position={[
-              data?.delivery?.address?.lat,
-              data?.delivery?.address?.lon,
-            ]}
-          ></Marker>
-        ) : null}
+            key="delivery-marker"
+            position={[data.delivery.address.lat, data.delivery.address.lon]}
+          >
+            <Popup>
+              Delivery Location: {data.delivery?.address?.street || ""}
+            </Popup>
+          </Marker>
+        )}
 
-        {/* Current Location Markers */}
-        {/* Delivered Marker */}
-        {data.driver?.location?.lat && data.driver?.location?.lon ? (
+        {/* Driver's Current Location Marker */}
+        {data?.driver?.location?.lat && data?.driver?.location?.lon && (
           <Marker
             icon={currentLocationIcon}
-            key={3}
-            position={[data.driver?.location?.lat, data.driver?.location?.lon]}
-          ></Marker>
-        ) : null}
-        {/* Multiple Delivery Markers */}
-        {data.stops?.map((item, index) => {
-          return item.o_order != data?.delivery?.o_order &&
-            item.o_order != data?.pickup?.o_order ? (
-            <Marker
-              key={index}
-              icon={BetweenMarker}
-              position={[item.lat, item.lon]}
-            ></Marker>
-          ) : null;
-        })}
-        <Bounds />
+            key="driver-marker"
+            position={[data.driver.location.lat, data.driver.location.lon]}
+          >
+            <Popup>Driver Location</Popup>
+          </Marker>
+        )}
+
+        {/* In-between Stops Markers */}
+        {Array.isArray(data?.stops) &&
+          data.stops.map((item, index) => {
+            // Skip if missing coordinates
+            if (!item.lat || !item.lon) return null;
+
+            // Only show markers for stops that aren't pickup or delivery
+            if (
+              item.o_order !== data?.delivery?.o_order &&
+              item.o_order !== data?.pickup?.o_order
+            ) {
+              return (
+                <Marker
+                  key={`stop-${index}`}
+                  icon={betweenMarker}
+                  position={[item.lat, item.lon]}
+                >
+                  <Popup>Stop #{index + 1}</Popup>
+                </Marker>
+              );
+            }
+            return null;
+          })}
+
+        <MapController />
       </MapContainer>
     </div>
   );

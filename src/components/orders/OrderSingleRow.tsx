@@ -2,8 +2,6 @@ import { useContext } from "react";
 import { ThemeContext } from "../../context/ThemeContext";
 import StatusBtn from "../reusable/StatusBtn";
 import OrderDropdown from "./OrderDropdown";
-import CancelOrderPopup from "../popups/CancelOrderPopup";
-import BlackOverlay from "../popups/BlackOverlay";
 import DotIcon from "../../assets/dot.svg";
 import CloseIcon from "../../assets/closeIcon.svg";
 import useClickOutside from "../../hooks/useHandleOutsideClick";
@@ -21,6 +19,7 @@ interface OrderItem {
     };
   };
   delivery: {
+    external_order_id: string;
     name: string;
     address: {
       street: string;
@@ -35,14 +34,14 @@ interface OrderItem {
 }
 
 const OrderSingleRow = ({ item }: { item: OrderItem }) => {
-  //console.log(item);
   // Toggle Dropdown by custom hook
   const { isOpen, setIsOpen, dropdownRef, dotRef } =
     useClickOutside<HTMLDivElement>(false);
 
   // Destructuring The Objects Data
   const { delivery, last_updated, order_id, pickup, status, timeframe } = item;
-  // Naviagte to other page
+
+  // Navigate to other page
   const navigate = useNavigate();
 
   const redirectToTracking = () => {
@@ -50,60 +49,72 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
       state: item,
     });
   };
-  const contextValue = useContext(ThemeContext);
-  return (
-    <tr className="bg-white hover:bg-contentBg cursor-pointer duration-200">
-      {/* Order */}
-      <td
-        onClick={redirectToTracking}
-        className="border-b border-b-themeLightGray min-w-[170px] xl:min-w-[auto]"
-      >
-        <div className="pl-[30px] py-4">
-          <p>
-            <span className="text-themeOrange">DBX</span>
-            {order_id}
-          </p>
-        </div>
-      </td>
 
-      {/* status */}
-      <td
+  const contextValue = useContext(ThemeContext);
+
+  return (
+    <div className="flex w-full bg-white hover:bg-contentBg cursor-pointer duration-200 border-b border-b-themeLightGray">
+      {/* Order */}
+      <div
         onClick={redirectToTracking}
-        className="border-b border-b-themeLightGray min-w-[170px] xl:min-w-[auto]"
+        className="flex-1 py-3 pl-[30px] min-w-[170px] xl:min-w-[auto]"
       >
-        <div className="flex items-center px-2.5">
+        <div className="py-1">
+          {delivery.external_order_id ? (
+            <>
+              <p className="text-xs">
+                <span className="text-themeOrange">DBX</span>
+                {order_id}
+              </p>
+              <p className="leading-none mt-1">{delivery.external_order_id}</p>
+            </>
+          ) : (
+            <p>
+              <span className="text-themeOrange">DBX</span>
+              {order_id}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* Status */}
+      <div
+        onClick={redirectToTracking}
+        className="flex-1 py-3 px-2.5 min-w-[170px] xl:min-w-[auto]"
+      >
+        <div className="flex items-center">
           <StatusBtn type={status.toLowerCase()} />
         </div>
-      </td>
+      </div>
 
-      {/* pickup */}
-      <td
+      {/* Pickup */}
+      <div
         onClick={redirectToTracking}
-        className="border-b border-b-themeLightGray min-w-[170px] xl:min-w-[auto]"
+        className="flex-1 py-3 px-2.5 min-w-[170px] xl:min-w-[auto]"
       >
-        <div className="px-2.5">
+        <div>
           <p className="text-xs">{pickup.address.street}</p>
           <p className="leading-none mt-1">{pickup.name}</p>
         </div>
-      </td>
+      </div>
 
-      {/* delivery */}
-      <td
+      {/* Delivery */}
+      <div
         onClick={redirectToTracking}
-        className="border-b border-b-themeLightGray min-w-[170px] xl:min-w-[auto]"
+        className="flex-1 py-3 px-2.5 min-w-[170px] xl:min-w-[auto]"
       >
-        <div className="px-2.5">
+        <div>
           <p className="text-xs">{delivery.address.street}</p>
           <p className="leading-none mt-1">{delivery.name}</p>
         </div>
-      </td>
+      </div>
 
-      {/* time-frame */}
-      <td
+      {/* Time-frame */}
+      <div
         onClick={redirectToTracking}
-        className="border-b border-b-themeLightGray min-w-[170px] xl:min-w-[auto]"
+        className="flex-1 py-3 px-2.5 min-w-[170px] xl:min-w-[auto]"
       >
-        <div className="px-2.5">
+        <div>
           <p className="text-xs">
             {moment(timeframe.start_time).format("MM/DD/YY")}
           </p>
@@ -112,47 +123,55 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
             {moment(timeframe.end_time).format("h:mm a")}
           </p>
         </div>
-      </td>
+      </div>
 
-      {/* last update */}
-      <td className="border-b border-b-themeLightGray min-w-[300px] xl:min-w-[auto] relative">
-        <div onClick={redirectToTracking} className="pl-2.5">
+      {/* Last Updated with Actions - Fixed Width Column */}
+      <div className="flex-1 py-3 min-w-[300px] xl:min-w-[auto] relative">
+        {/* Content container with fixed padding to match header */}
+        <div
+          className="flex justify-between items-center pl-2.5 pr-[30px]"
+          onClick={redirectToTracking}
+        >
           <p className="leading-none mt-1">
             {moment(last_updated).format("MM/DD/YY h:mm a")}
           </p>
+
+          {/* Action icon container with fixed position */}
+          <div
+            className="ml-2"
+            onClick={(e) => e.stopPropagation()}
+            ref={dotRef}
+          >
+            {isOpen ? (
+              <img
+                src={CloseIcon}
+                alt="close-icon"
+                className="cursor-pointer"
+                onClick={() => setIsOpen(false)}
+              />
+            ) : (
+              <img
+                src={DotIcon}
+                alt="dot-icon"
+                className="cursor-pointer"
+                onClick={() => setIsOpen(true)}
+              />
+            )}
+          </div>
         </div>
 
-        {/* Dot and close icon*/}
-        <div
-          className="absolute top-1/2 -translate-y-1/2 2xl:left-[70%] left-[85%]"
-          ref={dotRef}
-        >
-          {isOpen === true ? (
-            <img
-              src={CloseIcon}
-              alt="close-icon"
-              className="cursor-pointer"
-              onClick={() => setIsOpen(false)}
+        {/* Dropdown Menu - Positioned absolutely relative to the cell */}
+        {isOpen && (
+          <div className="absolute right-4 top-full z-20">
+            <OrderDropdown
+              closeDropdown={() => setIsOpen(false)}
+              orderId={order_id}
+              dropdownRef={dropdownRef}
             />
-          ) : (
-            <img
-              src={DotIcon}
-              alt="dot-icon"
-              className="cursor-pointer"
-              onClick={() => setIsOpen(true)}
-            />
-          )}
-        </div>
-        {/* Popup */}
-        {isOpen === true ? (
-          <OrderDropdown
-            closeDropdown={() => setIsOpen(false)}
-            orderId={order_id}
-            dropdownRef={dropdownRef}
-          />
-        ) : null}
-      </td>
-    </tr>
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 

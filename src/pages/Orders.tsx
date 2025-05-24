@@ -9,7 +9,7 @@ const Orders = () => {
       <PrimaryNav title="Orders" />
 
       {/* Content Box */}
-      <div className="bg-themeOrange relative z-40">
+      <div className="bg-themeOrange">
         {/* Sidebar */}
         <Sidebar />
 

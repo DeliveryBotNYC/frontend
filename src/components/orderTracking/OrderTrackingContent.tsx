@@ -1,57 +1,107 @@
-import ContentBox from "../reusable/ContentBox";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
+
+import ContentBox2 from "../reusable/ContentBox2";
 import AllOrders from "./AllOrders";
 import CurrentOrderMap from "./CurrentOrderMap";
 import OrderTrackingInfo from "./OrderTrackingInfo";
-import { useConfig, url } from "../../hooks/useConfig";
-import Orders from "../../data/OrdersData.json";
 import RateDeliveryMan from "./RateDeliveryMan";
-import { useState, useEffect } from "react";
 import UseGetOrderId from "../../hooks/UseGetOrderId";
-import axios from "axios";
-import { useQuery } from "@tanstack/react-query";
+import { useConfig, url } from "../../hooks/useConfig";
 
 const OrderTrackingContent = () => {
-  // Grab the order id from addressbar
   const orderId = UseGetOrderId();
-
   const config = useConfig();
-  const [getOrder, setgetOrder] = useState({});
+  const [orderData, setOrderData] = useState({});
+  const [showRating, setShowRating] = useState(false);
 
-  const { isSuccess, data, refetch } = useQuery({
-    queryKey: ["currentorder", { orderId }],
-    queryFn: () => {
-      return axios
-        .get(url + "/orders?order_id=" + orderId, config)
-        .then((res) => setgetOrder(res.data));
-    },
-  });
+  // Memoize query options to prevent unnecessary re-renders
+  const queryOptions = useMemo(
+    () => ({
+      queryKey: ["currentorder", orderId],
+      queryFn: async () => {
+        try {
+          const response = await axios.get(`${url}/order/${orderId}`, config);
+          return response.data.data;
+        } catch (error) {
+          console.error("Error fetching order:", error);
+          throw error;
+        }
+      },
+      enabled: Boolean(orderId),
+      refetchOnWindowFocus: false,
+      staleTime: 5000, // Consider data fresh for 5 seconds
+    }),
+    [orderId, config]
+  );
 
-  // Get orders data
-  setInterval(() => {
-    refetch();
-  }, 1000000);
+  const { data, isLoading, refetch } = useQuery(queryOptions);
+
+  // Update order data when query results change
+  useEffect(() => {
+    if (data && !isLoading) {
+      setOrderData(data);
+
+      // Show rating component if delivered
+      if (data.status === "delivered") {
+        setShowRating(true);
+      }
+    }
+  }, [data, isLoading]);
+
+  // Set up polling interval
+  useEffect(() => {
+    if (!orderId) return;
+
+    const intervalId = setInterval(() => {
+      refetch();
+    }, 10000);
+
+    return () => clearInterval(intervalId);
+  }, [refetch, orderId]);
 
   return (
-    <ContentBox>
-      <div className="flex h-full justify-between gap-2.5">
-        {/* All Orders (Sidebar) */}
-        <AllOrders />
+    <ContentBox2>
+      <div className="flex flex-col md:flex-row h-full bg-white rounded-2xl shadow-sm">
+        {/* Sidebar */}
+        <div className="w-full md:w-[30%] md:max-w-[400px] border-r border-gray-100">
+          <AllOrders activeOrderId={orderId} />
+        </div>
 
-        {/* Content Box */}
-        <div className="w-full h-full bg-white rounded-2xl relative overflow-hidden">
-          {/* Map */}
-          <CurrentOrderMap data={getOrder} />
+        {/* Main content */}
+        <div className="w-full h-full rounded-r-2xl relative overflow-hidden">
+          {isLoading ? (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10">
+              <div className="animate-pulse text-blue-500">
+                Loading order data...
+              </div>
+            </div>
+          ) : !orderId ? (
+            <div className="flex items-center justify-center h-full text-gray-500">
+              <p>Select an order to track</p>
+            </div>
+          ) : (
+            <>
+              {/* Map */}
+              <CurrentOrderMap data={orderData} />
 
+              {/* Rating Component */}
+              {showRating && orderData.status === "delivered" && (
+                <RateDeliveryMan
+                  setShowRating={setShowRating}
+                  orderId={orderId}
+                />
+              )}
+              {/* Order Status */}
+              <OrderTrackingInfo data={orderData} />
+            </>
+          )}
           {/* Order Status */}
-          <OrderTrackingInfo data={getOrder} />
-
-          {/* Rating Components 
-          {rateDriver === true && currentStatus === "delivered" ? (
-            <RateDeliveryMan setRateDriver={setRateDriver} />
-          ) : null}*/}
+          <OrderTrackingInfo data={orderData} />
         </div>
       </div>
-    </ContentBox>
+    </ContentBox2>
   );
 };
 

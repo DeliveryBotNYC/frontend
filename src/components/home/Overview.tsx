@@ -81,7 +81,7 @@ const Overview = () => {
     },
   ];
   return (
-    <div className="w-full flex justify-between gap-2.5">
+    <div className="w-full flex justify-between gap-2.5 h-1/6 max-h-[130px]">
       {/* Left Side */}
       <div className="w-9/12 bg-white rounded-primaryRadius px-10 pt-[15px] pb-6 flex items-center justify-between gap-14">
         {/* Cards */}

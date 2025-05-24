@@ -14,7 +14,7 @@ const ContentBox = ({
       }`}
     >
       {/* Content Box */}
-      <div className="w-full lg:px-5 2xl:px-16 py-[20px] bg-contentBg rounded-tr-2xl rounded-tl-2xl h-full">
+      <div className="w-full lg:px-5 2xl:px-8 py-[20px] bg-contentBg rounded-tr-2xl rounded-tl-2xl h-full">
         {children}
       </div>
     </div>

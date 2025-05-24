@@ -1,55 +1,44 @@
 import SearchIcon from "../../assets/search.svg";
 import { ThemeContext } from "../../context/ThemeContext";
 import RoutesCard from "./RoutesCard";
-import { useConfig, url } from "../../hooks/useConfig";
-import axios from "axios";
-import { useQuery } from "@tanstack/react-query";
-import { useContext, useState, useEffect } from "react";
+import { useContext, useEffect } from "react";
 
-const SideBarRoutes = () => {
-  const config = useConfig();
-  const [routesValues, setRoutesValues] = useState([]);
-  // Get orders data
-  const { data, isSuccess } = useQuery({
-    queryKey: ["statistics"],
-    queryFn: () => {
-      return axios.get(url + "/routes", config).then((res) => {
-        return res?.data;
-      });
-    },
-  });
-
-  //update state when default data
-  useEffect(() => {
-    if (data) setRoutesValues(data);
-  }, [isSuccess]);
-  // Context to grab the search input state
-  const contextValue = useContext(ThemeContext);
+const SideBarRoutes = ({ routes, searchTerm, setSearchTerm, isLoading }) => {
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+  };
 
   return (
     <div>
       {/* SearchBox */}
-      <div className="w-full  py-5 bg-contentBg">
-        <div className="w-full border-b border-b-primaryBorder flex items-center gap-2 pb-2 px-2.5">
-          <img src={SearchIcon} alt="searchbox" />
-
-          {/* Search Input */}
+      <div className="p-5">
+        <div className="border-b border-gray-300 hover:!border-gray-500 flex items-center gap-2 pb-1">
+          <img src={SearchIcon} width={18} alt="searchbox" />
           <input
             type="text"
-            className="w-full bg-transparent outline-none border-none placeholder:text-textLightBlack text-themeLightBlack"
-            placeholder="Search..."
-            value={contextValue?.searchInput || ""}
-            onChange={(e) =>
-              contextValue?.setSearchInput &&
-              contextValue.setSearchInput(e.target.value)
-            }
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="bg-transparent outline-none border-none placeholder:text-textLightBlack text-themeLightBlack text-sm transition-all duration-300 ease-in-out w-full"
+            placeholder="Search routes..."
           />
         </div>
       </div>
-      {/* outlet here */}
-      {routesValues.map((item) => (
-        <RoutesCard key={item?.route_id} item={item} />
-      ))}
+
+      {/* Routes List */}
+      <div className="routes-list">
+        {isLoading ? (
+          <div className="p-5 text-center text-gray-500">Loading routes...</div>
+        ) : routes.length > 0 ? (
+          routes.map((item) => <RoutesCard key={item?.route_id} item={item} />)
+        ) : (
+          <div className="p-5 text-center text-gray-500">
+            {searchTerm.trim()
+              ? `No routes found matching "${searchTerm}"`
+              : "No routes found matching the current filters."}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
