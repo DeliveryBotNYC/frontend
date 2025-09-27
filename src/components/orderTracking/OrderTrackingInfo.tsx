@@ -22,7 +22,7 @@ import CancelOrderPopup from "../popups/CancelOrderPopup";
 import BlackOverlay from "../popups/BlackOverlay";
 import ReportPODPopup from "../popups/ReportPODPopup";
 
-const OrderTrackingInfo = ({ data }) => {
+const OrderTrackingInfo = ({ data, clearOrderSelection }) => {
   // Context to grab the search input state
   const contextValue = useContext(ThemeContext);
 
@@ -32,6 +32,13 @@ const OrderTrackingInfo = ({ data }) => {
 
   // Current Order Status
   const currentStatus = data?.status;
+
+  // Handle close button click
+  const handleCloseClick = () => {
+    if (clearOrderSelection) {
+      clearOrderSelection();
+    }
+  };
 
   return (
     <div>
@@ -52,9 +59,19 @@ const OrderTrackingInfo = ({ data }) => {
                   </span>
                 </p>
 
-                <Link to="/orders">
-                  <img src={CloseIcon} alt="close-icohn" />
-                </Link>
+                {/* Conditional close button rendering */}
+                {clearOrderSelection ? (
+                  <img
+                    src={CloseIcon}
+                    alt="close-icon"
+                    className="cursor-pointer"
+                    onClick={handleCloseClick}
+                  />
+                ) : (
+                  <Link to="/orders">
+                    <img src={CloseIcon} alt="close-icon" />
+                  </Link>
+                )}
               </div>
 
               {/* Status Button */}
@@ -67,7 +84,7 @@ const OrderTrackingInfo = ({ data }) => {
                 {/* Pickup */}
                 <div>
                   <p className="text-xs text-themeDarkGray">
-                    {data?.pickup?.address.street}
+                    {data?.pickup?.address.street_address_1}
                   </p>
                   <p className="text-xs text-themeDarkGray">
                     {data?.pickup?.name}
@@ -77,7 +94,7 @@ const OrderTrackingInfo = ({ data }) => {
                 {/* delivery */}
                 <div className="text-right">
                   <p className="text-xs text-themeDarkGray">
-                    {data?.delivery?.address.street}
+                    {data?.delivery?.address.street_address_1}
                   </p>
                   <p className="text-xs text-themeDarkGray">
                     {data?.delivery?.name}

@@ -12,7 +12,6 @@ const Overview = () => {
   const config = useConfig();
 
   // Filter Btn
-  //const filterBtns = ["Day", "Month", "Year"];
   const filterBtns = [
     { id: "day", title: "Day" },
     { id: "month", title: "Month" },
@@ -23,22 +22,21 @@ const Overview = () => {
     id: "day",
     title: "Day",
   });
+
   // Get orders data
   const { isLoading, data, error, refetch, isSuccess } = useQuery({
-    queryKey: ["statistics"],
+    queryKey: ["statistics", activeFilterBtn.id],
     queryFn: () => {
       return axios
-        .get(url + "/orders/statistics", {
+        .get(url + "/order/statistics", {
           ...config,
           params: { range: activeFilterBtn.id },
         })
-        .then((res) => res.data);
+        .then((res) => res.data.data);
     },
   });
-  useEffect(() => {
-    refetch();
-  }, [activeFilterBtn]);
-  var statisticsData = [
+
+  const statisticsData = [
     {
       id: "processing",
       title: "Processing",
@@ -80,23 +78,24 @@ const Overview = () => {
       progressValueBg: "#F03F3F",
     },
   ];
+
   return (
     <div className="w-full flex justify-between gap-2.5 h-1/6 max-h-[130px]">
-      {/* Left Side */}
-      <div className="w-9/12 bg-white rounded-primaryRadius px-10 pt-[15px] pb-6 flex items-center justify-between gap-14">
-        {/* Cards */}
+      {/* Statistics Cards Section */}
+      <div className="w-9/12 bg-white rounded-primaryRadius shadow-sm border border-gray-200 px-10 pt-[15px] pb-6 flex items-center justify-between gap-14">
         {statisticsData?.map((item) =>
           isSuccess ? (
             <StatisticsCard
               key={item.id}
               item={{
                 ...item,
-                value: data?.breakdown[item.id] ? data.breakdown[item.id] : 0,
+                value: data?.breakdown?.[item.id] || 0,
                 progressValue:
-                  ((data?.breakdown[item.id] ? data.breakdown[item.id] : 0) /
-                    data?.total) *
-                    100 +
-                  "%",
+                  data?.total > 0
+                    ? Math.round(
+                        ((data?.breakdown?.[item.id] || 0) / data.total) * 100
+                      ) + "%"
+                    : "0%",
               }}
             />
           ) : (
@@ -105,32 +104,26 @@ const Overview = () => {
         )}
       </div>
 
-      {/* Right Side */}
-      <div className="w-3/12 bg-white rounded-primaryRadius px-10 pt-[15px] flex justify-between gap-2.5">
-        {/* left side */}
-        <div className="w-4/12">
-          <img src={TruckIcon} alt="truck-icon" />
-
-          {/* title */}
-          <p className="text-3xl font-extrabold mt-2.5 heading">
-            {data?.total ? data.total : 0}
+      {/* Total Orders & Chart Section */}
+      <div className="w-3/12 bg-white rounded-primaryRadius px-10 pt-[15px] flex justify-between gap-2.5 relative">
+        {/* Total Orders */}
+        <div className="py-4 flex flex-col items-left justify-center">
+          <img src={TruckIcon} alt="truck-icon" className="w-10 h-10 mb-3" />
+          <p className="text-3xl font-extrabold heading mb-1">
+            {data?.total || 0}
           </p>
-
-          {/* desc */}
-          <p className="text-xs text-secondaryBtnBorder mt-2 pl-4">
-            Total orders
-          </p>
+          <p className="text-xs text-secondaryBtnBorder">Total orders</p>
         </div>
 
-        {/* Right Side */}
-        <div className="w-8/12">
-          {/* Filter selector */}
-          <div className="flex items-center justify-between gap-2.5">
-            {filterBtns?.map((item, idx) => (
+        {/* Chart Section */}
+        <div className="w-8/12 relative z-10">
+          {/* Filter Buttons */}
+          <div className="flex items-center justify-between gap-1">
+            {filterBtns?.map((item) => (
               <button
                 key={item.id}
                 onClick={() => setActiveFilterBtn(item)}
-                className={`w-full text-sm text-secondaryBtnBorder py-1.5 ${
+                className={`w-full text-sm text-secondaryBtnBorder py-1.5 px-2 ${
                   activeFilterBtn.id === item.id
                     ? "bg-contentBg"
                     : "bg-transparent"
@@ -141,14 +134,16 @@ const Overview = () => {
             ))}
           </div>
 
-          {/* Graph */}
-          {isSuccess ? (
-            <DashboardAreaChart
-              item={{ total: data?.total, chart: data?.chart }}
-            />
-          ) : (
-            <DashboardAreaChart item={{ total: 0, chart: [] }} />
-          )}
+          {/* Chart */}
+          <div className="relative z-20 mt-3">
+            {isSuccess ? (
+              <DashboardAreaChart
+                item={{ total: data?.total || 0, chart: data?.chart || [] }}
+              />
+            ) : (
+              <DashboardAreaChart item={{ total: 0, chart: [] }} />
+            )}
+          </div>
         </div>
       </div>
     </div>

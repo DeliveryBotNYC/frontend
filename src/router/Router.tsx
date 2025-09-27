@@ -13,14 +13,15 @@ import CreateOrder from "../pages/CreateOrder";
 import Invoices from "../pages/Invoices";
 import Customers from "../pages/Customers";
 import SingleCustomer from "../pages/SingleCustomer";
-import SingleInvoice from "../pages/SingleInvoice";
 import Automations from "../pages/Automations";
+import Users from "../pages/Users"; // New import
+import SingleUser from "../pages/SingleUser"; // New import for user edit page
 import Accounts from "../pages/Accounts";
 import AccountsGeneral from "../pages/AccountsGeneral";
 import AccountsDefault from "../pages/AccountsDefault";
 import AccountsBilling from "../pages/AccountsBilling";
 import Dispatch from "../pages/Dispatch";
-import SideBarRoutes from "../components/dispatch/SideBarRoutes";
+import DispatchContent from "../components/dispatch/DispatchContent";
 
 import EditOrder from "../pages/EditOrder";
 
@@ -51,7 +52,7 @@ const Router = () => {
         <Route path="" element={<LoginContext />}>
           <Route path="login" element={<LoginForm />} />
           <Route path="forgot-password" element={<ForgotPasswordForm />} />
-          <Route path="reset-password/:id" element={<ResetPasswordForm />} />
+          <Route path="reset-password/:token" element={<ResetPasswordForm />} />
         </Route>
         <Route path="admin" element={<LoginContext />}>
           <Route path="login" element={<LoginForm />} />
@@ -63,13 +64,12 @@ const Router = () => {
         <Route path="orders" element={<Orders />} />
         <Route path="orders/tracking/:id" element={<OrderTracking />} />
         <Route path="orders/edit/:id" element={<EditOrder />} />
-        <Route path="automations" element={<Automations />} />
         <Route path="invoices" element={<Invoices />} />
-        <Route path="invoices/:id" element={<SingleInvoice />} />
         <Route path="create-order" element={<CreateOrder />} />
         <Route path="create-order/:id" element={<CreateOrder />} />
         <Route path="customers" element={<Customers />} />
         <Route path="customers/edit/:id" element={<SingleCustomer />} />
+        <Route path="automations" element={<Automations />} />
         {/* Account Routes */}
         <Route path="accounts" element={<Accounts />}>
           <Route path="general" element={<AccountsGeneral />} />
@@ -77,10 +77,16 @@ const Router = () => {
           <Route path="billing" element={<AccountsBilling />} />
         </Route>
       </Route>
+
+      {/* Admin-only routes */}
       <Route element={<RequireAuth allowedRoles={[ROLES.Admin]} />}>
+        {/* Users management - Admin only */}
+        <Route path="users" element={<Users />} />
+        <Route path="users/:userType/:id" element={<SingleUser />} />
+        {/* Dispatch - Admin only */}
         <Route path="dispatch" element={<Dispatch />}>
-          <Route path="" element={<SideBarRoutes />} />
-          <Route path="route/:id" element={<SideBarRoutes />} />
+          <Route path="" element={<DispatchContent />} />
+          <Route path="route/:id" element={<DispatchContent />} />
         </Route>
       </Route>
     </Routes>

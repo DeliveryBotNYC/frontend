@@ -1,311 +1,684 @@
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useOutletContext } from "react-router-dom";
 import { url, useConfig } from "../hooks/useConfig";
-import { enforceFormat, formatToPhone } from "../components/reusable/functions";
+import {
+  FormInput,
+  AddressAutocomplete,
+  FormTextarea,
+} from "../components/reusable/FormComponents";
 
-const AccountsGeneral = () => {
-  const config = useConfig();
-  const [autoFillDropdown, setaAutoFillDropdown] = useState([]);
-  const { accounstData, setaccountsData } = useOutletContext();
-  const [updatedaccounstData, setaUpdatedAccounstData] = useState({});
-  const [updatedCustomerData, setaCustomerData] = useState({});
-  const [error, setError] = useState({ message: "" });
-  console.log(error);
-  function handleChange(e) {
-    accounstData.account[e.target.id] != e.target.value
-      ? setaUpdatedAccounstData({
-          ...updatedaccounstData,
-          [e.target.id]: e.target.value,
-        })
-      : (delete updatedaccounstData?.[e.target.id],
-        setaUpdatedAccounstData(updatedaccounstData));
-  }
+// Type definitions
+interface PasswordData {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
 
-  function handleChange2(e) {
-    accounstData.store[e.target.id] != e.target.value
-      ? setaCustomerData({
-          ...updatedCustomerData,
-          [e.target.id]: e.target.value,
-        })
-      : (delete updatedCustomerData?.[e.target.id],
-        setaCustomerData(updatedCustomerData));
-  }
+interface PasswordErrors {
+  currentPassword?: string;
+  newPassword?: string;
+  confirmPassword?: string;
+  submit?: string;
+}
 
-  const addTodoMutation = useMutation({
-    mutationFn: (newTodo: Array) =>
-      axios.patch(url + "/retail/profile", newTodo, config),
-    onSuccess: (data) => {
-      setError({ message: "" });
-      setaUpdatedAccounstData({});
-      setaCustomerData({});
-      setaccountsData({
-        ...accounstData,
-        account: data.data.account,
-        store: data.data.store,
-      });
-    },
-    onError: (error) => {
-      console.log(error.response.data);
-      setError({ message: error.response.data.message });
-      //accessTokenRef.current = data.token;
-    },
+interface UpdatePasswordModalProps {
+  show: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+interface SubmitStatus {
+  type: string;
+  message: string;
+}
+
+interface ErrorState {
+  message: string;
+  fieldErrors: Record<string, string | undefined>;
+}
+
+interface AccountData {
+  firstname?: string;
+  lastname?: string;
+  email?: string;
+  name?: string;
+  phone?: string;
+  address?: string;
+  apt?: string;
+  access_code?: string;
+  default_pickup_note?: string;
+  default_delivery_note?: string;
+  phone_formatted?: string;
+  [key: string]: string | number | boolean | undefined;
+}
+
+interface OutletContext {
+  accountsData: AccountData;
+  setAccountsData: (data: AccountData) => void;
+}
+
+// Update Password Modal
+const UpdatePasswordModal: React.FC<UpdatePasswordModalProps> = ({
+  show,
+  onClose,
+  onSuccess,
+}) => {
+  const [passwords, setPasswords] = useState<PasswordData>({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
   });
+  const [passwordErrors, setPasswordErrors] = useState<PasswordErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
-  //address autofill
-  const checkAddressExist = useMutation({
-    mutationFn: (newTodo: string) =>
-      axios.get(
-        url +
-          "/address?address=" +
-          encodeURI(updatedCustomerData?.address.street),
-        config
-      ),
-    onSuccess: (address) => {
-      if (address) setaAutoFillDropdown(address.data);
-    },
-    onError: (error) => {
-      console.log(error);
-    },
-  });
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPasswords((prev) => ({ ...prev, [name]: value }));
 
-  //address autofill
-  function address_input(e) {
-    let address = e.target.value;
-    for (var i = 0; i < autoFillDropdown.length; i++) {
-      if (autoFillDropdown[i].formatted === address) {
-        handleChange2({
-          target: { id: "address", value: autoFillDropdown[i] },
-        });
-        e.target.value = autoFillDropdown[i].street;
-        return;
-      }
+    if (passwordErrors[name as keyof PasswordErrors]) {
+      setPasswordErrors((prev) => ({ ...prev, [name]: "" }));
     }
-    handleChange2({
-      target: { id: "address", value: { street: address } },
-    });
-    checkAddressExist.mutate(address);
-  }
+  };
+
+  const validatePasswords = (): PasswordErrors => {
+    const errors: PasswordErrors = {};
+
+    if (!passwords.currentPassword) {
+      errors.currentPassword = "Current password is required";
+    }
+
+    if (!passwords.newPassword) {
+      errors.newPassword = "New password is required";
+    } else if (passwords.newPassword.length < 8) {
+      errors.newPassword = "Password must be at least 8 characters";
+    }
+
+    if (!passwords.confirmPassword) {
+      errors.confirmPassword = "Please confirm your password";
+    } else if (passwords.newPassword !== passwords.confirmPassword) {
+      errors.confirmPassword = "Passwords do not match";
+    }
+
+    return errors;
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const errors = validatePasswords();
+
+    if (Object.keys(errors).length > 0) {
+      setPasswordErrors(errors);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      // Add your password update API call here
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate API call
+
+      setPasswords({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setPasswordErrors({});
+      onClose();
+      onSuccess();
+    } catch (error) {
+      setPasswordErrors({ submit: "Failed to update password" });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleClose = () => {
+    setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    setPasswordErrors({});
+    onClose();
+  };
+
+  if (!show) return null;
+
   return (
-    <div className="w-full h-full bg-white p-themePadding rounded-2xl">
-      <div className="w-full h-full bg-white rounded-2xl flex flex-col justify-between items-center">
-        {/* Form */}
-        <div className="w-full h-full">
-          {/* Header */}
-          <div className="flex items-center justify-between gap-2.5">
-            <p className="text-lg text-black font-bold">General</p>
-          </div>
-
-          {/* Pickup Forms Data */}
-          <div className="w-full grid grid-cols-2 gap-2.5 pb-3 mt-7">
-            {/* First Name */}
-            <div className="w-full">
-              <label className="text-themeDarkGray text-xs">
-                First Name <span className="text-themeRed">*</span>
-              </label>
-
-              {/* Input Field */}
-              <input
-                type="text"
-                defaultValue={accounstData?.account?.firstname}
-                id="firstname"
-                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                onChange={(e) => handleChange(e)}
-              />
-            </div>
-
-            {/* Last NAme */}
-            <div className="w-full">
-              <label className="text-themeDarkGray text-xs">
-                Last Name <span className="text-themeRed">*</span>
-              </label>
-
-              {/* Input Field */}
-              <input
-                type="text"
-                id="lastname"
-                defaultValue={accounstData?.account?.lastname}
-                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                onChange={(e) => handleChange(e)}
-              />
-            </div>
-
-            {/* email */}
-            <div className="w-full col-span-2">
-              <label className="text-themeDarkGray text-xs">
-                Email <span className="text-themeRed">*</span>
-              </label>
-
-              {/* Input Field */}
-              <input
-                type="email"
-                id="email"
-                defaultValue={accounstData?.account?.email}
-                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                onChange={(e) => handleChange(e)}
-              />
-            </div>
-          </div>
-          {/* Update Password */}
-          <p className="text-sm text-black">Update password</p>
-
-          {/* STore */}
-          <div className="flex items-center justify-between gap-2.5 mt-5">
-            <p className="text-lg text-black font-bold">Store</p>
-          </div>
-
-          <div className="w-full grid grid-cols-2 gap-2.5 pb-3 mt-3">
-            {/* Store Name */}
-            <div className="w-full">
-              <label className="text-themeDarkGray text-xs">
-                Store Name <span className="text-themeRed">*</span>
-              </label>
-
-              {/* Input Field */}
-              <input
-                type="text"
-                id="store_name"
-                defaultValue={accounstData?.store?.name}
-                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none bg-transparent"
-                disabled
-                onChange={(e) => handleChange2(e)}
-              />
-            </div>
-
-            {/* Phone */}
-            <div className="w-full">
-              <label className="text-themeDarkGray text-xs">
-                Phone <span className="text-themeRed">*</span>
-              </label>
-
-              {/* Input Field */}
-              <input
-                autoComplete="new-password"
-                type="text"
-                id="phone"
-                defaultValue={accounstData?.store?.phone_formatted}
-                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                onKeyUp={(e) => (formatToPhone(e), handleChange2(e))}
-                onKeyDown={(e) => (enforceFormat(e), handleChange2(e))}
-                onChange={(e) => handleChange2(e)}
-              />
-            </div>
-
-            {/* Address */}
-            <div className="w-full">
-              <label className="text-themeDarkGray text-xs">
-                Address <span className="text-themeRed">*</span>
-              </label>
-
-              {/* Input Field */}
-              <input
-                autoComplete="new-password"
-                defaultValue={accounstData?.store?.address?.street}
-                id="address"
-                type="search"
-                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                list="delivery_autofill"
-                onChange={(e) => address_input(e)}
-              />
-
-              <datalist id="delivery_autofill">
-                {autoFillDropdown.map((item, key) => (
-                  <option key={key} value={item.formatted} />
-                ))}
-              </datalist>
-            </div>
-
-            {/* Apt, Access code */}
-            <div className="w-full flex items-center justify-between gap-2.5">
-              {/* Apt */}
-              <div className="w-full">
-                <label className="text-themeDarkGray text-xs">Apt</label>
-
-                {/* Input Field */}
-                <input
-                  type="number"
-                  id="apt"
-                  defaultValue={accounstData?.store?.apt}
-                  className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none bg-transparent"
-                  onChange={(e) => handleChange2(e)}
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-black">
+              Update Password
+            </h3>
+            <button
+              type="button"
+              onClick={handleClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
                 />
-              </div>
-
-              {/* Access code */}
-              <div className="w-full">
-                <label className="text-themeDarkGray text-xs">
-                  Access code
-                </label>
-
-                {/* Input Field */}
-                <input
-                  id="access_code"
-                  defaultValue={accounstData?.store?.access_code}
-                  className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                  onChange={(e) => handleChange2(e)}
-                />
-              </div>
-            </div>
-            {/* Courier Note */}
-            <div className="w-full col-span-2">
-              <label className="text-themeDarkGray text-xs">
-                Pickup courier note
-              </label>
-              {/* Input Field */}
-              <input
-                type="text"
-                id="default_pickup_note"
-                defaultValue={accounstData?.store?.default_pickup_note}
-                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                onChange={(e) => handleChange2(e)}
-              />
-            </div>
-            {/* Courier Note */}
-            <div className="w-full col-span-2">
-              <label className="text-themeDarkGray text-xs">
-                Delivery courier note
-              </label>
-              {/* Input Field */}
-              <input
-                type="text"
-                id="default_delivery_note"
-                defaultValue={accounstData?.store?.default_delivery_note}
-                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                onChange={(e) => handleChange2(e)}
-              />
-            </div>
+              </svg>
+            </button>
           </div>
-        </div>
 
-        {/* Submit Button */}
-        <div className="w-full flex items-center justify-center">
-          <button
-            disabled={
-              Object.keys(updatedaccounstData).length < 1 &&
-              Object.keys(updatedCustomerData).length < 1
-            }
-            onClick={() =>
-              addTodoMutation.mutate({
-                account: updatedaccounstData,
-                store: updatedCustomerData,
-              })
-            }
-            className={`w-[352px] py-2.5 text-white shadow-btnShadow rounded-lg hover:scale-95 duration-200 bg-theme${
-              Object.keys(updatedaccounstData).length > 0 ||
-              Object.keys(updatedCustomerData).length > 0
-                ? "Green"
-                : "LightGray"
-            }`}
-          >
-            Save
-          </button>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <FormInput
+              label="Current Password"
+              id="currentPassword"
+              name="currentPassword"
+              type="password"
+              required
+              value={passwords.currentPassword}
+              onChange={handlePasswordChange}
+              error={passwordErrors.currentPassword}
+            />
+
+            <FormInput
+              label="New Password"
+              id="newPassword"
+              name="newPassword"
+              type="password"
+              required
+              value={passwords.newPassword}
+              onChange={handlePasswordChange}
+              error={passwordErrors.newPassword}
+            />
+
+            <FormInput
+              label="Confirm New Password"
+              id="confirmPassword"
+              name="confirmPassword"
+              type="password"
+              required
+              value={passwords.confirmPassword}
+              onChange={handlePasswordChange}
+              error={passwordErrors.confirmPassword}
+            />
+
+            {passwordErrors.submit && (
+              <div className="text-red-500 text-sm mt-2">
+                {passwordErrors.submit}
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={handleClose}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`flex-1 px-4 py-2 text-white rounded-lg transition-all ${
+                  isSubmitting
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-themeGreen hover:bg-green-600"
+                }`}
+              >
+                {isSubmitting ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    Updating...
+                  </div>
+                ) : (
+                  "Update Password"
+                )}
+              </button>
+            </div>
+          </form>
         </div>
-        <p className="text-sm text-themeRed">
-          {error.message ? error.message : null}
-        </p>
       </div>
     </div>
+  );
+};
+
+const AccountsGeneral: React.FC = () => {
+  const config = useConfig();
+  const [showPasswordModal, setShowPasswordModal] = useState<boolean>(false);
+  const [submitStatus, setSubmitStatus] = useState<SubmitStatus>({
+    type: "",
+    message: "",
+  });
+  const { accountsData, setAccountsData } = useOutletContext<OutletContext>();
+  const [updatedAccountData, setUpdatedAccountData] = useState<
+    Partial<AccountData>
+  >({});
+  const [error, setError] = useState<ErrorState>({
+    message: "",
+    fieldErrors: {},
+  });
+
+  // Store current form values (combination of original data and updates)
+  const currentFormValues = useMemo(() => {
+    return { ...accountsData, ...updatedAccountData };
+  }, [accountsData, updatedAccountData]);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { id, value } = e.target;
+
+    // Clear field error and status when user starts typing
+    if (error.fieldErrors[id]) {
+      setError((prev) => ({
+        ...prev,
+        fieldErrors: {
+          ...prev.fieldErrors,
+          [id]: undefined,
+        },
+      }));
+    }
+
+    if (error.message) {
+      setError((prev) => ({
+        ...prev,
+        message: "",
+      }));
+    }
+
+    // Clear submit status when user makes changes
+    if (submitStatus.message) {
+      setSubmitStatus({ type: "", message: "" });
+    }
+
+    if (accountsData[id] !== value) {
+      setUpdatedAccountData((prev) => ({
+        ...prev,
+        [id]: value,
+      }));
+    } else {
+      const newData = { ...updatedAccountData };
+      delete newData[id];
+      setUpdatedAccountData(newData);
+    }
+  };
+
+  const addTodoMutation = useMutation({
+    mutationFn: (newTodo: Partial<AccountData>) =>
+      axios.patch(url + "/retail", newTodo, config),
+    onSuccess: (data) => {
+      setError({ message: "", fieldErrors: {} });
+      const updatedData: AccountData = {
+        ...accountsData,
+        ...data.data.data,
+        phone: data.data.data.phone_formatted,
+      };
+      setAccountsData(updatedData);
+      setUpdatedAccountData({});
+
+      // Show success message
+      setSubmitStatus({
+        type: "success",
+        message: "Changes saved successfully!",
+      });
+
+      // Clear success message after 5 seconds
+      setTimeout(() => {
+        setSubmitStatus({ type: "", message: "" });
+      }, 5000);
+    },
+    onError: (error: unknown) => {
+      const fieldErrors: Record<string, string> = {};
+
+      // Type guard to check if error has the expected structure
+      if (
+        error &&
+        typeof error === "object" &&
+        "response" in error &&
+        error.response &&
+        typeof error.response === "object" &&
+        "data" in error.response &&
+        error.response.data &&
+        typeof error.response.data === "object" &&
+        "data" in error.response.data &&
+        Array.isArray(error.response.data.data)
+      ) {
+        error.response.data.data.forEach((err: unknown) => {
+          if (
+            err &&
+            typeof err === "object" &&
+            "field" in err &&
+            "message" in err &&
+            typeof err.field === "string" &&
+            typeof err.message === "string"
+          ) {
+            fieldErrors[err.field] = err.message;
+          }
+        });
+      }
+
+      // Get error message with type safety
+      let errorMessage = "An error occurred";
+      if (
+        error &&
+        typeof error === "object" &&
+        "response" in error &&
+        error.response &&
+        typeof error.response === "object" &&
+        "data" in error.response &&
+        error.response.data &&
+        typeof error.response.data === "object" &&
+        "message" in error.response.data &&
+        typeof error.response.data.message === "string"
+      ) {
+        errorMessage = error.response.data.message;
+      }
+
+      setError({
+        message: errorMessage,
+        fieldErrors: fieldErrors,
+      });
+
+      // Show error message
+      setSubmitStatus({
+        type: "error",
+        message: errorMessage,
+      });
+    },
+  });
+
+  // Warn user about unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (Object.keys(updatedAccountData).length > 0) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [updatedAccountData]);
+
+  const handlePasswordSuccess = () => {
+    setSubmitStatus({
+      type: "success",
+      message: "Password updated successfully!",
+    });
+    setTimeout(() => {
+      setSubmitStatus({ type: "", message: "" });
+    }, 5000);
+  };
+
+  return (
+    <>
+      <div className="w-full h-full bg-white p-themePadding rounded-2xl">
+        <div className="w-full h-full bg-white rounded-2xl flex flex-col justify-between items-center">
+          <div className="w-full h-full">
+            {/* Header */}
+            <div className="flex items-center justify-between gap-2.5 mb-6">
+              <div>
+                <h2 className="text-xl text-black font-bold">General</h2>
+                <p className="text-sm text-themeDarkGray mt-1">
+                  Manage your account and store information
+                </p>
+              </div>
+              {Object.keys(updatedAccountData).length > 0 && (
+                <div className="flex items-center gap-2 text-sm text-themeDarkGray">
+                  <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
+                  <span>Unsaved changes</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-6">
+              {/* Personal Information Section */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4 text-black">
+                  Personal Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormInput
+                    label="First Name"
+                    id="firstname"
+                    required
+                    value={currentFormValues?.firstname || ""}
+                    onChange={handleChange}
+                    error={error.fieldErrors?.firstname}
+                    capitalize={true}
+                  />
+
+                  <FormInput
+                    label="Last Name"
+                    id="lastname"
+                    required
+                    value={currentFormValues?.lastname || ""}
+                    onChange={handleChange}
+                    error={error.fieldErrors?.lastname}
+                    capitalize={true}
+                  />
+
+                  <div className="md:col-span-2">
+                    <FormInput
+                      label="Email"
+                      id="email"
+                      type="email"
+                      required
+                      value={currentFormValues?.email || ""}
+                      onChange={handleChange}
+                      error={error.fieldErrors?.email}
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-5">
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswordModal(true)}
+                    className="text-sm text-black hover:text-themeGreen transition-colors"
+                  >
+                    Update password
+                  </button>
+                </div>
+              </div>
+
+              {/* Store Information Section */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4 text-black">
+                  Store Information
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormInput
+                    label="Store Name"
+                    id="name"
+                    required
+                    disabled
+                    value={currentFormValues?.name || ""}
+                    onChange={handleChange}
+                    error={error.fieldErrors?.name}
+                    capitalize={true}
+                  />
+
+                  {/* Phone input with +1 prefix using reusable component */}
+                  <FormInput
+                    label="Phone"
+                    id="phone"
+                    required
+                    prefix="+1"
+                    isPhone={true}
+                    autoComplete="new-password"
+                    value={currentFormValues?.phone || ""}
+                    onChange={handleChange}
+                    error={error.fieldErrors?.phone}
+                    placeholder="(555) 123-4567"
+                  />
+
+                  {/* Using the AddressAutocomplete component */}
+                  <AddressAutocomplete
+                    label="Address"
+                    id="address"
+                    required
+                    value={currentFormValues?.address || ""}
+                    onChange={handleChange}
+                    error={error.fieldErrors?.address}
+                  />
+
+                  <div className="flex items-start gap-4">
+                    <FormInput
+                      label="Apt"
+                      id="apt"
+                      type="number"
+                      value={currentFormValues?.apt || ""}
+                      onChange={handleChange}
+                      error={error.fieldErrors?.apt}
+                    />
+
+                    <FormInput
+                      label="Access code"
+                      id="access_code"
+                      value={currentFormValues?.access_code || ""}
+                      onChange={handleChange}
+                      error={error.fieldErrors?.access_code}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <FormTextarea
+                      label="Pickup courier note"
+                      id="default_pickup_note"
+                      value={currentFormValues?.default_pickup_note || ""}
+                      onChange={handleChange}
+                      error={error.fieldErrors?.default_pickup_note}
+                      maxLength={100}
+                      showCharacterCount={true}
+                      resizable={true}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <FormTextarea
+                      label="Delivery courier note"
+                      id="default_delivery_note"
+                      value={currentFormValues?.default_delivery_note || ""}
+                      onChange={handleChange}
+                      error={error.fieldErrors?.default_delivery_note}
+                      maxLength={100}
+                      showCharacterCount={true}
+                      resizable={true}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="w-full flex flex-col items-center mt-8">
+            <button
+              type="button"
+              disabled={
+                Object.keys(updatedAccountData).length < 1 ||
+                addTodoMutation.isPending
+              }
+              onClick={() => addTodoMutation.mutate(updatedAccountData)}
+              className={`w-full max-w-sm py-3 text-white shadow-btnShadow rounded-lg transition-all duration-200 font-medium ${
+                Object.keys(updatedAccountData).length > 0 &&
+                !addTodoMutation.isPending
+                  ? "bg-themeGreen hover:bg-green-600 hover:scale-[0.98] active:scale-95"
+                  : "bg-themeLightGray cursor-not-allowed"
+              }`}
+            >
+              {addTodoMutation.isPending ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                  Saving Changes...
+                </div>
+              ) : (
+                "Save Changes"
+              )}
+            </button>
+
+            {/* Success/Error Messages */}
+            {submitStatus.message && (
+              <div
+                className={`mt-3 p-3 rounded-lg text-sm font-medium w-full max-w-sm ${
+                  submitStatus.type === "success"
+                    ? "bg-green-50 text-green-700 border border-green-200"
+                    : "bg-red-50 text-red-700 border border-red-200"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {submitStatus.type === "success" ? (
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"
+                      />
+                    </svg>
+                  )}
+                  {submitStatus.message}
+                </div>
+              </div>
+            )}
+
+            {/* General Error Message - Show if there's an error message and no submit status */}
+            {error.message && !submitStatus.message && (
+              <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg w-full max-w-sm">
+                <div className="flex items-center gap-2">
+                  <svg
+                    className="w-4 h-4 text-red-500"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 15.5c-.77.833.192 2.5 1.732 2.5z"
+                    />
+                  </svg>
+                  <p className="text-sm text-red-700 font-medium">
+                    {error.message}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Update Password Modal */}
+      <UpdatePasswordModal
+        show={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        onSuccess={handlePasswordSuccess}
+      />
+    </>
   );
 };
 

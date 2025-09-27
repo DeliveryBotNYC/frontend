@@ -3,58 +3,65 @@ import { Link, useLocation } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { url } from "../../hooks/useConfig";
+import useAuth from "../../hooks/useAuth";
 import axios from "axios";
-import { enforceFormat, formatToPhone } from "../reusable/functions";
+import {
+  FormInput,
+  FormTextarea,
+  AddressAutocomplete,
+  FormSelect,
+} from "../reusable/FormComponents";
 
 const SetupForm = () => {
+  const { setAuth } = useAuth();
   const navigate = useNavigate();
-  // Data form the register form page
   const { state } = useLocation();
+
   useEffect(() => {
-    !state?.email ? navigate("/auth/signup") : null;
-  });
+    if (!state?.email) {
+      navigate("/auth/signup");
+    }
+  }, [state, navigate]);
 
-  // active delivery per week btn
+  // Form states
   const [deliveryPerWeek, setdeliveryPerWeek] = useState<string>("");
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // delivery per week state
+  // Delivery options
   const deliveryData = [
-    {
-      id: 1,
-      title: "1-5",
-      quantity: "1-5",
-    },
-    {
-      id: 2,
-      title: "5-20",
-      quantity: "5-20",
-    },
-    {
-      id: 3,
-      title: "20-50",
-      quantity: "20-50",
-    },
-    {
-      id: 4,
-      title: "100+",
-      quantity: "100+",
-    },
+    { id: 1, title: "1-5", quantity: "1-5" },
+    { id: 2, title: "5-20", quantity: "5-20" },
+    { id: 3, title: "20-50", quantity: "20-50" },
+    { id: 4, title: "100+", quantity: "100+" },
   ];
 
-  // form data
+  // Store type options
+  const storeTypeOptions = [
+    { label: "Grocery", value: "grocery" },
+    { label: "Clothing", value: "clothing" },
+    { label: "Laundry", value: "laundry" },
+    { label: "Flower", value: "flower" },
+    { label: "Alcohol", value: "alcohol" },
+    { label: "Other", value: "other" },
+  ];
+
+  // Enhanced form data with proper typing
   const [companySetupData, setCompanySetupData] = useState({
-    email: state?.email,
-    password: state?.password,
-    comfirm_password: state?.comfirm_password,
+    email: state?.email || "",
+    password: state?.password || "",
     firstname: "",
     lastname: "",
     store_name: "",
+    store_type: "", // Added store_type to state
     phone: "",
-    location: {
+    access_code: "",
+    address: {
+      address_id: null as string | null,
       full: "",
       street_address_1: "",
       street_address_2: "",
-      access_code: "",
       city: "",
       state: "",
       zip: "",
@@ -62,301 +69,479 @@ const SetupForm = () => {
       lon: "",
     },
     note: "",
-    quantity: "",
+    estimated_monthly_volume: 0,
+    // Terms acceptance tracking
+    terms: null as string | null,
   });
-  console.log(companySetupData);
-  //google autofill
-  let autocomplete;
-  let address1Field = document.getElementById("street_address_1");
-  if (address1Field)
-    (autocomplete = new google.maps.places.Autocomplete(address1Field, {
-      componentRestrictions: { country: ["us", "ca"] },
-      fields: ["address_components", "geometry"],
-      types: ["address"],
-    })),
-      autocomplete.addListener("place_changed", fillInAddress);
-  function fillInAddress() {
-    let full = "";
-    let street_address_1 = "";
-    let city = "";
-    let state = "";
-    let zip = "";
-    let building = "";
 
-    if (building) {
-      setCompanySetupData({
-        ...companySetupData,
-        location: {
-          ...companySetupData.location,
-          full: full,
-          street_address_1: street_address_1,
-          city: city,
-          state: state,
-          zip: zip,
-          lat: place.geometry.location.lat(),
-          lon: place.geometry.location.lng(),
+  console.log(companySetupData);
+
+  // Validation function
+  const validateForm = () => {
+    const errors: Record<string, string> = {};
+
+    if (!companySetupData.firstname.trim()) {
+      errors.firstname = "First name is required";
+    }
+    if (!companySetupData.lastname.trim()) {
+      errors.lastname = "Last name is required";
+    }
+    if (!companySetupData.store_name.trim()) {
+      errors.store_name = "Store name is required";
+    }
+    if (!companySetupData.store_type.trim()) {
+      errors.store_type = "Store type is required";
+    }
+    if (!companySetupData.phone.trim()) {
+      errors.phone = "Phone number is required";
+    }
+    if (!companySetupData.address.full.trim()) {
+      errors.address = "Address is required";
+    }
+    if (!deliveryPerWeek) {
+      errors.deliveryPerWeek = "Please select delivery frequency";
+    }
+    if (!termsAccepted) {
+      errors.terms = "You must accept the terms and conditions";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Check if all required fields are completed
+  const isFormValid = () => {
+    return (
+      companySetupData.firstname.trim() &&
+      companySetupData.lastname.trim() &&
+      companySetupData.store_name.trim() &&
+      companySetupData.store_type.trim() && // Added store_type validation
+      companySetupData.phone.trim() &&
+      companySetupData.address.address_id &&
+      deliveryPerWeek &&
+      termsAccepted
+    );
+  };
+
+  // Helper function to get estimated volume
+  const getEstimatedVolume = (quantity: string): number => {
+    const volumeMap: Record<string, number> = {
+      "1-5": 5,
+      "5-20": 20,
+      "20-50": 50,
+      "100+": 100,
+    };
+    return volumeMap[quantity] || 0;
+  };
+
+  // Enhanced submit handler
+  const formSubmitHandler = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    // Prepare API data
+    const apiData = {
+      email: companySetupData.email,
+      password: companySetupData.password,
+      firstname: companySetupData.firstname.trim(),
+      lastname: companySetupData.lastname.trim(),
+      store_name: companySetupData.store_name.trim(),
+      store_type: companySetupData.store_type.trim(), // Added store_type to API data
+      phone: companySetupData.phone.trim(),
+      estimated_monthly_volume: getEstimatedVolume(deliveryPerWeek),
+      note: companySetupData.note.trim(),
+      address: companySetupData.address,
+      terms: new Date().toISOString(), // ISO timestamp
+    };
+
+    console.log("Sending API data:", apiData);
+    addTodoMutation.mutate(apiData);
+  };
+
+  const addTodoMutation = useMutation({
+    mutationFn: (userData: any) => axios.post(`${url}/retail`, userData),
+    onSuccess: (data) => {
+      console.log("Signup successful:", data.data.data);
+      const results = data.data.data.retail;
+      const email = results.email;
+      const pwd = results.password;
+      const roles = [2001];
+      const accessToken = data.data.data.token;
+
+      setAuth({ user: email, pwd, roles, accessToken });
+      localStorage.setItem("aT", accessToken);
+      localStorage.setItem("roles", JSON.stringify(roles));
+
+      // Navigate to home with success message
+      navigate("/auth/login", {
+        state: {
+          accountCreated: true,
+          message:
+            "Account created successfully! Your account is currently under review. You'll receive an email notification once it's approved and ready to use.",
+          email: email,
         },
       });
-    }
-  }
-
-  // Submit Handler
-  const formSubmitHandler = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    addTodoMutation.mutate(companySetupData);
-  };
-  const addTodoMutation = useMutation({
-    mutationFn: (newTodo: string) =>
-      axios.post(url + "/retail/signup", companySetupData),
-    onSuccess: (data) => {
-      navigate("/");
-      console.log(data);
-      //accessTokenRef.current = data.token;
     },
-    onError: (error) => {
-      if (error.response.status == 412)
-        navigate("/auth/login", { state: error.response?.data?.message });
-      //accessTokenRef.current = data.token;
+    onError: (error: any) => {
+      setIsSubmitting(false);
+      console.error("Signup error:", error);
+
+      if (error.response?.status === 409) {
+        // Email already exists
+        navigate("/auth/login", {
+          state: {
+            message:
+              "An account with this email already exists. Please log in instead.",
+            email: companySetupData.email,
+          },
+        });
+      } else if (error.response?.status === 400) {
+        // Validation errors from backend
+        const backendErrors = error.response?.data?.errors || {};
+        setFormErrors(backendErrors);
+      } else {
+        // Generic error
+        setFormErrors({
+          general: "Something went wrong. Please try again.",
+        });
+      }
     },
   });
+
+  // Handle address change
+  const handleAddressChange = (e: any) => {
+    const value = e.target.value;
+
+    // Clear address error when user starts typing
+    if (formErrors.address) {
+      setFormErrors((prev) => ({ ...prev, address: "" }));
+    }
+
+    if (typeof value === "object" && value !== null) {
+      setCompanySetupData((prev) => ({
+        ...prev,
+        address: {
+          ...prev.address,
+          address_id: value.address_id || null,
+          full: value.formatted || value.formatted_address || "",
+          street_address_1: value.street_address_1 || value.street || "",
+          city: value.city || "",
+          state: value.state || "",
+          zip: value.zip || "",
+          lat: value.lat || "",
+          lon: value.lon || "",
+        },
+      }));
+    } else {
+      setCompanySetupData((prev) => ({
+        ...prev,
+        address: {
+          ...prev.address,
+          full: value,
+          street_address_1: value,
+          city: "",
+          state: "",
+          zip: "",
+          lat: "",
+          lon: "",
+        },
+      }));
+    }
+  };
+
+  // Handle terms checkbox
+  const handleTermsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const isChecked = e.target.checked;
+    setTermsAccepted(isChecked);
+
+    // Clear terms error
+    if (formErrors.terms) {
+      setFormErrors((prev) => ({ ...prev, terms: "" }));
+    }
+
+    // Update terms acceptance timestamp
+    setCompanySetupData((prev) => ({
+      ...prev,
+      terms: isChecked ? new Date().toISOString() : null,
+    }));
+  };
+
   return (
     <form className="mt-[60px] w-full" onSubmit={formSubmitHandler}>
-      {/* Form Content */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* First Name */}
-        <div className="w-full">
-          <label htmlFor="firstName" className="text-themeDarkGray text-xs">
-            First name <span className="text-themeRed">*</span>
-          </label>
-
-          {/* input */}
-          <input
-            required
-            id="firstName"
-            type="text"
-            placeholder="Enter your first name"
-            className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-            value={companySetupData.firstname}
-            onChange={(e) =>
-              setCompanySetupData({
-                ...companySetupData,
-                firstname: e.target.value,
-              })
-            }
-          />
+      {/* General Error Message */}
+      {formErrors.general && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+          <p className="text-sm text-red-600">{formErrors.general}</p>
         </div>
+      )}
+
+      {/* Form Content */}
+      <div className="w-full grid grid-cols-1 md:grid-cols-2 gap-2.5">
+        {/* First Name */}
+        <FormInput
+          label="First name"
+          required
+          type="text"
+          placeholder="Enter your first name"
+          value={companySetupData.firstname}
+          onChange={(e) => {
+            setCompanySetupData((prev) => ({
+              ...prev,
+              firstname: e.target.value,
+            }));
+            if (formErrors.firstname) {
+              setFormErrors((prev) => ({ ...prev, firstname: "" }));
+            }
+          }}
+          capitalize={true}
+          error={formErrors.firstname}
+        />
 
         {/* Last Name */}
-        <div className="w-full">
-          <label htmlFor="lastName" className="text-themeDarkGray text-xs">
-            Last name <span className="text-themeRed">*</span>
-          </label>
-
-          {/* input */}
-          <input
-            required
-            id="lastName"
-            type="text"
-            placeholder="Enter your last name"
-            className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-            value={companySetupData.lastname}
-            onChange={(e) =>
-              setCompanySetupData({
-                ...companySetupData,
-                lastname: e.target.value,
-              })
+        <FormInput
+          label="Last name"
+          required
+          type="text"
+          placeholder="Enter your last name"
+          value={companySetupData.lastname}
+          onChange={(e) => {
+            setCompanySetupData((prev) => ({
+              ...prev,
+              lastname: e.target.value,
+            }));
+            if (formErrors.lastname) {
+              setFormErrors((prev) => ({ ...prev, lastname: "" }));
             }
-          />
-        </div>
+          }}
+          capitalize={true}
+          error={formErrors.lastname}
+        />
 
         {/* Store Name */}
-        <div className="w-full">
-          <label htmlFor="storeName" className="text-themeDarkGray text-xs">
-            Store name <span className="text-themeRed">*</span>
-          </label>
-
-          {/* input */}
-          <input
-            required
-            id="storeName"
-            type="text"
-            placeholder="Enter your store name"
-            className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-            value={companySetupData.store_name}
-            onChange={(e) =>
-              setCompanySetupData({
-                ...companySetupData,
-                store_name: e.target.value,
-              })
+        <FormInput
+          label="Store name"
+          required
+          type="text"
+          placeholder="Enter your store name"
+          value={companySetupData.store_name}
+          onChange={(e) => {
+            setCompanySetupData((prev) => ({
+              ...prev,
+              store_name: e.target.value,
+            }));
+            if (formErrors.store_name) {
+              setFormErrors((prev) => ({ ...prev, store_name: "" }));
             }
-          />
-        </div>
+          }}
+          capitalize={true}
+          error={formErrors.store_name}
+        />
 
-        {/* Phone  */}
-        <div className="w-full">
-          <label htmlFor="phoneField" className="text-themeDarkGray text-xs">
-            Phone <span className="text-themeRed">*</span>
-          </label>
-
-          {/* input */}
-          <input
-            required
-            id="phoneField"
-            placeholder="Enter your phone number"
-            className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-            value={companySetupData.phone}
-            onKeyUp={(e) => formatToPhone(e)}
-            onKeyDown={(e) => enforceFormat(e)}
-            onChange={(e) =>
-              setCompanySetupData({
-                ...companySetupData,
-                phone: e.target.value,
-              })
+        {/* Store Type */}
+        <FormSelect
+          label="Store type"
+          required
+          type="text"
+          value={companySetupData.store_type}
+          onChange={(e) => {
+            setCompanySetupData((prev) => ({
+              ...prev,
+              store_type: e.target.value,
+            }));
+            if (formErrors.store_type) {
+              setFormErrors((prev) => ({ ...prev, store_type: "" }));
             }
-          />
-        </div>
+          }}
+          options={storeTypeOptions}
+          error={formErrors.store_type}
+        />
 
-        {/* Address  */}
-        <div className="w-full">
-          <label htmlFor="addressField" className="text-themeDarkGray text-xs">
-            Address <span className="text-themeRed">*</span>
-          </label>
+        {/* Phone */}
+        <FormInput
+          label="Phone"
+          required
+          type="tel"
+          placeholder="Enter the store phone number"
+          value={companySetupData.phone}
+          onChange={(e) => {
+            setCompanySetupData((prev) => ({
+              ...prev,
+              phone: e.target.value,
+            }));
+            if (formErrors.phone) {
+              setFormErrors((prev) => ({ ...prev, phone: "" }));
+            }
+          }}
+          isPhone={true}
+          error={formErrors.phone}
+        />
 
-          {/* input */}
-          <input
+        {/* Address */}
+        <div
+          className={`w-full ${
+            !companySetupData.address?.lat ? "col-span-2" : ""
+          }`}
+        >
+          <AddressAutocomplete
+            label="Address"
             required
-            id="street_address_1"
-            type="text"
+            id="address"
             placeholder="Enter your full address"
-            className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-            value={companySetupData.location.full}
-            onChange={(e) =>
-              setCompanySetupData({
-                ...companySetupData,
-                location: {
-                  ...companySetupData.location,
-                  full: e.target.value,
-                },
-              })
-            }
+            value={companySetupData.address}
+            onChange={handleAddressChange}
+            error={formErrors.address}
           />
         </div>
 
-        {/* Address Additional */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          {/* Apt */}
-          <div className="w-full">
-            <label htmlFor="aptField" className="text-themeDarkGray text-xs">
-              Apt
-            </label>
-
-            {/* input */}
-            <input
-              id="aptField"
-              placeholder="Enter your Appartment No"
-              className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-              value={companySetupData.location.street_address_2}
+        {/* Address Additional Fields */}
+        {companySetupData.address?.lat && (
+          <div className="w-full flex items-center justify-between gap-2.5">
+            <FormInput
+              label="Apt"
+              type="text"
+              placeholder="Enter your Apartment No"
+              value={companySetupData.address.street_address_2}
               onChange={(e) =>
-                setCompanySetupData({
-                  ...companySetupData,
-                  location: {
-                    ...companySetupData.location,
+                setCompanySetupData((prev) => ({
+                  ...prev,
+                  address: {
+                    ...prev.address,
                     street_address_2: e.target.value,
                   },
-                })
+                }))
               }
             />
-          </div>
 
-          {/* Access */}
-          <div className="w-full">
-            <label htmlFor="accessField" className="text-themeDarkGray text-xs">
-              Access Code
-            </label>
-
-            {/* input */}
-            <input
-              id="accessField"
+            <FormInput
+              label="Access Code"
+              type="text"
               placeholder="Enter your Access Code"
-              className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
-              value={companySetupData.location.access_code}
+              value={companySetupData.access_code}
               onChange={(e) =>
-                setCompanySetupData({
-                  ...companySetupData,
-                  location: {
-                    ...companySetupData.location,
-                    access_code: e.target.value,
-                  },
-                })
+                setCompanySetupData((prev) => ({
+                  ...prev,
+                  access_code: e.target.value,
+                }))
               }
             />
           </div>
-        </div>
+        )}
 
-        {/* Pickup note */}
+        {/* Pickup Note */}
         <div className="md:col-span-2">
-          <label htmlFor="pickupNote" className="text-themeDarkGray text-xs">
-            Courier pickup note
-          </label>
-
-          {/* INput */}
-          <input
-            id="pickupNote"
-            type="text"
-            placeholder="Please type your message"
-            className="w-full text-xs sm:text-sm pb-1 text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
+          <FormTextarea
+            label="Courier pickup note"
+            placeholder="Enter default pickup note for courier"
             value={companySetupData.note}
             onChange={(e) =>
-              setCompanySetupData({
-                ...companySetupData,
+              setCompanySetupData((prev) => ({
+                ...prev,
                 note: e.target.value,
-              })
+              }))
             }
+            maxLength={100}
+            showCharacterCount
+            rows={1}
+            resizable={true}
           />
         </div>
 
         {/* Number of deliveries per week */}
         <div className="md:col-span-2 py-2.5">
           <p className="text-themeDarkGray text-xs">
-            Number of deliveries per week
+            Number of deliveries per week{" "}
+            <span className="text-themeRed">*</span>
           </p>
 
-          {/* Buttons */}
           <div className="grid grid-cols-4 gap-2.5 mt-2.5">
-            {/* Btns */}
             {deliveryData.map(({ id, quantity, title }) => (
               <div
                 key={id}
-                className={`w-full p-2.5 shadow-btnShadow border ${
+                className={`w-full p-2.5 shadow-btnShadow border rounded-lg text-center cursor-pointer transition-all duration-200 transform ${
                   quantity === deliveryPerWeek
-                    ? "border-themeOrange font-bold"
-                    : "border-secondaryBtnBorder font-normal"
-                }  rounded-lg text-center cursor-pointer`}
+                    ? "border-themeOrange bg-themeOrange text-white font-bold scale-105"
+                    : "border-secondaryBtnBorder bg-white text-themeDarkGray font-normal hover:border-themeOrange hover:bg-orange-50 hover:scale-102"
+                }`}
                 onClick={() => {
                   setdeliveryPerWeek(quantity);
-                  setCompanySetupData({
-                    ...companySetupData,
-                    quantity: quantity,
-                  });
+                  if (formErrors.deliveryPerWeek) {
+                    setFormErrors((prev) => ({ ...prev, deliveryPerWeek: "" }));
+                  }
                 }}
               >
-                <p className="text-sm text-themeDarkGray">{title}</p>
+                <p className="text-sm">{title}</p>
               </div>
             ))}
           </div>
+
+          {formErrors.deliveryPerWeek && (
+            <p className="text-xs text-themeRed mt-1">
+              {formErrors.deliveryPerWeek}
+            </p>
+          )}
+        </div>
+
+        {/* Terms and Conditions Checkbox */}
+        <div className="md:col-span-2 py-2.5">
+          <div className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              id="terms"
+              checked={termsAccepted}
+              onChange={handleTermsChange}
+              className="mt-1 h-4 w-4 text-themeOrange focus:ring-themeOrange border-gray-300 rounded"
+            />
+            <label htmlFor="terms" className="text-sm text-themeDarkGray">
+              I agree to the{" "}
+              <Link
+                to="https://dbx.delivery/terms"
+                target="_blank"
+                className="text-themeOrange hover:underline"
+              >
+                Terms and Conditions
+              </Link>{" "}
+              and{" "}
+              <Link
+                to="https://dbx.delivery/privacy-policy"
+                target="_blank"
+                className="text-themeOrange hover:underline"
+              >
+                Privacy Policy
+              </Link>
+              <span className="text-themeRed ml-1">*</span>
+            </label>
+          </div>
+
+          {formErrors.terms && (
+            <p className="text-xs text-themeRed mt-1">{formErrors.terms}</p>
+          )}
         </div>
       </div>
 
-      {/* Submit Btn */}
-      <div className="flex items-center justify-center gap-5 mt-[50px]">
+      {/* Submit Button */}
+      <div className="flex items-center justify-between gap-5 mt-[50px]">
         <Link to="/auth/signup" state={companySetupData}>
-          <p className="text-xs text-themeDarkGray"> Back</p>
+          <p className="text-xs text-themeDarkGray hover:text-themeOrange transition-colors">
+            ← Back
+          </p>
         </Link>
-        <div className="text-end w-full">
-          <button className="text-sm md:text-base text-white font-bold bg-themeGreen px-themePadding py-2.5 rounded-md hover:-translate-x-4 duration-300">
-            Sign-up
-          </button>
-        </div>
+
+        <button
+          type="submit"
+          disabled={isSubmitting || !isFormValid()}
+          className={`text-sm md:text-base font-bold px-themePadding py-2.5 rounded-md transition-all duration-300 ${
+            isFormValid() && !isSubmitting
+              ? "text-white bg-themeGreen hover:bg-green-600 transform hover:scale-105"
+              : "text-gray-400 bg-gray-300 cursor-not-allowed"
+          }`}
+        >
+          {isSubmitting ? "Creating Account..." : "Create Account"}
+        </button>
       </div>
     </form>
   );

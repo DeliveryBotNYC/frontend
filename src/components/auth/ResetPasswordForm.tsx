@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
 import FormBtn from "../reusable/FormBtn";
 import EyeIcon from "../../assets/eye-icon.svg";
@@ -9,40 +9,75 @@ import { useMutation } from "@tanstack/react-query";
 
 import { url } from "../../hooks/useConfig";
 
-import { useConfig } from "../../hooks/UseGetJtoken";
-
-const ForgotPasswordForm = () => {
-  const config = useConfig();
+const ResetPasswordForm = () => {
   const navigate = useNavigate();
-  // login form value's
+  const { token } = useParams(); // Get token from URL params
+
+  // Form values
   const [pwd, setPwd] = useState("");
   const [cpwd, setCpwd] = useState("");
 
   const [errmsg, setErrmsg] = useState<boolean>(false);
+  const [apiError, setApiError] = useState<string>("");
+
   // State to change the password type to text
   const [changePasswordType, setChangePasswordType] = useState<boolean>(false);
   const [changeConfirmPasswordType, setChangeConfirmPasswordType] =
     useState<boolean>(false);
 
-  const addTodoMutation = useMutation({
-    mutationFn: (newTodo: string) =>
-      axios.patch(
-        url + "/retail/profile",
+  const resetPasswordMutation = useMutation({
+    mutationFn: (password: string) =>
+      axios.post(
+        url + "/retail/reset-password",
         {
-          password: pwd,
+          password: password,
         },
-        config
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
       ),
     onSuccess: (data) => {
-      navigate("/auth/login");
+      // Show success message or navigate to login
+      navigate("/auth/login", {
+        state: {
+          message:
+            "Password reset successfully! Please login with your new password.",
+        },
+      });
+    },
+    onError: (error: any) => {
+      // Handle API errors
+      const errorMessage =
+        error.response?.data?.message ||
+        "Failed to reset password. Please try again.";
+      setApiError(errorMessage);
     },
   });
 
   const formSubmitHandler = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    pwd != cpwd
-      ? setErrmsg(true)
-      : (setErrmsg(false), addTodoMutation.mutate(pwd));
+
+    // Clear previous errors
+    setErrmsg(false);
+    setApiError("");
+
+    // Check if passwords match
+    if (pwd !== cpwd) {
+      setErrmsg(true);
+      return;
+    }
+
+    // Check if token exists
+    if (!token) {
+      setApiError("Invalid reset link. Please request a new password reset.");
+      return;
+    }
+
+    // Submit the form
+    resetPasswordMutation.mutate(pwd);
   };
 
   return (
@@ -67,6 +102,8 @@ const ForgotPasswordForm = () => {
             className="w-full text-xs sm:text-sm pb-[2px] text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
             value={pwd}
             onChange={(e) => setPwd(e.target.value)}
+            disabled={resetPasswordMutation.isPending}
+            minLength={8}
           />
 
           {/* Eye Icon */}
@@ -82,27 +119,33 @@ const ForgotPasswordForm = () => {
               <FaEyeSlash
                 color="#676767"
                 size={17}
+                className="cursor-pointer"
                 onClick={() => setChangePasswordType(false)}
               />
             )}
           </div>
         </div>
 
-        {/* password field */}
+        {/* confirm password field */}
         <div className="w-full mt-5 relative">
-          <label htmlFor="passwordField" className="text-themeDarkGray text-xs">
+          <label
+            htmlFor="confirmPasswordField"
+            className="text-themeDarkGray text-xs"
+          >
             Confirm password <span className="text-themeRed">*</span>
           </label>
 
           {/* input */}
           <input
             required
-            id="passwordField"
+            id="confirmPasswordField"
             type={changeConfirmPasswordType === true ? "text" : "password"}
             placeholder="Re-type your password"
             className="w-full text-xs sm:text-sm pb-[2px] text-themeLightBlack placeholder:text-themeLightBlack border-b border-b-themeLightGray focus:border-b-themeOrange outline-none"
             value={cpwd}
             onChange={(e) => setCpwd(e.target.value)}
+            disabled={resetPasswordMutation.isPending}
+            minLength={8}
           />
 
           {/* Eye Icon */}
@@ -118,26 +161,48 @@ const ForgotPasswordForm = () => {
               <FaEyeSlash
                 color="#676767"
                 size={17}
+                className="cursor-pointer"
                 onClick={() => setChangeConfirmPasswordType(false)}
               />
             )}
           </div>
         </div>
 
-        {/* If Form Submited */}
-        {errmsg ? (
+        {/* Error Messages */}
+        {errmsg && (
           <p className="text-xs text-themeRed mt-5">Passwords don't match.</p>
-        ) : null}
+        )}
 
-        <FormBtn hasBg={true} title={"Reset Password"} />
+        {apiError && <p className="text-xs text-themeRed mt-5">{apiError}</p>}
 
-        {/* Forgot password */}
+        {!token && (
+          <p className="text-xs text-themeRed mt-5">
+            Invalid reset link. Please request a new password reset.
+          </p>
+        )}
+
+        {/* Loading state */}
+        {resetPasswordMutation.isPending && (
+          <p className="text-xs text-themeGray mt-5">
+            Resetting your password...
+          </p>
+        )}
+
+        <FormBtn
+          hasBg={true}
+          title={"Reset Password"}
+          disabled={resetPasswordMutation.isPending || !token}
+        />
+
+        {/* Back to login */}
         <Link to={"/auth/login"}>
-          <p className="mt-5 text-xs text-themeGray text-center">Login</p>
+          <p className="mt-5 text-xs text-themeGray text-center">
+            Back to Login
+          </p>
         </Link>
       </form>
     </div>
   );
 };
 
-export default ForgotPasswordForm;
+export default ResetPasswordForm;

@@ -21,9 +21,10 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
 
   const [error, setError] = useState({ message: "" });
   const navigate = useNavigate();
+
   const addTodoMutation = useMutation({
     mutationFn: (newTodo: string) =>
-      axios.post(url + "/orders", rest.state, config),
+      axios.post(url + "/order", rest.state, config),
     onSuccess: (data) => {
       navigate("/orders/tracking/" + data.data.order_id);
     },
@@ -35,7 +36,7 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
 
   const createQuote = useMutation({
     mutationFn: (newQuote: string) =>
-      axios.post(url + "/orders/quote", rest.state, config),
+      axios.post(url + "/order/quote", rest.state, config),
     onMutate: () => {
       setError({ message: "" });
       setGivenQuote({
@@ -46,11 +47,11 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
     },
     onSuccess: (quote) => {
       setGivenQuote({
-        price: quote.data.price,
-        tip: quote.data.tip,
-        original_price: quote.data.original_price
-          ? quote.data.original_price
-          : null,
+        price: quote.data.data.pricing.price,
+        tip: quote.data.data.pricing.tip,
+        original_price: quote.data.data.pricing.discount.original
+          ? quote.data.data.pricing.discount.original
+          : "",
       });
     },
     onError: (error) => {
@@ -61,7 +62,7 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
   const createPatchQuote = useMutation({
     mutationFn: (patchQuote: string) =>
       axios.post(
-        url + "/orders/quote?order_id=" + data?.order_id,
+        url + "/order/quote?order_id=" + data?.order_id,
         rest.state,
         config
       ),
@@ -98,44 +99,98 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
       }
     } else setError({ message: "" });
   }, [rest?.state]);
-  return (
-    <div className="w-full z-10 sticky left-0 bottom-0 bg-white shadow-dropdownShadow py-2.5 px-4 flex items-center justify-between gap-2.5">
-      {isCompleted(rest?.state).pickup &&
+
+  // Helper function to render pricing display
+  const renderPricing = () => {
+    const isNewOrder = rest.state?.status == "new_order";
+    const hasPatchQuote =
+      patchQuote.price && !isNaN(parseInt(patchQuote.price) / 100);
+    const hasGivenQuote =
+      givenQuote.price && !isNaN(parseInt(givenQuote.price) / 100);
+
+    // For existing orders (viewing/editing)
+    if (!isNewOrder && data) {
+      const currentPrice = data.price || 0;
+      const currentTip = data.tip || 0;
+
+      if (hasPatchQuote) {
+        // Show crossed out current price and new price
+        const priceDiff = parseInt(patchQuote.price) - currentPrice;
+        const tipDiff = parseInt(patchQuote.tip) - currentTip;
+        const totalDiff = priceDiff + tipDiff;
+
+        return (
+          <>
+            {/* Current price - crossed out */}
+            <span className="line-through text-gray-500">
+              ${(currentPrice / 100).toFixed(2)} + $
+              {(currentTip / 100).toFixed(2)} tip
+            </span>
+            <br />
+            {/* New price */}
+            <span className="text-secondaryBtnBorder font-bold">
+              New Total:{" "}
+            </span>
+            ${(parseInt(patchQuote.price) / 100).toFixed(2)} + $
+            {(parseInt(patchQuote.tip) / 100).toFixed(2)} tip
+            <br />
+            <span className="text-sm">
+              ({totalDiff >= 0 ? "+" : ""}${(totalDiff / 100).toFixed(2)}{" "}
+              change)
+            </span>
+          </>
+        );
+      } else {
+        // Show current price only
+        return (
+          <>
+            <span className="text-secondaryBtnBorder font-bold">Current: </span>
+            ${(currentPrice / 100).toFixed(2)} + $
+            {(currentTip / 100).toFixed(2)} tip
+          </>
+        );
+      }
+    }
+
+    // For new orders
+    if (isNewOrder && hasGivenQuote) {
+      return (
+        <>
+          <span className="text-secondaryBtnBorder font-bold">Total: </span>
+          {givenQuote.original_price && (
+            <span className="line-through">
+              ${(parseInt(givenQuote.original_price) / 100).toFixed(2)}
+            </span>
+          )}{" "}
+          ${(parseInt(givenQuote.price) / 100).toFixed(2)} + $
+          {(parseInt(givenQuote.tip) / 100).toFixed(2)} tip
+        </>
+      );
+    }
+
+    return null;
+  };
+
+  const shouldShowActiveButton = () => {
+    const isNewOrder = rest.state?.status == "new_order";
+    const hasValidQuote = isNewOrder
+      ? !isNaN(parseInt(givenQuote.price) / 100)
+      : !isNaN(parseInt(patchQuote.price) / 100) || (data && data.price);
+
+    return (
+      isCompleted(rest?.state).pickup &&
       isCompleted(rest?.state).delivery &&
       isCompleted(rest?.state).timeframe &&
-      (!isNaN(parseInt(givenQuote.price) / 100) ||
-        !isNaN(parseInt(patchQuote.price) / 100)) ? (
+      hasValidQuote
+    );
+  };
+
+  return (
+    <div className="w-full z-10 sticky left-0 bottom-0 bg-white shadow-dropdownShadow py-2.5 px-4 flex items-center justify-between gap-2.5">
+      {shouldShowActiveButton() ? (
         <>
           <div>
-            <p className="text-sm">
-              <span className="text-secondaryBtnBorder font-bold">
-                {rest.state?.status == "new_order" ? "Total:" : "Additional:"}
-              </span>
-              {givenQuote.original_price ? (
-                <span className="line-through">
-                  ${(parseInt(givenQuote.original_price) / 100).toFixed(2)}
-                </span>
-              ) : null}{" "}
-              {givenQuote?.price
-                ? "$" +
-                  (parseInt(givenQuote.price) / 100).toFixed(2) +
-                  " + $" +
-                  (parseInt(givenQuote.tip) / 100).toFixed(2) +
-                  " tip"
-                : "+$" +
-                  (
-                    (parseInt(patchQuote.price) +
-                      parseInt(patchQuote.tip) -
-                      (parseInt(patchQuote.previous_price) +
-                        parseInt(patchQuote.previous_tip))) /
-                    100
-                  ).toFixed(2) +
-                  " ($" +
-                  (parseInt(patchQuote.price) / 100).toFixed(2) +
-                  " + $" +
-                  (parseInt(patchQuote.tip) / 100).toFixed(2) +
-                  " tip)"}
-            </p>
+            <p className="text-sm">{renderPricing()}</p>
           </div>
           <button
             className="bg-themeGreen py-2 px-themePadding text-white font-bold"

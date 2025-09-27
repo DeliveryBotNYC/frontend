@@ -44,7 +44,7 @@ const LoginContext = () => {
                 <FormBtn title="Sign-up" hasBg={false} />
               </Link>
 
-              <Link to={"/"}>
+              <Link target="_blank" to={"https://dbx.delivery"}>
                 <p className="text-white text-xs text-center mt-5">
                   Learn more
                 </p>

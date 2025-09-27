@@ -2,25 +2,40 @@ import { useState } from "react";
 import TableHeader from "./TableHeader";
 import TableContent from "./TableContent";
 import TablePagination from "./TablePagination";
-import TableToolbar from "./TableToolbar";
-import { FilterOptions } from "./TableToolbar"; // Import the FilterOptions interface
+import TableToolbar, { FilterState } from "./TableToolbar";
+
+// Generic filter configuration interface
+interface FilterConfig {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  type: "dropdown" | "date-range" | "single-select";
+  options?: Array<{ value: string; label: string; description?: string }>;
+  multiple?: boolean;
+}
 
 interface TableContainerProps {
   searchEnabled?: boolean;
   downloadEnabled?: boolean;
   refreshEnabled?: boolean;
-  uploadEnabled?: boolean; // New prop for upload button
-  dateRangeFilterEnabled?: boolean; // New prop for date range filter
-  statusFilterEnabled?: boolean; // New prop for status filter
-  platformFilterEnabled?: boolean; // New prop for platform filter
-  storeFilterEnabled?: boolean; // New prop for store filter
-  platformOptions?: Array<{ value: string; label: string }>; // New prop for platform options
+  uploadEnabled?: boolean;
+
+  // LEGACY PROPS - Keep for backward compatibility
+  dateRangeFilterEnabled?: boolean;
+  statusFilterEnabled?: boolean;
+  platformFilterEnabled?: boolean;
+  storeFilterEnabled?: boolean;
+  platformOptions?: Array<{ value: string; label: string }>;
+
+  // NEW PROPS - For new generic filter system
+  filterConfigs?: FilterConfig[];
+
   onSearch?: (value: string) => void;
   onDownloadAll?: () => void;
   onDownloadCurrent?: () => void;
   onRefresh?: (callback: () => void) => void;
-  onUpload?: () => void; // New handler for upload
-  onFilterChange?: (filters: FilterOptions) => void; // New handler for filter changes
+  onUpload?: () => void;
+  onFilterChange?: (filters: FilterState) => void;
   headers: Array<{ title: string; value: string }>;
   data: any[];
   isLoading: boolean;
@@ -40,11 +55,17 @@ const TableContainer = ({
   downloadEnabled = false,
   refreshEnabled = false,
   uploadEnabled = false,
+
+  // Legacy props
   dateRangeFilterEnabled = false,
   statusFilterEnabled = false,
   platformFilterEnabled = false,
   storeFilterEnabled = false,
-  platformOptions = [{ value: "portal", label: "Portal" }], // Default platform options
+  platformOptions = [{ value: "portal", label: "Portal" }],
+
+  // New props
+  filterConfigs = [],
+
   onSearch,
   onDownloadAll,
   onDownloadCurrent,
@@ -97,16 +118,22 @@ const TableContainer = ({
     }
   };
 
+  // Determine which filter system to use
+  const hasLegacyFilters =
+    dateRangeFilterEnabled ||
+    statusFilterEnabled ||
+    platformFilterEnabled ||
+    storeFilterEnabled;
+  const hasNewFilters = filterConfigs && filterConfigs.length > 0;
+
   // Check if any toolbar features are enabled
   const isToolbarVisible =
     searchEnabled ||
     downloadEnabled ||
     refreshEnabled ||
     uploadEnabled ||
-    dateRangeFilterEnabled ||
-    statusFilterEnabled ||
-    platformFilterEnabled ||
-    storeFilterEnabled;
+    hasLegacyFilters ||
+    hasNewFilters;
 
   return (
     <div className="flex flex-col h-full bg-white rounded-tr-2xl rounded-tl-2xl">
@@ -117,11 +144,18 @@ const TableContainer = ({
           downloadEnabled={downloadEnabled}
           refreshEnabled={refreshEnabled}
           uploadEnabled={uploadEnabled}
-          dateRangeFilterEnabled={dateRangeFilterEnabled}
-          statusFilterEnabled={statusFilterEnabled}
-          platformFilterEnabled={platformFilterEnabled}
-          storeFilterEnabled={storeFilterEnabled}
-          platformOptions={platformOptions}
+          // Pass legacy props if using legacy system
+          {...(hasLegacyFilters && !hasNewFilters
+            ? {
+                dateRangeFilterEnabled,
+                statusFilterEnabled,
+                platformFilterEnabled,
+                storeFilterEnabled,
+                platformOptions,
+              }
+            : {})}
+          // Pass new filter configs if using new system
+          {...(hasNewFilters ? { filterConfigs } : {})}
           onSearch={onSearch}
           onDownloadAll={onDownloadAll}
           onDownloadCurrent={onDownloadCurrent}

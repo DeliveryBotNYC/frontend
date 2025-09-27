@@ -1,14 +1,14 @@
 import moment from "moment";
+
 //export const stadia = "fdcd2695-e5e1-4888-b985-4ffc0cccc317";
 export const stadia = "";
 export const mapStyle =
   "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=";
+
 export function isCompleted(input) {
   return {
     pickup:
-      !/^(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(
-        input.pickup.phone
-      ) ||
+      !/^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(input.pickup.phone) ||
       input.pickup.name === "" ||
       input.pickup.address.street === "" ||
       input.pickup.address.lat === "" ||
@@ -16,9 +16,7 @@ export function isCompleted(input) {
         ? false
         : true,
     delivery:
-      !/^(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(
-        input.delivery.phone
-      ) ||
+      !/^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(input.delivery.phone) ||
       input.delivery.name === "" ||
       input.delivery.address.street === "" ||
       input.delivery.address.lat === "" ||
@@ -36,7 +34,7 @@ export function isCompleted(input) {
 
 export function isCustomerCompleted(input) {
   if ("phone" in input && input.phone !== "") {
-    const phoneRegex = /^(\+\d{1,2}\s?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/;
+    const phoneRegex = /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/;
     if (!phoneRegex.test(input.phone)) return false;
   }
 
@@ -71,7 +69,7 @@ export function itemCompleted(items) {
 export function isEmpty(input) {
   return {
     pickup:
-      (input.pickup.phone === "" || input.pickup.phone === "+1") &&
+      input.pickup.phone === "" &&
       input.pickup.name === "" &&
       input.pickup.address.street === "" &&
       input.pickup.address.lat === "" &&
@@ -106,25 +104,13 @@ export const isModifierKey = (event) => {
   );
 };
 
-// Custom phone formatter that ensures +1 prefix
+// Phone format enforcement without +1 prefix
 export const enforcePhoneFormat = (e) => {
-  // First run the original enforceFormat
-  enforceFormat(e);
-
-  // Additional logic to handle +1 prefix
-  const input = e.target;
-  const value = input.value;
-
-  // If the user tries to delete or modify the +1 prefix, restore it
-  if (!value.startsWith("+1")) {
-    // If completely empty, set to +1
-    if (value === "") {
-      input.value = "+1";
-    }
-    // If user tried to modify the prefix, restore it and keep the rest
-    else {
-      input.value = "+1" + value.replace(/^\+1/, "");
-    }
+  // Input must be of a valid number format or a modifier key, and not longer than ten digits
+  if (!isNaN(e.key) || isModifierKey(e)) {
+    return;
+  } else {
+    e.preventDefault();
   }
 };
 
@@ -149,7 +135,7 @@ export const formatName = (str) => {
 
 // Parse clipboard text function
 export const parseClipboardText = (text) => {
-  // Expected format: "Junior Nicolle, 100 Wall St, 10th Floor, New York New York 10005, United States, +19175737687"
+  // Expected format: "Junior Nicolle, 100 Wall St, 10th Floor, New York New York 10005, United States, 9175737687"
   try {
     // Basic split by commas
     const parts = text.split(",").map((part) => part.trim());
@@ -162,16 +148,13 @@ export const parseClipboardText = (text) => {
     // Extract name (first part)
     const name = formatName(parts[0]);
 
-    // Extract phone number if it exists (10 digits with optional +1 prefix)
-    // Look for a part that contains a sequence of 10 digits, possibly with a +1 prefix
+    // Extract phone number if it exists (10 digits)
+    // Look for a part that contains a sequence of 10 digits
     const phoneMatch = parts.find((part) => {
       // Remove all non-digit characters to count the digits
       const digitsOnly = part.replace(/\D/g, "");
-      // Check if it has exactly 10 digits or 11 digits starting with 1
-      return (
-        digitsOnly.length === 10 ||
-        (digitsOnly.length === 11 && digitsOnly.startsWith("1"))
-      );
+      // Check if it has exactly 10 digits
+      return digitsOnly.length === 10;
     });
 
     let phone = "";
@@ -191,7 +174,10 @@ export const parseClipboardText = (text) => {
     }
 
     // Address parsing
-    const addressParts = parts.slice(1, phoneMatch);
+    const addressParts = parts.slice(
+      1,
+      phoneMatch ? parts.indexOf(phoneMatch) : undefined
+    );
 
     // 1. Street is the first part of the address
     const street = addressParts[0]; // "100 Wall St"
@@ -243,46 +229,33 @@ export const parseClipboardText = (text) => {
 };
 
 export const formatPhoneWithPrefix = (e) => {
-  console.log(e);
   if (isModifierKey(e)) {
     return;
   }
 
-  // Get the current value
-  let value = e.target.value;
-
-  // Ensure it has the +1 prefix
-  if (!value.startsWith("+1")) {
-    value = "+1" + value.replace(/^\+1/, "");
-  }
-
-  // If it's just the prefix, do nothing more
-  if (value === "+1") {
-    e.target.value = "+1";
-    return;
-  }
-
-  // Extract just the digits after the +1 prefix
-  const digitsOnly = value.substring(2).replace(/\D/g, "").substring(0, 10);
+  // Get the current value and extract only digits
+  const digitsOnly = e.target.value.replace(/\D/g, "").substring(0, 10);
   const areaCode = digitsOnly.substring(0, 3);
   const middle = digitsOnly.substring(3, 6);
   const last = digitsOnly.substring(6, 10);
 
-  // Format with the +1 prefix preserved
+  // Format without +1 prefix
   if (digitsOnly.length > 6) {
-    e.target.value = `+1 (${areaCode}) ${middle}-${last}`;
+    e.target.value = `(${areaCode}) ${middle}-${last}`;
   } else if (digitsOnly.length > 3) {
-    e.target.value = `+1 (${areaCode}) ${middle}`;
+    e.target.value = `(${areaCode}) ${middle}`;
   } else if (digitsOnly.length > 0) {
-    e.target.value = `+1 (${areaCode}`;
+    e.target.value = `(${areaCode}`;
   } else {
-    e.target.value = "+1";
+    e.target.value = "";
   }
 };
 
 export const enforceFormat = (event) => {
   // Input must be of a valid number format or a modifier key, and not longer than ten digits
-  if (!isNaN(event) && !isModifierKey(event)) {
+  if (!isNaN(event.key) || isModifierKey(event)) {
+    return;
+  } else {
     event.preventDefault();
   }
 };
@@ -366,6 +339,27 @@ export const initialState = {
     end_time: "",
   },
 };
+
+export function handleAuthError(
+  error: {
+    response: { status: number; data: { message: any } };
+  },
+  navigate: (path: string, options?: any) => void // Pass navigate as parameter
+) {
+  console.log(error);
+  if (error.response?.status === 401 || error.response?.status === 403) {
+    // Clear auth tokens
+    localStorage.removeItem("aT");
+    localStorage.removeItem("roles");
+
+    // Navigate to login with error message
+    navigate("/auth/login", {
+      state: { message: error.response?.data?.message },
+    });
+    return true; // Indicates auth error was handled
+  }
+  return false; // No auth error
+}
 
 export function getRouteStatusText(
   status: string,

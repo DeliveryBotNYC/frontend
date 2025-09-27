@@ -1,32 +1,18 @@
-import { useContext } from "react";
-import { ThemeContext } from "../../context/ThemeContext";
-
-import Logo from "../../assets/logo.svg";
-import DashedImage from "../../assets/nav-dashed.svg";
+import Logo from "../../assets/logo-01.svg";
 import PlusIcon from "../../assets/plus-icon.svg";
 import { Link } from "react-router-dom";
 
 const PrimaryNav = ({ title }: { title: string }) => {
   // Context
-  const contextValue = useContext(ThemeContext);
 
   return (
-    <nav className="w-full bg-themeOrange h-16 flex items-center justify-between gap-4 px-4 fixed top-0 left-0 z-[99]">
+    <nav className="w-full bg-themeOrange h-16 flex items-center justify-between gap-4 fixed top-0 left-0 z-[99]">
       {/* left */}
       <div className="flex items-center gap-10">
         {/* Image */}
         <div className="flex items-end gap-3">
-          {/* Dashed Image */}
-          <div
-            className={`${
-              contextValue?.expandWidth === true ? "w-[108px]" : "w-0"
-            } duration-300`}
-          >
-            <img src={DashedImage} alt="dashed_image" />
-          </div>
-
           {/* Logo */}
-          <img src={Logo} alt="site_logo" />
+          <img src={Logo} width={"80px"} alt="site_logo" />
         </div>
 
         {/* title */}

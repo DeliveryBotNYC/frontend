@@ -1,108 +1,181 @@
-import Logo from "../assets/logo.svg";
+import Logo from "../assets/logo-new.png";
 import DownArrow from "../assets/filter-icon-down.svg";
 import UpArrow from "../assets/filter-icon-up.svg";
 import Backward from "../assets/arrow-back.svg";
 
 import { useState, useEffect } from "react";
 import UseGetOrderId from "../hooks/UseGetOrderId";
-import axios from "axios";
-import { url } from "../hooks/useConfig";
-
-import { loadStripe } from "@stripe/stripe-js";
-
-const stripePromise = loadStripe("your-publishable-key-here");
 
 import OrientationMainContent from "../components/orientation/OrientationMainContent";
 import Videos from "../components/orientation/Videos";
-import DriverLicense from "../components/orientation/DriverLicense";
+import Payment from "../components/orientation/Payment";
+import IdentityVerification from "../components/orientation/IdentityVerification";
+import Legal from "../components/orientation/Legal";
 
 const Orientation = () => {
-  const [error, setError] = useState({});
+  const [error, setError] = useState<{ message?: string }>({});
   const [isOpen, setIsOpen] = useState(false);
   const [step, setStep] = useState("home");
+  const [orientationData, setOrientationData] = useState(null);
   const token = UseGetOrderId();
 
-  const createVerificationSession = async () => {
-    try {
-      const response = await axios.post(
-        `${url}/stripe/verification-session`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+  // Handle data updates from main content
+  const handleDataUpdate = (newData) => {
+    setOrientationData(newData);
+  };
+
+  // Handle item updates from child components
+  const handleItemUpdate = (itemId, newStatus) => {
+    if (orientationData?.items) {
+      const updatedItems = orientationData.items.map((item) =>
+        item.id === itemId ? { ...item, status: newStatus } : item
       );
+      setOrientationData({
+        ...orientationData,
+        items: updatedItems,
+      });
+    }
+  };
 
-      const { sessionId, redirectUrl } = response.data;
+  // Get step title for display
+  const getStepTitle = (currentStep) => {
+    switch (currentStep) {
+      case "video":
+      case "videos":
+        return "Training Videos";
+      case "vs_id":
+      case "identity-verification":
+        return "Identity Verification";
+      case "account_id":
+      case "payment":
+        return "Payment Setup";
+      case "driver-license":
+        return "Driver License";
+      case "terms":
+        return "Terms & Conditions";
+      case "home":
+      default:
+        return "Driver Orientation";
+    }
+  };
 
-      if (redirectUrl) {
-        window.location.href = redirectUrl; // Redirect to Stripe Identity page
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || "Verification failed");
+  // Render the appropriate component based on step
+  const renderStepComponent = () => {
+    switch (step) {
+      case "video":
+      case "videos":
+        return (
+          <Videos
+            token={token}
+            setStep={setStep}
+            onUpdateItem={handleItemUpdate}
+          />
+        );
+
+      case "vs_id":
+      case "identity-verification":
+        return (
+          <IdentityVerification
+            token={token}
+            setStep={setStep}
+            orientationData={orientationData}
+            onUpdateItem={handleItemUpdate}
+          />
+        );
+
+      case "account_id":
+      case "payment":
+        return (
+          <Payment
+            token={token}
+            setStep={setStep}
+            orientationData={orientationData}
+            onUpdateItem={handleItemUpdate}
+          />
+        );
+
+      case "terms":
+        // Add your Terms component here when you create it
+        return (
+          <Legal
+            token={token}
+            setStep={setStep}
+            orientationData={orientationData}
+            onUpdateItem={handleDataUpdate}
+          />
+        );
+
+      case "home":
+      default:
+        return (
+          <OrientationMainContent
+            token={token}
+            setStep={setStep}
+            onDataUpdate={handleDataUpdate}
+          />
+        );
     }
   };
 
   return (
-    <div className="w-screen h-screen items-center ">
+    <div className="w-screen h-screen items-center">
       <nav className="w-full bg-themeOrange h-16 flex items-center justify-between px-4 fixed top-0 left-0 z-[99]">
+        {/* Left side - Logo or Back Button */}
         {step === "home" ? (
-          <>
-            {/* Logo Section */}
-            <div className="flex items-center gap-2">
-              <img src={Logo} alt="site_logo" />
-            </div>
-
-            {/* Help Button */}
-            <div className="relative inline-block">
-              <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="bg-white text-black px-3 py-1 rounded-full flex items-center gap-4 shadow-md focus:outline-none"
-              >
-                Help
-                <img src={isOpen ? UpArrow : DownArrow} alt="DownArrow" />
-              </button>
-
-              {/* Dropdown */}
-              {isOpen && (
-                <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg">
-                  <ul className="py-2 text-gray-700">
-                    <li>
-                      <a
-                        href="mailto:driver@dbx.delivery?subject=Orientation%20Inquiry"
-                        className="block px-4 py-2 hover:bg-gray-100"
-                      >
-                        Email Driver Support
-                      </a>
-                    </li>
-                  </ul>
-                </div>
-              )}
-            </div>
-          </>
+          <div className="flex items-center gap-2">
+            <img src={Logo} alt="site_logo" width={"80px"} />
+          </div>
         ) : (
-          <>
-            {/* Back Button (Left-Aligned) */}
-            <div
-              className="cursor-pointer ml-4"
-              onClick={() => setStep("home")}
-            >
-              <img src={Backward} alt="Backward" />
-            </div>
-
-            {/* Centered Title */}
-            <div className="absolute left-1/2 transform -translate-x-1/2 text-white font-semibold text-base">
-              {step}
-            </div>
-          </>
+          <button
+            onClick={() => setStep("home")}
+            className="flex items-center justify-center w-10 h-10 bg-white bg-opacity-20 rounded-full hover:bg-opacity-30 transition-all"
+          >
+            <img src={Backward} alt="Back" className="w-5 h-5" />
+          </button>
         )}
+
+        {/* Center - Dynamic Title */}
+        <div className="text-white font-semibold text-base">
+          {getStepTitle(step)}
+        </div>
+
+        {/* Right side - Help Button */}
+        <div className="relative inline-block">
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="bg-white text-black px-3 py-1 rounded-full flex items-center gap-4 shadow-md focus:outline-none"
+          >
+            Help
+            <img src={isOpen ? UpArrow : DownArrow} alt="DownArrow" />
+          </button>
+
+          {/* Dropdown */}
+          {isOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg">
+              <ul className="py-2 text-gray-700">
+                <li>
+                  <a
+                    href="mailto:driver@dbx.delivery?subject=Orientation%20Inquiry"
+                    className="block px-4 py-2 hover:bg-gray-100"
+                  >
+                    Email Driver Support
+                  </a>
+                </li>
+              </ul>
+            </div>
+          )}
+        </div>
       </nav>
-      {step === "video" ? (
-        <Videos token={token} setStep={setStep} />
-      ) : step === "vs_id" ? (
-        { createVerificationSession }
-      ) : (
-        <OrientationMainContent token={token} setStep={setStep} />
+
+      {/* Error Display */}
+      {error?.message && (
+        <div className="fixed top-16 left-0 right-0 bg-red-100 border border-red-400 text-red-700 px-4 py-3 z-50">
+          {error.message}
+        </div>
       )}
+
+      {/* Render Current Step Component */}
+      {renderStepComponent()}
     </div>
   );
 };

@@ -1,0 +1,136 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useMemo, useState, useRef, useEffect } from "react";
+import moment from "moment";
+const RouteBar = ({ data }) => {
+    const [showTooltip, setShowTooltip] = useState(false);
+    const barRef = useRef(null);
+    const [tooltipPosition, setTooltipPosition] = useState({
+        top: 0,
+        left: 0,
+        width: 0,
+    });
+    // Update tooltip position when it becomes visible
+    useEffect(() => {
+        if (showTooltip && barRef.current) {
+            const rect = barRef.current.getBoundingClientRect();
+            setTooltipPosition({
+                top: rect.bottom + window.scrollY,
+                left: rect.left + window.scrollX,
+                width: rect.width,
+            });
+        }
+    }, [showTooltip]);
+    const routeInfo = useMemo(() => {
+        const now = moment();
+        switch (data.status) {
+            case "assigned":
+            case "acknowledged": {
+                if (!data.date)
+                    return { text: "Assigned", progress: 0, color: "#74C2F8" };
+                const routeDate = moment(data.date);
+                const timeDiff = routeDate.diff(now);
+                const isFuture = timeDiff > 0;
+                const duration = moment.duration(Math.abs(timeDiff));
+                const hours = Math.floor(duration.asHours());
+                const minutes = Math.floor(duration.asMinutes()) % 60;
+                const timeText = isFuture
+                    ? `in ${hours}h ${minutes}m`
+                    : `${hours}h ${minutes}m ago`;
+                return {
+                    text: timeText,
+                    progress: 0,
+                    color: "#74C2F8",
+                };
+            }
+            case "created": {
+                // Handle new views format
+                const viewsData = data.views || { views: 0, available_now: 0 };
+                const viewsSeen = viewsData.views || 0;
+                const totalAvailable = viewsData.available_now || 0;
+                const progress = totalAvailable > 0 ? (viewsSeen / totalAvailable) * 100 : 0;
+                let timeText = "";
+                if (data.created_at) {
+                    const createdDate = moment(data.created_at);
+                    const minutes = now.diff(createdDate, "minutes");
+                    timeText = ` - ${minutes} min ago`;
+                }
+                return {
+                    text: `${viewsSeen} / ${totalAvailable} views${timeText}`,
+                    progress,
+                    color: "#74C2F8",
+                    hasViewerDetails: !!viewsData.viewers?.length,
+                };
+            }
+            case "started": {
+                const stops = data.stops || { completed: 0, total: 0 };
+                const progress = stops.total > 0 ? (stops.completed / stops.total) * 100 : 0;
+                return {
+                    text: `${stops.completed} / ${stops.total} stops`,
+                    progress,
+                    color: "#B2D235",
+                };
+            }
+            case "missed_arrived": {
+                return {
+                    text: "Missed",
+                    progress: 100,
+                    color: "#F03F3F",
+                };
+            }
+            case "completed": {
+                const stops = data.stops || { completed: 0, total: 0 };
+                let timeText = "";
+                if (data.completed_at && data.date) {
+                    const completedDate = moment(data.completed_at);
+                    const scheduledDate = moment(data.date);
+                    const minutes = completedDate.diff(scheduledDate, "minutes");
+                    if (minutes > 0) {
+                        timeText = ` - ${minutes} min late`;
+                    }
+                    else if (minutes < 0) {
+                        timeText = ` - ${Math.abs(minutes)} min early`;
+                    }
+                }
+                return {
+                    text: `${stops.completed} / ${stops.total} stops${timeText}`,
+                    progress: 100,
+                    color: "#B2D235",
+                };
+            }
+            default:
+                return {
+                    text: "Unknown",
+                    progress: 0,
+                    color: "#ACACAC",
+                };
+        }
+    }, [data]);
+    // Determine text color based on background for better contrast
+    const getTextColor = (bgColor) => {
+        // Simple contrast logic - in practice you might want more sophisticated color analysis
+        const darkColors = ["#F03F3F"];
+        return darkColors.includes(bgColor) ? "text-white" : "text-gray-800";
+    };
+    // Format view timestamp to readable format
+    const formatViewTime = (dateTimeStr) => {
+        return moment(dateTimeStr).format("MMM D, h:mm A");
+    };
+    return (_jsxs("div", { className: "relative w-full h-8 rounded-md overflow-hidden bg-gray-100", onMouseEnter: () => setShowTooltip(true), onMouseLeave: () => setShowTooltip(false), ref: barRef, children: [_jsxs("div", { className: "absolute inset-0 flex", children: [_jsx("div", { className: "h-full transition-all duration-300 ease-out", style: {
+                            width: `${routeInfo.progress}%`,
+                            backgroundColor: routeInfo.color,
+                            opacity: 0.3,
+                        } }), _jsx("div", { className: "h-full bg-gray-300", style: {
+                            width: `${100 - routeInfo.progress}%`,
+                            opacity: 0.3,
+                        } })] }), _jsx("div", { className: `absolute inset-0 flex items-center justify-center px-2 ${getTextColor(routeInfo.color)}`, children: _jsx("span", { className: `text-xs font-medium text-center leading-tight text-${getTextColor(routeInfo.color)}`, children: routeInfo.text }) }), showTooltip &&
+                data.status === "created" &&
+                data.views?.viewers &&
+                data.views.viewers.length > 0 && (_jsx("div", { className: "fixed shadow-lg rounded-md p-3 bg-white z-50 text-xs", style: {
+                    top: `${tooltipPosition.top}px`,
+                    left: `${tooltipPosition.left}px`,
+                    width: `${tooltipPosition.width}px`,
+                }, children: _jsx("ul", { className: "space-y-2 max-h-48 overflow-y-auto", children: data.views.viewers.map((viewer) => (_jsxs("li", { className: "border-b border-gray-100 pb-1", children: [_jsxs("div", { className: "font-medium", children: [viewer.first_name, " ", viewer.last_name] }), _jsxs("div", { className: "text-gray-500", children: [_jsx("span", { className: "text-xs", children: viewer.views.length > 1
+                                            ? `${viewer.views.length} views`
+                                            : "1 view" }), _jsx("ul", { className: "pl-3 mt-1 text-gray-400 text-xs", children: viewer.views.map((viewTime, index) => (_jsx("li", { children: formatViewTime(viewTime) }, index))) })] })] }, viewer.driver_id))) }) }))] }));
+};
+export default RouteBar;

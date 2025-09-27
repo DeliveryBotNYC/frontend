@@ -132,67 +132,99 @@ const EditOrderContent = () => {
 
   // Initialize with the default state
   const [newOrderValues, setNewOrderValues] = useState(defaultOrderState);
+  // Keep track of original order data for PricePopup
+  const [originalOrderData, setOriginalOrderData] = useState(null);
 
   // Query to fetch order data
   const { isLoading, data, error, isSuccess } = useQuery({
-    queryKey: ["order", orderId], // Include orderId in the query key for better caching
+    queryKey: ["order", orderId],
     queryFn: async () => {
       try {
         const res = await axios.get(`${url}/order/${orderId}`, config);
-        const orderData = res?.data?.data || {}; // Ensure we're accessing res.data.data
+        const orderData = res?.data?.data || {};
 
+        // Store the original API response for PricePopup
+        setOriginalOrderData(orderData);
+
+        // Transform API response to match form expectations
         return {
           order_id: orderId,
-          status: orderData?.status,
+          status: orderData?.status || "delivered",
           pickup: {
-            phone: orderData?.pickup?.phone_formatted,
-            name: orderData?.pickup?.name,
-            note: orderData?.pickup?.note,
-            apt: orderData?.pickup?.apt,
+            phone_formatted: orderData?.pickup?.phone_formatted || "", // Map to expected field name
+            phone: orderData?.pickup?.phone || "",
+            name: orderData?.pickup?.name || "",
+            note: orderData?.pickup?.note || "",
+            apt: orderData?.pickup?.apt || "",
+            access_code: orderData?.pickup?.access_code || "",
+            pickup_picture:
+              orderData?.pickup?.required_verification?.picture || false,
             address: {
-              address_id: orderData?.pickup?.address?.address_id,
-              formatted: orderData?.pickup?.address?.formatted,
-              street: orderData?.pickup?.address?.street,
-              access_code: orderData?.pickup?.address?.access_code,
-              city: orderData?.pickup?.address?.city,
-              state: orderData?.pickup?.address?.state,
-              zip: orderData?.pickup?.address?.zip,
-              lat: orderData?.pickup?.address?.lat,
-              lon: orderData?.pickup?.address?.lon,
+              address_id: orderData?.pickup?.address?.address_id || "",
+              formatted: orderData?.pickup?.address?.formatted || "",
+              street: orderData?.pickup?.address?.street || "",
+              street_address_1:
+                orderData?.pickup?.address?.street_address_1 || "",
+              access_code:
+                orderData?.pickup?.address?.access_code ||
+                orderData?.pickup?.access_code ||
+                "",
+              city: orderData?.pickup?.address?.city || "",
+              state: orderData?.pickup?.address?.state || "",
+              zip: orderData?.pickup?.address?.zip || "",
+              lat: orderData?.pickup?.address?.lat || "",
+              lon: orderData?.pickup?.address?.lon || "",
             },
             required_verification: {
-              picture: orderData?.pickup?.required_verification?.picture,
+              picture:
+                orderData?.pickup?.required_verification?.picture || false,
             },
           },
           delivery: {
-            phone: orderData?.delivery?.phone_formatted,
-            name: orderData?.delivery?.name,
-            note: orderData?.delivery?.note,
-            apt: orderData?.delivery?.apt,
-            tip: orderData?.delivery?.tip,
+            phone_formatted: orderData?.delivery?.phone_formatted || "", // Map to expected field name
+            phone: orderData?.delivery?.phone || "",
+            name: orderData?.delivery?.name || "",
+            note: orderData?.delivery?.note || "",
+            apt: orderData?.delivery?.apt || "",
+            access_code: orderData?.delivery?.access_code || "",
+            tip: orderData?.tip || 0,
+            delivery_picture:
+              orderData?.delivery?.required_verification?.picture || false,
+            delivery_recipient:
+              orderData?.delivery?.required_verification?.recipient || false,
+            delivery_signature:
+              orderData?.delivery?.required_verification?.signature || false,
             address: {
-              address_id: orderData?.delivery?.address?.address_id,
-              formatted: orderData?.delivery?.address?.formatted,
-              street: orderData?.delivery?.address?.street,
-              access_code: orderData?.delivery?.address?.access_code,
-              city: orderData?.delivery?.address?.city,
-              state: orderData?.delivery?.address?.state,
-              zip: orderData?.delivery?.address?.zip,
-              lat: orderData?.delivery?.address?.lat,
-              lon: orderData?.delivery?.address?.lon,
+              address_id: orderData?.delivery?.address?.address_id || "",
+              formatted: orderData?.delivery?.address?.formatted || "",
+              street: orderData?.delivery?.address?.street || "",
+              street_address_1:
+                orderData?.delivery?.address?.street_address_1 || "",
+              access_code:
+                orderData?.delivery?.address?.access_code ||
+                orderData?.delivery?.access_code ||
+                "",
+              city: orderData?.delivery?.address?.city || "",
+              state: orderData?.delivery?.address?.state || "",
+              zip: orderData?.delivery?.address?.zip || "",
+              lat: orderData?.delivery?.address?.lat || "",
+              lon: orderData?.delivery?.address?.lon || "",
             },
             required_verification: {
-              picture: orderData?.delivery?.required_verification?.picture,
-              recipient: orderData?.delivery?.required_verification?.recipient,
-              signature: orderData?.delivery?.required_verification?.signature,
+              picture:
+                orderData?.delivery?.required_verification?.picture || false,
+              recipient:
+                orderData?.delivery?.required_verification?.recipient || false,
+              signature:
+                orderData?.delivery?.required_verification?.signature || false,
             },
-            items: orderData?.delivery?.items?.items || [],
+            items: orderData?.items || [],
           },
           timeframe: {
-            service: orderData?.timeframe?.service,
+            service: orderData?.timeframe?.service || "1-hour",
             service_id: orderData?.timeframe?.service_id || 0,
-            start_time: orderData?.timeframe?.start_time,
-            end_time: orderData?.timeframe?.end_time,
+            start_time: orderData?.timeframe?.start_time || "",
+            end_time: orderData?.timeframe?.end_time || "",
           },
         };
       } catch (error) {
@@ -200,7 +232,6 @@ const EditOrderContent = () => {
         throw error;
       }
     },
-    // Enable retries for better UX if API call fails
     retry: 2,
   });
 
@@ -266,8 +297,12 @@ const EditOrderContent = () => {
         <Map state={newOrderValues} />
       </div>
 
-      {/* Price Popup */}
-      <PricePopup state={newOrderValues} data={data} stateChanger={undefined} />
+      {/* Price Popup - Pass original order data instead of transformed data */}
+      <PricePopup
+        state={newOrderValues}
+        data={originalOrderData}
+        stateChanger={undefined}
+      />
     </ContentBox2>
   );
 };

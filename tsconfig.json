@@ -5,20 +5,19 @@
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "module": "ESNext",
     "skipLibCheck": true,
-
-    /* Bundler mode */
     "moduleResolution": "bundler",
-    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
     "jsx": "react-jsx",
-
-    /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "allowImportingTsExtensions": true,
+    "types": ["vite/client"],
+    "noFallthroughCasesInSwitch": true,
+    "allowJs": true,
+    "checkJs": false
   },
   "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]

@@ -1,4 +1,4 @@
-import { useContext, useState, useEffect, useMemo } from "react";
+import { useContext, useState, useEffect, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
@@ -20,17 +20,20 @@ import UploadSmallIcon from "../../assets/upload-small.svg";
 import { ThemeContext } from "../../context/ThemeContext";
 import UseGetOrderId from "../../hooks/UseGetOrderId";
 import { url, useConfig } from "../../hooks/useConfig";
+import useAuth from "../../hooks/useAuth";
 
-// Default state constants - with proper address structure
+// Default state constants
 const DEFAULT_ORDER_STATE = {
   status: "new_order",
   pickup: {
+    customer_id: null,
     phone: "",
     name: "",
     note: "",
     apt: "",
     access_code: "",
     address: {
+      address_id: "",
       formatted: "",
       street: "",
       city: "",
@@ -44,6 +47,7 @@ const DEFAULT_ORDER_STATE = {
     },
   },
   delivery: {
+    customer_id: null,
     phone: "",
     name: "",
     note: "",
@@ -51,6 +55,7 @@ const DEFAULT_ORDER_STATE = {
     apt: "",
     access_code: "",
     address: {
+      address_id: "",
       formatted: "",
       street: "",
       city: "",
@@ -80,227 +85,264 @@ const DEFAULT_ORDER_STATE = {
   },
 };
 
+const createDefaultItems = (data) => [
+  {
+    quantity: data?.item_quantity || 1,
+    description: data?.item_type || "box",
+    size: "xsmall",
+  },
+];
+
+const createVerificationSettings = (data, type) => {
+  if (type === "pickup") {
+    return {
+      picture: data?.pickup_picture || false,
+    };
+  }
+
+  return {
+    picture: data?.delivery_picture || false,
+    recipient: data?.delivery_recipient || false,
+    signature: data?.delivery_signature || false,
+  };
+};
+
 const CreateOrderContent = () => {
   const { setShowImageUploaderPopup, showImageUploaderPopup } =
     useContext(ThemeContext) || {};
   const config = useConfig();
   const orderId = UseGetOrderId();
-
-  // Generate the search URL based on orderId
-  const searchUrl = useMemo(
-    () =>
-      orderId === "create-order"
-        ? `${url}/retail`
-        : `${url}/orders?order_id=${orderId}`,
-    [orderId]
-  );
+  const { auth } = useAuth();
 
   const [newOrderValues, setNewOrderValues] = useState(DEFAULT_ORDER_STATE);
+  const [selectedUserId, setSelectedUserId] = useState(null);
 
-  // Data fetching with React Query
+  // Check if user is admin - moved to top to avoid conditional hooks
+  const isAdmin = useMemo(() => {
+    return auth?.roles?.includes(5150);
+  }, [auth?.roles]);
+
+  // Always fetch users for admins, or retail data for regular users
+  const shouldFetchUsers = isAdmin && orderId === "create-order";
+  const shouldFetchRetail = !isAdmin && orderId === "create-order";
+  const shouldFetchOrder = orderId !== "create-order";
+
+  // Generate search URL - always defined to avoid conditional hooks
+  const searchUrl = useMemo(() => {
+    if (shouldFetchOrder) {
+      return `${url}/orders?order_id=${orderId}`;
+    } else if (shouldFetchUsers) {
+      return `${url}/retail/all`;
+    } else if (shouldFetchRetail) {
+      return `${url}/retail`;
+    }
+    return null;
+  }, [shouldFetchOrder, shouldFetchUsers, shouldFetchRetail, orderId]);
+
+  // Always call useQuery to maintain hook order
   const { isLoading, data, isSuccess } = useQuery({
-    queryKey: ["profile", orderId],
+    queryKey: ["profile", orderId, shouldFetchUsers ? "all-users" : "single"],
+    enabled: searchUrl !== null,
     refetchOnWindowFocus: false,
     queryFn: () => axios.get(searchUrl, config).then((res) => res?.data?.data),
   });
 
-  // Debug log to check data structure
-  useEffect(() => {
-    if (isSuccess && data) {
-      console.log("Data loaded:", data);
+  // Get current user data from the list if admin has selected a user
+  const currentUserData = useMemo(() => {
+    if (isAdmin && selectedUserId && Array.isArray(data)) {
+      return data.find((user) => user.user_id === parseInt(selectedUserId));
     }
-  }, [isSuccess, data]);
+    return data;
+  }, [isAdmin, selectedUserId, data]);
 
-  // Update state when data is loaded - with improved address handling
-  useEffect(() => {
-    if (!isSuccess || !data) return;
-    console.log("Updating state from data:", data);
+  // Process existing order data
+  const processExistingOrder = useCallback((data) => {
+    return {
+      ...DEFAULT_ORDER_STATE,
+      status: data.status || "new_order",
+      pickup: {
+        phone: data.pickup?.phone_formatted || "",
+        name: data.pickup?.name || "",
+        note: data.pickup?.note || "",
+        apt: data.pickup?.apt || "",
+        access_code: data.pickup?.access_code || "",
+        address: data.pickup?.address,
+        required_verification:
+          data.pickup?.required_verification ||
+          DEFAULT_ORDER_STATE.pickup.required_verification,
+      },
+      delivery: {
+        phone: data.delivery?.phone_formatted || "",
+        name: data.delivery?.name || "",
+        note: data.delivery?.note || "",
+        apt: data.delivery?.apt || "",
+        access_code: data.delivery?.access_code || "",
+        address: data.delivery?.address,
+        required_verification:
+          data.delivery?.required_verification ||
+          DEFAULT_ORDER_STATE.delivery.required_verification,
+        items: data.delivery?.items?.items || createDefaultItems(data),
+        tip: data.delivery?.tip || 0,
+      },
+    };
+  }, []);
 
-    if (orderId !== "create-order" && data?.pickup) {
-      // Handle existing order data
-      const pickupAddress = data.pickup.address || {};
+  // Process new order with retail defaults
+  const processNewOrder = useCallback((data) => {
+    if (!data) return DEFAULT_ORDER_STATE;
 
-      // Ensure address has proper structure with street property
-      const formattedPickupAddress = {
-        ...pickupAddress,
-        street: pickupAddress.street || "",
-        formatted:
-          pickupAddress.formatted_address || pickupAddress.formatted || "",
-        city: pickupAddress.city || "",
-        state: pickupAddress.state || "",
-        zip: pickupAddress.zip || "",
-        lat: pickupAddress.lat || "",
-        lon: pickupAddress.lon || "",
+    const isPickupDefault = data.store_default === "pickup";
+    const isDeliveryDefault = data.store_default === "delivery";
+
+    const baseOrder = {
+      ...DEFAULT_ORDER_STATE,
+      pickup: {
+        ...DEFAULT_ORDER_STATE.pickup,
+        required_verification: createVerificationSettings(data, "pickup"),
+      },
+      delivery: {
+        ...DEFAULT_ORDER_STATE.delivery,
+        required_verification: createVerificationSettings(data, "delivery"),
+        items: createDefaultItems(data),
+        tip: data.tip || 0,
+      },
+    };
+
+    // Apply store defaults based on store_default setting
+    if (isPickupDefault && data.address) {
+      baseOrder.pickup = {
+        ...baseOrder.pickup,
+        customer_id: data.customer_id,
+        phone: data.phone_formatted || "",
+        name: data.name || "",
+        note: data.default_pickup_note || "",
+        apt: data.apt || "",
+        access_code: data.access_code || "",
+        address: data.address,
       };
-
-      const deliveryAddress = data.delivery.address || {};
-
-      // Ensure address has proper structure with street property
-      const formattedDeliveryAddress = {
-        ...deliveryAddress,
-        street: deliveryAddress.street || "",
-        formatted:
-          deliveryAddress.formatted_address || deliveryAddress.formatted || "",
-        city: deliveryAddress.city || "",
-        state: deliveryAddress.state || "",
-        zip: deliveryAddress.zip || "",
-        lat: deliveryAddress.lat || "",
-        lon: deliveryAddress.lon || "",
+    } else if (isDeliveryDefault && data.address) {
+      baseOrder.delivery = {
+        ...baseOrder.delivery,
+        customer_id: data.customer_id,
+        phone: data.phone_formatted || "",
+        name: data.name || "",
+        note: data.default_delivery_note || "",
+        apt: data.apt || "",
+        access_code: data.access_code || "",
+        address: data.address,
       };
-
-      setNewOrderValues((prev) => ({
-        ...prev,
-        status: data.status || "new_order",
-        pickup: {
-          phone: data.pickup.phone_formatted || "",
-          name: data.pickup.name || "",
-          note: data.pickup.note || "",
-          apt: data.pickup.apt || "",
-          access_code: data.pickup.access_code || "",
-          address: formattedPickupAddress,
-          required_verification: data.pickup.required_verification || {
-            picture: false,
-          },
-        },
-        delivery: {
-          phone: data.delivery.phone_formatted || "",
-          name: data.delivery.name || "",
-          note: data.delivery.note || "",
-          apt: data.delivery.apt || "",
-          access_code: data.delivery.access_code || "",
-          address: formattedDeliveryAddress,
-          required_verification: data.delivery.required_verification || {
-            picture: false,
-            recipient: false,
-            signature: false,
-          },
-          items: data.delivery.items?.items || [
-            {
-              quantity: 1,
-              description: "box",
-              size: "xsmall",
-            },
-          ],
-          tip: data.delivery.tip || 0,
-        },
-      }));
-      return;
     }
 
-    // Handle store defaults
-    if (data) {
-      console.log("Setting up defaults from store data");
+    return baseOrder;
+  }, []);
 
-      const storeDefault = data.store_default || "";
-      const isPickupDefault = storeDefault === "pickup";
-
-      // Prepare default pickup verification settings
-      const pickupVerification = {
-        picture: data.pickup_picture || false,
-      };
-
-      // Prepare default delivery verification settings
-      const deliveryVerification = {
-        picture: data.delivery_picture || false,
-        recipient: data.delivery_recipient || false,
-        signature: data.delivery_signature || false,
-      };
-
-      // Format address from the data object, ensuring it has all needed properties
-      const formatAddressObject = (addressObj) => {
-        if (!addressObj) return DEFAULT_ORDER_STATE.pickup.address;
-
-        return {
-          formatted: addressObj.formatted_address || addressObj.formatted || "",
-          street: addressObj.street || "",
-          city: addressObj.city || "",
-          state: addressObj.state || "",
-          zip: addressObj.zip || "",
-          lat: addressObj.lat || "",
-          lon: addressObj.lon || "",
-        };
-      };
-
-      // Set common updates for both scenarios
-      const updatedOrder = {
-        ...newOrderValues,
-        pickup: {
-          ...newOrderValues.pickup,
-          required_verification: pickupVerification,
-        },
-        delivery: {
-          ...newOrderValues.delivery,
-          required_verification: deliveryVerification,
-          items: [
-            {
-              quantity: data.item_quantity || 1,
-              description: data.item_type || "box",
-              size: "xsmall",
-            },
-          ],
-          tip: data.tip || 0,
-        },
-      };
-
-      // Apply specific fields based on default type
-      if (isPickupDefault && data.address) {
-        // Process address from data
-        const formattedAddress = formatAddressObject(data.address);
-
-        updatedOrder.pickup = {
-          ...updatedOrder.pickup,
-          phone: data.phone_formatted || "",
-          name: data.name || "",
-          note: data.default_pickup_note || "",
-          apt: data.apt || "",
-          access_code: data.access_code || "",
-          address: formattedAddress,
-        };
-      } else if (data.account) {
-        // Process account address
-        const formattedAddress = formatAddressObject(data.account.address);
-
-        if (!isPickupDefault) {
-          updatedOrder.delivery = {
-            ...updatedOrder.delivery,
-            phone: data.account.phone || "",
-            name: data.account.store_name || "",
-            note: data.defaults?.delivery_note || "",
-            apt: data.account.apt || "",
-            access_code: data.account.access_code || "",
-            address: formattedAddress,
-          };
-        }
-      }
-
-      console.log("Updated order with defaults:", updatedOrder);
-      setNewOrderValues(updatedOrder);
-    }
-  }, [isSuccess, data, orderId]);
-
-  // Debug whenever the state changes
+  // Main data processing effect
   useEffect(() => {
-    console.log("Order state updated:", newOrderValues);
-  }, [newOrderValues]);
+    if (!isSuccess) return;
 
-  const handleOpenImageUploader = () => setShowImageUploaderPopup(true);
-  const handleClosePopup = () => setShowImageUploaderPopup(false);
+    let processedOrder;
 
-  // Memoize the form components to prevent unnecessary re-renders
+    if (shouldFetchOrder && data?.pickup) {
+      // Existing order
+      processedOrder = processExistingOrder(data);
+    } else if (currentUserData && !shouldFetchOrder) {
+      // New order with retail defaults
+      processedOrder = processNewOrder(currentUserData);
+    } else {
+      return; // Don't process if no valid data
+    }
+
+    // Add user_id to state if admin has selected a user
+    if (isAdmin && selectedUserId) {
+      processedOrder.user_id = parseInt(selectedUserId);
+    }
+
+    setNewOrderValues(processedOrder);
+  }, [
+    isSuccess,
+    data,
+    currentUserData,
+    shouldFetchOrder,
+    processExistingOrder,
+    processNewOrder,
+    isAdmin,
+    selectedUserId,
+  ]);
+
+  // Event handlers
+  const handleOpenImageUploader = useCallback(() => {
+    setShowImageUploaderPopup(true);
+  }, [setShowImageUploaderPopup]);
+
+  const handleClosePopup = useCallback(() => {
+    setShowImageUploaderPopup(false);
+  }, [setShowImageUploaderPopup]);
+
+  const handleUserSelect = useCallback((e) => {
+    setSelectedUserId(e.target.value);
+  }, []);
+
+  // Render user dropdown for admins
+  const renderUserDropdown = () => {
+    if (!isAdmin || orderId !== "create-order" || !Array.isArray(data))
+      return null;
+
+    return (
+      <div className="bg-white rounded-2xl my-5 px-5 py-4">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Select User
+        </label>
+        <select
+          value={selectedUserId || ""}
+          onChange={handleUserSelect}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        >
+          <option value="">Select a user...</option>
+          {data.map((user) => (
+            <option key={user.user_id} value={user.user_id}>
+              {user.firstname} {user.lastname} ({user.email})
+            </option>
+          ))}
+        </select>
+      </div>
+    );
+  };
+
+  // Determine if we should show forms
+  const shouldShowForms = useMemo(() => {
+    if (shouldFetchOrder) {
+      return isSuccess && data?.pickup; // Existing order
+    } else if (isAdmin) {
+      return isSuccess && selectedUserId && currentUserData; // Admin with user selected
+    } else {
+      return isSuccess && data; // Regular user
+    }
+  }, [
+    shouldFetchOrder,
+    isAdmin,
+    isSuccess,
+    selectedUserId,
+    currentUserData,
+    data,
+  ]);
+
+  // Memoize form components to prevent unnecessary re-renders
   const formComponents = useMemo(() => {
-    if (!isSuccess) return <LoadingFormSkeleton />;
+    if (!shouldShowForms) {
+      return <LoadingFormSkeleton />;
+    }
 
     return (
       <>
         <PickupForm
           state={newOrderValues}
           stateChanger={setNewOrderValues}
-          data={data}
+          data={currentUserData}
         />
         <AddDelivery
           state={newOrderValues}
           stateChanger={setNewOrderValues}
-          data={data}
+          data={currentUserData}
         />
         <SelectDateandTime
           state={newOrderValues}
@@ -308,38 +350,45 @@ const CreateOrderContent = () => {
         />
       </>
     );
-  }, [isSuccess, newOrderValues, data]);
+  }, [shouldShowForms, newOrderValues, currentUserData]);
+
+  // Memoize map component
+  const mapComponent = useMemo(
+    () => <Map state={newOrderValues} />,
+    [newOrderValues]
+  );
 
   return (
     <ContentBox2>
       <div className="flex h-[calc(100%-60px)] justify-between gap-2.5 bg-contentBg">
         <div className="overflow-auto px-themePadding w-3/4">
           <div className="pt-5 px-2.5 flex items-center justify-between gap-2.5">
-            <p className="text-2xl text-black font-bold heading">New Order</p>
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl text-black font-bold heading">
+                New Order
+              </h1>
+            </div>
 
-            {/* Upload Button */}
             <button
               className="flex items-center justify-end gap-2.5 cursor-pointer"
               onClick={handleOpenImageUploader}
               type="button"
+              aria-label="Upload image"
             >
-              <img src={UploadSmallIcon} alt="upload" />
-              <p className="text-sm text-secondaryBtnBorder">Upload</p>
+              <img src={UploadSmallIcon} alt="" aria-hidden="true" />
+              <span className="text-sm text-secondaryBtnBorder">Upload</span>
             </button>
           </div>
 
-          {/* Form Components */}
+          {renderUserDropdown()}
           {formComponents}
         </div>
 
-        {/* Map Component */}
-        <Map state={newOrderValues} />
+        {mapComponent}
       </div>
 
-      {/* Price Popup */}
       <PricePopup state={newOrderValues} />
 
-      {/* Image Uploader with Overlay */}
       {showImageUploaderPopup && (
         <>
           <BlackOverlay closeFunc={handleClosePopup} />

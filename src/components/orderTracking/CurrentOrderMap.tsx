@@ -18,11 +18,7 @@ import DeliveryIcon from "../../assets/deliveryMapIcon.svg";
 import DeliveryCompletedIcon from "../../assets/deliveryMapCompletedIcon.svg";
 import { stadia, mapStyle } from "../reusable/functions";
 
-// Make sure Leaflet CSS is imported somewhere in your application
-// import "leaflet/dist/leaflet.css";
-
 const CurrentOrderMap = ({ data }) => {
-  const [mapReady, setMapReady] = useState(false);
   const mapRef = useRef(null);
 
   // Initialize polyline array for route visualization
@@ -97,87 +93,56 @@ const CurrentOrderMap = ({ data }) => {
     iconAnchor: [7, 7], // Center the icon
   });
 
-  // Enhanced MapController component to replace Bounds
-  function MapController() {
+  // Simple bounds component like HomeMap
+  function Bounds() {
     const map = useMap();
 
-    // Initial map setup and bounds fitting
     useEffect(() => {
       if (!map) return;
 
-      // Set a timeout to ensure the map container is fully rendered
-      const timer = setTimeout(() => {
-        // Force map to recalculate dimensions
-        map.invalidateSize({ animate: true });
+      let bounds = [];
 
-        let bounds = [];
+      // Determine bounds based on available data
+      if (Array.isArray(data?.stops) && data?.stops?.length > 0) {
+        // Add stops to bounds
+        data.stops.forEach((stop) => {
+          if (stop.lat && stop.lon) {
+            bounds.push([stop.lat, stop.lon]);
+          }
+        });
+      } else if (data?.pickup?.address?.lat && data?.delivery?.address?.lat) {
+        // Add pickup and delivery locations
+        bounds.push(
+          [data.delivery?.address?.lat, data.delivery?.address?.lon],
+          [data.pickup?.address?.lat, data.pickup?.address?.lon]
+        );
+      }
 
-        // Determine bounds based on available data
-        if (Array.isArray(data?.stops) && data?.stops?.length > 0) {
-          // Add stops to bounds
-          data.stops.forEach((stop) => {
-            if (stop.lat && stop.lon) {
-              bounds.push([stop.lat, stop.lon]);
-            }
-          });
-        } else if (data?.pickup?.address?.lat && data?.delivery?.address?.lat) {
-          // Add pickup and delivery locations
-          bounds.push(
-            [data.delivery?.address?.lat, data.delivery?.address?.lon],
-            [data.pickup?.address?.lat, data.pickup?.address?.lon]
-          );
-        } else {
-          // Default bounds for NYC if no locations available
-          bounds.push([40.84, -73.91], [40.63, -74.02]);
-        }
+      // Add driver location to bounds if available
+      if (data?.driver?.location?.lat && data?.driver?.location?.lon) {
+        bounds.push([data.driver.location.lat, data.driver.location.lon]);
+      }
 
-        // Add driver location to bounds if available
-        if (data?.driver?.location?.lat && data?.driver?.location?.lon) {
-          bounds.push([data.driver.location.lat, data.driver.location.lon]);
-        }
-
-        // Fit map to bounds with padding
-        if (bounds.length > 0) {
-          map.fitBounds(bounds, {
-            padding: [50, 50],
-            paddingBottomRight: [400, 50],
-            animate: true,
-          });
-        }
-
-        setMapReady(true);
-      }, 300);
-
-      return () => clearTimeout(timer);
+      // Fit map to bounds with padding or default bounds
+      if (bounds.length > 0) {
+        map.fitBounds(bounds, {
+          padding: [50, 50],
+          paddingBottomRight: [400, 50],
+        });
+      } else {
+        // Default bounds for NYC if no locations available
+        map.fitBounds([
+          [40.84, -73.91],
+          [40.63, -74.02],
+        ]);
+      }
     }, [map, data]);
-
-    // Handle window resize events
-    useEffect(() => {
-      if (!map) return;
-
-      const handleResize = () => {
-        map.invalidateSize({ animate: true });
-      };
-
-      window.addEventListener("resize", handleResize);
-
-      return () => {
-        window.removeEventListener("resize", handleResize);
-      };
-    }, [map]);
 
     return null;
   }
 
   return (
-    <div className="w-full h-full relative">
-      {/* Loading overlay */}
-      {!mapReady && (
-        <div className="absolute inset-0 bg-gray-100 flex items-center justify-center z-10">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-themeOrange"></div>
-        </div>
-      )}
-
+    <div className="w-full h-full">
       <MapContainer
         ref={mapRef}
         className="h-full w-full"
@@ -186,7 +151,6 @@ const CurrentOrderMap = ({ data }) => {
         zoomControl={true}
         zoomControlPosition="topright"
         scrollWheelZoom={true}
-        style={{ height: "100%", width: "100%" }}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -280,7 +244,7 @@ const CurrentOrderMap = ({ data }) => {
             return null;
           })}
 
-        <MapController />
+        <Bounds />
       </MapContainer>
     </div>
   );

@@ -1,13 +1,12 @@
 import HomeMap from "./HomeMap";
 import OpenOrdersContainer from "./OpenOrdersContainer";
 import Overview from "./Overview";
-
 import ContentBox from "../reusable/ContentBox";
 
 const HomeContext = () => {
   return (
-    <ContentBox isHomePage={true}>
-      <div className="flex flex-col h-full">
+    <ContentBox>
+      <div className="flex flex-col h-full gap-2.5">
         {/* Overview */}
         <Overview />
 

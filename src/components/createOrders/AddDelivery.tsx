@@ -1,3 +1,9 @@
+import { useState, useCallback, memo, useRef, useMemo, Fragment } from "react";
+import { useMutation } from "@tanstack/react-query";
+import axios from "axios";
+import { Link } from "react-router-dom";
+
+// Assets
 import DeliveredIcon from "../../assets/delivered.svg";
 import DeliveredBwIcon from "../../assets/delivery-bw.svg";
 import DeliveredBwFilledIcon from "../../assets/delivery-bw-filled.svg";
@@ -6,9 +12,16 @@ import TashIcon from "../../assets/trash-icn.svg";
 import homeIcon from "../../assets/store-bw.svg";
 import PlusIcon from "../../assets/plus-icon.svg";
 import clipart from "../../assets/deliveryClipArt.svg";
-import { useState, useEffect, Fragment, useCallback, useRef } from "react";
-import axios from "axios";
-import { useMutation } from "@tanstack/react-query";
+
+// Reusable Components
+import {
+  FormInput,
+  FormTextarea,
+  FormCheckbox,
+  AddressAutocomplete,
+} from "../reusable/FormComponents";
+
+// Utils
 import {
   formatPhoneWithPrefix,
   enforcePhoneFormat,
@@ -21,7 +34,18 @@ import {
 } from "../reusable/functions";
 import { url, useConfig } from "../../hooks/useConfig";
 
-const items = {
+// Constants
+const PHONE_REGEX = /^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/;
+const EDITABLE_STATUSES = [
+  "new_order",
+  "processing",
+  "assigned",
+  "arrived_at_pickup",
+  "picked_up",
+];
+const ADDRESS_EDITABLE_STATUSES = ["new_order", "processing"];
+
+const ITEM_TYPES = {
   Box: "small",
   Bag: "small",
   Plant: "medium",
@@ -30,395 +54,560 @@ const items = {
   hanger: "medium",
 };
 
-const sizes = [
-  { key: "xsmall", value: "Extra Small - Fits in an envelope" },
-  { key: "small", value: "Small - Fits in a shoe box" },
-  { key: "medium", value: "Medium - Fits in a large backpack" },
+const ITEM_SIZES = [
+  { key: "xsmall", value: "Extra Small - Fits in a shoe box" },
+  { key: "small", value: "Small - Fits in a large backpack" },
+  { key: "medium", value: "Medium - Fits in backseat" },
   { key: "large", value: "Large - Fits in a car trunk" },
 ];
 
-function AddDelivery({ data, stateChanger, state }) {
-  const nameInputRef2 = useRef(null);
-  const aptInputRef2 = useRef(null);
+// Utility functions moved outside component to prevent recreation
+const normalizeDeliveryData = (data) => {
+  if (!data) return {};
 
+  return {
+    customer_id: data.customer_id || null,
+    phone: data.phone_formatted || "",
+    name: data.name || "",
+    note: data.default_delivery_note || "",
+    apt: data.apt || "",
+    access_code: data.access_code || "",
+    tip: data.tip || 0,
+    address: {
+      formatted:
+        data.address?.formatted || data.address?.formatted_address || "",
+      street_address_1:
+        data.address?.street_address_1 || data.address?.street || "",
+      city: data.address?.city || "",
+      state: data.address?.state || "",
+      zip: data.address?.zip || "",
+      lat: data.address?.lat || "",
+      lon: data.address?.lon || "",
+    },
+    required_verification: {
+      picture: data.delivery_picture || false,
+      recipient: data.delivery_recipient || false,
+      signature: data.delivery_signature || false,
+    },
+    items: data.items || [
+      {
+        quantity: data.item_quantity || 1,
+        description: data.item_type || "",
+        size: ITEM_TYPES[data.item_type] || "xsmall",
+      },
+    ],
+  };
+};
+
+const createApiService = (config) => ({
+  checkCustomerByPhone: (phone) =>
+    axios.get(`${url}/customer?phone=${phone}`, config),
+  getAddressAutocomplete: (address) =>
+    axios.get(
+      `${url}/address/autocomplete?address=${encodeURI(address)}`,
+      config
+    ),
+  validateAddress: (address) =>
+    axios.get(
+      `${url}/address/validate?street=${encodeURI(
+        address.street
+      )}&zip=${encodeURI(address.zip)}`,
+      config
+    ),
+});
+
+// Memoized sub-components for better performance
+const HeaderActions = memo(
+  ({
+    isFormEmpty,
+    status,
+    onClipboardPaste,
+    onHomeAddressClick,
+    onResetForm,
+  }) => {
+    if (status !== "new_order") return null;
+
+    return isFormEmpty ? (
+      <div className="flex items-center gap-5">
+        <button
+          type="button"
+          className="cursor-pointer text-themeDarkGray text-xs hover:text-themeOrange transition-colors"
+          onClick={onClipboardPaste}
+        >
+          Paste from clipboard
+        </button>
+        <button
+          type="button"
+          onClick={onHomeAddressClick}
+          className="cursor-pointer hover:opacity-70 transition-opacity"
+          aria-label="Use store address"
+        >
+          <img src={homeIcon} alt="" />
+        </button>
+      </div>
+    ) : (
+      <button
+        type="button"
+        onClick={onResetForm}
+        className="cursor-pointer hover:opacity-70 transition-opacity"
+        aria-label="Reset form"
+      >
+        <img src={RefreshIcon} alt="" />
+      </button>
+    );
+  }
+);
+
+const QuantityControls = memo(
+  ({
+    item,
+    index,
+    itemsLength,
+    canEdit,
+    onDecrease,
+    onIncrease,
+    onRemove,
+    onQuantityChange,
+  }) => (
+    <div className="flex items-center justify-between gap-2.5">
+      {item.quantity <= 1 && itemsLength > 1 ? (
+        <span
+          className="quantity-btn"
+          onClick={() => !canEdit || onRemove(index)}
+        >
+          <img src={TashIcon} width="10px" alt="Remove" />
+        </span>
+      ) : (
+        <span
+          className="quantity-btn"
+          onClick={() => !canEdit || onDecrease(index)}
+        >
+          -
+        </span>
+      )}
+
+      <input
+        disabled={!canEdit}
+        type="number"
+        step={1}
+        className="text-center text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 outline-none w-[60px]"
+        value={item.quantity || 1}
+        onChange={(e) => onQuantityChange(index, parseInt(e.target.value) || 1)}
+      />
+
+      <span
+        className="quantity-btn"
+        onClick={() => !canEdit || onIncrease(index)}
+      >
+        +
+      </span>
+    </div>
+  )
+);
+
+const ItemRow = memo(
+  ({
+    item,
+    index,
+    itemsLength,
+    permissions,
+    useMeasurements,
+    onItemUpdate,
+    onQuantityIncrease,
+    onQuantityDecrease,
+    onItemRemove,
+    onMeasurementUpdate,
+    onToggleMeasurements,
+  }) => (
+    <div className="w-full col-span-2">
+      {/* Single row with all fields */}
+      <div className="w-full grid grid-cols-12 gap-2.5">
+        {/* Item Name - 4 columns */}
+        <div className="col-span-4">
+          <label className="text-themeDarkGray text-xs">
+            Item name <span className="text-themeRed">*</span>
+          </label>
+          <input
+            disabled={!permissions.canEdit}
+            value={item.description || ""}
+            type="search"
+            className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
+            list={`type${index}`}
+            onChange={(e) => onItemUpdate(index, "description", e.target.value)}
+          />
+          <datalist id={`type${index}`}>
+            {Object.keys(ITEM_TYPES).map((itemOption) => (
+              <option key={itemOption} value={itemOption} />
+            ))}
+          </datalist>
+        </div>
+        {/* Measurements or Size - 5 columns */}
+        <div className="col-span-5">
+          {useMeasurements ? (
+            <div className="w-full">
+              <label className="text-themeDarkGray text-xs">
+                Measurements <span className="text-themeRed">*</span>
+              </label>
+              <div className="flex gap-1 mt-1">
+                <div className="flex-1 min-w-0">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    required
+                    disabled={!permissions.canEdit}
+                    value={item?.length || ""}
+                    onChange={(e) =>
+                      onMeasurementUpdate(
+                        index,
+                        "length",
+                        parseFloat(e.target.value) || ""
+                      )
+                    }
+                    className="w-full text-xs text-center text-themeLightBlack pb-1 border-b border-b-contentBg outline-none focus:border-b-themeOrange bg-transparent pr-3"
+                  />
+                  <div className="text-[10px] text-themeLightBlack text-center mt-0.5">
+                    in length
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    required
+                    disabled={!permissions.canEdit}
+                    value={item?.width || ""}
+                    onChange={(e) =>
+                      onMeasurementUpdate(
+                        index,
+                        "width",
+                        parseFloat(e.target.value) || ""
+                      )
+                    }
+                    className="w-full text-xs text-center text-themeLightBlack pb-1 border-b border-b-contentBg outline-none focus:border-b-themeOrange bg-transparent pr-3"
+                  />
+                  <div className="text-[10px] text-themeLightBlack text-center mt-0.5">
+                    in width
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    disabled={!permissions.canEdit}
+                    value={item?.height || ""}
+                    onChange={(e) =>
+                      onMeasurementUpdate(
+                        index,
+                        "height",
+                        parseFloat(e.target.value) || ""
+                      )
+                    }
+                    className="w-full text-xs text-center text-themeLightBlack pb-1 border-b border-b-contentBg outline-none focus:border-b-themeOrange bg-transparent pr-3"
+                  />
+                  <div className="text-[10px] text-themeLightBlack text-center mt-0.5">
+                    in height
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    required
+                    disabled={!permissions.canEdit}
+                    value={item?.weight || ""}
+                    onChange={(e) =>
+                      onMeasurementUpdate(
+                        index,
+                        "weight",
+                        parseFloat(e.target.value) || ""
+                      )
+                    }
+                    className="w-full text-xs text-center text-themeLightBlack pb-1 border-b border-b-contentBg outline-none focus:border-b-themeOrange bg-transparent pr-3"
+                  />
+                  <div className="text-[10px] text-themeLightBlack text-center mt-0.5">
+                    lbs weight
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="w-full">
+              <label className="text-themeDarkGray text-xs">
+                Size <span className="text-themeRed">*</span>
+              </label>
+              <select
+                disabled={!permissions.canEdit}
+                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack outline-none border-b border-b-contentBg pb-1"
+                value={item.size || "xsmall"}
+                onChange={(e) => onItemUpdate(index, "size", e.target.value)}
+              >
+                {ITEM_SIZES.map((size) => (
+                  <option key={size.key} value={size.key}>
+                    {size.value}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+        {/* Quantity - 3 columns */}
+        <div className="col-span-3">
+          <label className="text-themeDarkGray text-xs">
+            Quantity <span className="text-themeRed">*</span>
+          </label>
+          <QuantityControls
+            item={item}
+            index={index}
+            itemsLength={itemsLength}
+            canEdit={permissions.canEdit}
+            onDecrease={onQuantityDecrease}
+            onIncrease={onQuantityIncrease}
+            onRemove={onItemRemove}
+            onQuantityChange={onItemUpdate}
+          />
+        </div>
+      </div>
+    </div>
+  )
+);
+const DeliveryForm = memo(({ data, stateChanger, state }) => {
   const config = useConfig();
+  const apiService = useMemo(() => createApiService(config), [config]);
   const [autoFillDropdown, setAutoFillDropdown] = useState([]);
-  const [tip, setTip] = useState(state?.delivery?.tip / 100 || 0);
-  const [shouldFocusName, setShouldFocusName] = useState(false);
-  const [shouldFocusApt, setShouldFocusApt] = useState(false);
+  const [useMeasurements, setUseMeasurements] = useState(false);
 
-  // Status-based permissions
-  const isEditingDisabled = ![
-    "new_order",
-    "processing",
-    "assigned",
-    "arrived_at_pickup",
-    "picked_up",
-  ].includes(state?.status);
-  const isAddressEditingDisabled = !["new_order", "processing"].includes(
-    state?.status
+  const nameInputRef = useRef(null);
+  const aptInputRef = useRef(null);
+
+  // Optimize tip state - convert once and memoize
+  const [tip, setTip] = useState(() => {
+    const tipInCents = state?.delivery?.tip;
+    return tipInCents !== undefined
+      ? (tipInCents / 100).toFixed(2)
+      : data?.tip
+      ? (data.tip / 100).toFixed(2)
+      : "0.00";
+  });
+
+  // Memoized computations
+  const permissions = useMemo(
+    () => ({
+      canEdit: EDITABLE_STATUSES.includes(state?.status),
+      canEditAddress: ADDRESS_EDITABLE_STATUSES.includes(state?.status),
+    }),
+    [state?.status]
   );
 
-  // Phone validation regex
-  const phoneRegex = /^\+1\s?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/;
-  const isPhoneValid = phoneRegex.test(state?.delivery?.phone);
+  const validation = useMemo(() => {
+    const phone = state?.delivery?.phone;
+    const isPhoneValid = phone ? PHONE_REGEX.test(phone) : false;
+    const isFormEmpty = isEmpty(state).delivery;
+    const isFormCompleted =
+      isCompleted(state).delivery && itemCompleted(state?.delivery?.items);
 
-  useEffect(() => {
-    if (shouldFocusName && nameInputRef2.current) {
-      nameInputRef2.current.focus();
-      setShouldFocusName(false);
-    } else if (shouldFocusApt && aptInputRef2.current) {
-      aptInputRef2.current.focus();
-      setShouldFocusApt(false);
-    }
-  }, [shouldFocusName, shouldFocusApt]);
+    return { isPhoneValid, isFormEmpty, isFormCompleted };
+  }, [state?.delivery]);
 
-  // Helper function to capitalize first letter of each word and make every other letter lowercase
-  const formatName = (str) => {
-    if (!str) return "";
-
-    return str
-      .split(" ")
-      .map((word) => {
-        return word
-          .split("")
-          .map((char, index) => {
-            // First letter of each word is uppercase
-            if (index === 0) return char.toUpperCase();
-            return char.toLowerCase();
-          })
-          .join("");
-      })
-      .join(" ");
-  };
+  const addressError = useMemo(() => {
+    return state?.delivery?.address?.zone_ids === null
+      ? "Delivery address outside of zone."
+      : null;
+  }, [state?.delivery?.address?.zone_ids]);
 
   // API Mutations
   const checkPhoneExist = useMutation({
-    mutationFn: (phone) => axios.get(`${url}/customer?phone=${phone}`, config),
+    mutationFn: apiService.checkCustomerByPhone,
     onSuccess: (response) => {
       const customerData = response?.data?.data;
       if (customerData) {
-        stateChanger((prevState) => ({
-          ...prevState,
-          delivery: {
-            ...prevState.delivery,
-            name: customerData.name,
-            address: customerData.address,
-            apt: customerData.apt,
-            access_code: customerData.access_code,
-          },
-        }));
+        updateDeliveryData({
+          customer_id: customerData.customer_id || "",
+          name: customerData.name || "",
+          address: customerData.address || initialState.delivery.address,
+          apt: customerData.apt || "",
+          access_code: customerData.access_code || "",
+        });
       }
     },
     onError: (error) => {
-      console.log("Phone lookup error:", error);
+      nameInputRef.current?.focus();
+      console.error("Phone lookup error:", error);
     },
   });
 
-  const checkAddressExist = useMutation({
-    mutationFn: (addressStr) =>
-      axios.get(
-        `${url}/address/autocomplete?address=${encodeURI(addressStr)}`,
-        config
-      ),
+  const getAddressAutocomplete = useMutation({
+    mutationFn: apiService.getAddressAutocomplete,
     onSuccess: (response) => {
-      if (response?.data) {
+      if (response?.data?.data) {
         setAutoFillDropdown(response.data.data);
       }
     },
     onError: (error) => {
-      console.log("Address lookup error:", error);
+      console.error("Address autocomplete error:", error);
     },
   });
 
-  // Item manipulation functions
-  const removeItem = useCallback(
-    (index) => {
-      stateChanger((prevState) => ({
-        ...prevState,
-        delivery: {
-          ...prevState.delivery,
-          items: [
-            ...prevState.delivery.items.slice(0, index),
-            ...prevState.delivery.items.slice(index + 1),
-          ],
-        },
-      }));
-    },
-    [stateChanger]
-  );
-
-  const decreaseQuantity = useCallback(
-    (index) => {
-      stateChanger((prevState) => {
-        if (prevState.delivery.items[index].quantity <= 1) return prevState;
-
-        return {
-          ...prevState,
-          delivery: {
-            ...prevState.delivery,
-            items: [
-              ...prevState.delivery.items.slice(0, index),
-              {
-                ...prevState.delivery.items[index],
-                quantity: prevState.delivery.items[index].quantity - 1,
-              },
-              ...prevState.delivery.items.slice(index + 1),
-            ],
-          },
-        };
-      });
-    },
-    [stateChanger]
-  );
-
-  const increaseQuantity = useCallback(
-    (index) => {
-      stateChanger((prevState) => ({
-        ...prevState,
-        delivery: {
-          ...prevState.delivery,
-          items: [
-            ...prevState.delivery.items.slice(0, index),
-            {
-              ...prevState.delivery.items[index],
-              quantity: prevState.delivery.items[index].quantity + 1,
-            },
-            ...prevState.delivery.items.slice(index + 1),
-          ],
-        },
-      }));
-    },
-    [stateChanger]
-  );
-
-  const addItem = useCallback(() => {
-    stateChanger((prevState) => ({
-      ...prevState,
-      delivery: {
-        ...prevState.delivery,
-        items: [
-          ...prevState.delivery.items,
-          {
-            quantity: data?.item_quantity || 1,
-            description: data?.item_type || "",
-            size: "xsmall",
-          },
-        ],
-      },
-    }));
-  }, [stateChanger, data]);
-
-  const updateItem = useCallback(
-    (index, field, value) => {
-      stateChanger((prevState) => {
-        const updatedItem = { ...prevState.delivery.items[index] };
-
-        if (field === "description") {
-          updatedItem.description = value;
-          updatedItem.size = items[value] || updatedItem.size;
-        } else {
-          updatedItem[field] = value;
-        }
-
-        return {
-          ...prevState,
-          delivery: {
-            ...prevState.delivery,
-            items: [
-              ...prevState.delivery.items.slice(0, index),
-              updatedItem,
-              ...prevState.delivery.items.slice(index + 1),
-            ],
-          },
-        };
-      });
-    },
-    [stateChanger]
-  );
-
-  const checkAddressMatch = useMutation({
-    mutationFn: async (address) => {
-      const response = await axios.get(
-        `${url}/address/validate?street=${encodeURI(
-          address?.street
-        )}&zip=${encodeURI(address?.zip)}`,
-        config
-      );
-      return response.data.data; // Return just the data you want
+  const validateAddress = useMutation({
+    mutationFn: apiService.validateAddress,
+    onSuccess: (response) => {
+      if (response?.data?.data) {
+        updateDeliveryData({ address: response.data.data });
+      }
     },
     onError: (error) => {
-      console.log("Address lookup error:", error);
+      console.error("Address validation error:", error);
     },
   });
 
-  // State update handlers
-  const handlePhoneInput = useCallback(
-    (phone) => {
-      // Ensure the phone always has +1 prefix
-      const phoneWithPrefix = phone.startsWith("+1")
-        ? phone
-        : "+1" + phone.replace(/^\+1/, "");
+  // Optimized state updaters
+  const updateDeliveryData = useCallback(
+    (updates) => {
+      stateChanger((prevState) => ({
+        ...prevState,
+        delivery: { ...prevState.delivery, ...updates },
+      }));
+    },
+    [stateChanger]
+  );
+
+  const updateDeliveryField = useCallback(
+    (field, value) => updateDeliveryData({ [field]: value }),
+    [updateDeliveryData]
+  );
+
+  // Event handlers
+  const handlePhoneChange = useCallback(
+    (e) => {
+      const phone = e.target.value;
 
       stateChanger((prevState) => ({
         ...prevState,
         timeframe: initialState.timeframe,
         delivery: {
           ...initialState.delivery,
-          phone: phoneWithPrefix,
-          required_verification: data?.delivery_proof || {
-            picture: false,
+          phone,
+          required_verification: {
+            picture: data?.delivery_picture || false,
+            recipient: data?.delivery_recipient || false,
+            signature: data?.delivery_signature || false,
           },
           items: [
             {
               quantity: data?.item_quantity || 1,
               description: data?.item_type || "",
-              size: "xsmall",
+              size: ITEM_TYPES[data?.item_type] || "xsmall",
             },
           ],
           tip: data?.tip || 0,
         },
       }));
 
-      if (phoneRegex.test(phoneWithPrefix)) {
-        setShouldFocusName(true);
-
-        if (data?.autofill) checkPhoneExist.mutate(phoneWithPrefix);
+      if (PHONE_REGEX.test(phone) && data?.autofill) {
+        checkPhoneExist.mutate(phone);
       }
     },
-    [data, checkPhoneExist, stateChanger, phoneRegex]
+    [data, checkPhoneExist, stateChanger]
   );
 
-  const handleAddressInput = useCallback(
-    (address) => {
-      // Check for matching address in dropdown
-      const matchingAddress = autoFillDropdown.find(
-        (item) => item.formatted === address
-      );
+  const handleNameChange = useCallback(
+    (e) => updateDeliveryField("name", formatName(e.target.value)),
+    [updateDeliveryField]
+  );
 
-      if (matchingAddress) {
-        stateChanger((prevState) => ({
-          ...prevState,
-          delivery: {
-            ...prevState.delivery,
-            address: {
-              ...matchingAddress,
-              street_address_1: matchingAddress.street_address_1 || "",
-              pickup: matchingAddress.delivery !== false,
-            },
-            apt: "",
+  const handleAddressChange = useCallback(
+    (e) => {
+      const value = e.target.value;
+
+      if (typeof value === "object" && value !== null) {
+        updateDeliveryData({
+          address: {
+            ...value,
+            street_address_1: value.street_address_1 || value.street || "",
+            formatted: value.formatted || value.formatted_address || "",
           },
-        }));
-        setShouldFocusApt(true);
+        });
+        aptInputRef.current?.focus();
       } else {
-        // No match, update with manual entry
-        stateChanger((prevState) => ({
-          ...prevState,
-          delivery: {
-            ...prevState.delivery,
-            address: {
-              ...initialState.delivery.address,
-              street_address_1: address,
-              formatted: "",
-              city: "",
-              state: "",
-              zip: "",
-              lat: "",
-              lon: "",
-            },
+        updateDeliveryData({
+          address: {
+            ...state?.delivery?.address,
+            street_address_1: value,
+            formatted: "",
+            city: "",
+            state: "",
+            zip: "",
+            lat: "",
+            lon: "",
           },
-        }));
-
-        // Only look up if address has some content
-        if (address && address.trim().length > 3) {
-          checkAddressExist.mutate(address);
-        } else {
-          setAutoFillDropdown([]);
-        }
+        });
       }
     },
-    [autoFillDropdown, checkAddressExist, stateChanger]
-  );
-
-  const updateDeliveryField = useCallback(
-    (field, value) => {
-      stateChanger((prevState) => ({
-        ...prevState,
-        delivery: {
-          ...prevState.delivery,
-          [field]: value,
-        },
-      }));
-    },
-    [stateChanger]
+    [state?.delivery?.address, updateDeliveryData]
   );
 
   const handleHomeAddressClick = useCallback(() => {
-    setTip(parseFloat(data?.tip / 100 || 0).toFixed(2));
-    stateChanger((prevState) => ({
-      ...prevState,
-      delivery: {
-        ...prevState.delivery,
-        phone: data?.phone_formatted || data?.phone || "",
-        name: data?.store_name || data?.name || "",
-        note: data?.delivery_note || data?.pickup_note || "",
-        apt: data?.apt || "",
-        access_code: data?.address?.access_code || "",
-        address: data?.address || initialState.delivery.address,
-        tip: data?.tip || 0,
-      },
-    }));
-  }, [data, stateChanger]);
+    const tipValue = data?.tip ? (data.tip / 100).toFixed(2) : "0.00";
+    setTip(tipValue);
+    updateDeliveryData(normalizeDeliveryData(data));
+  }, [data, updateDeliveryData]);
 
-  // New function to handle clipboard paste
   const handleClipboardPaste = useCallback(async () => {
     try {
       const clipboardText = await navigator.clipboard.readText();
       const parsedData = parseClipboardText(clipboardText);
 
-      if (parsedData) {
-        console.log("Parsed clipboard data:", parsedData);
-        const address = await checkAddressMatch.mutateAsync(parsedData);
-        console.log("Address from clipboard:", address);
-        // Update state with parsed clipboard data
-        stateChanger((prevState) => ({
-          ...prevState,
-          delivery: {
-            ...prevState.delivery,
-            phone: parsedData.phone || prevState.delivery.phone, // Use parsed phone or keep existing
-            name: parsedData.name,
-            apt: parsedData.apt,
-            address: address,
-          },
-        }));
+      if (!parsedData) return;
 
-        // If we have a valid phone number from clipboard, check if user exists
-        if (parsedData.phone && phoneRegex.test(parsedData.phone)) {
-          checkPhoneExist.mutate(parsedData.phone);
+      // Validate address if available
+      if (parsedData.address?.street && parsedData.address?.zip) {
+        try {
+          const validatedAddress = await validateAddress.mutateAsync(
+            parsedData.address
+          );
+          parsedData.address = validatedAddress;
+        } catch (error) {
+          console.error("Address validation failed:", error);
         }
+      }
+
+      updateDeliveryData({
+        phone: parsedData.phone || state?.delivery?.phone,
+        name: parsedData.name || "",
+        apt: parsedData.apt || "",
+        address: parsedData.address || state?.delivery?.address,
+      });
+
+      if (parsedData.phone && PHONE_REGEX.test(parsedData.phone)) {
+        checkPhoneExist.mutate(parsedData.phone);
       }
     } catch (error) {
       console.error("Failed to read clipboard:", error);
     }
-  }, [checkAddressExist, checkPhoneExist, phoneRegex, stateChanger]);
+  }, [state?.delivery, updateDeliveryData, validateAddress, checkPhoneExist]);
 
   const handleResetForm = useCallback(() => {
-    setTip(parseFloat(data?.tip / 100 || 0).toFixed(2));
+    const tipValue = data?.tip ? (data.tip / 100).toFixed(2) : "0.00";
+    setTip(tipValue);
+    setUseMeasurements(false);
     stateChanger((prevState) => ({
       ...prevState,
       timeframe: initialState.timeframe,
       delivery: {
         ...initialState.delivery,
-        required_verification: data?.delivery_proof || {
-          picture: false,
-          recipient: false,
-          signature: false,
+        required_verification: {
+          picture: data?.delivery_picture || false,
+          recipient: data?.delivery_recipient || false,
+          signature: data?.delivery_signature || false,
         },
         items: [
           {
             quantity: data?.item_quantity || 1,
             description: data?.item_type || "",
-            size: "xsmall",
+            size: ITEM_TYPES[data?.item_type] || "xsmall",
           },
         ],
         tip: data?.tip || 0,
@@ -426,465 +615,446 @@ function AddDelivery({ data, stateChanger, state }) {
     }));
   }, [data, stateChanger]);
 
-  const updateTip = useCallback(
-    (value) => {
-      setTip(value);
-      stateChanger((prevState) => ({
-        ...prevState,
-        delivery: {
-          ...prevState.delivery,
-          tip: parseInt(value * 100),
-        },
-      }));
-    },
-    [stateChanger]
-  );
+  // Item handlers
+  const updateItem = useCallback(
+    (index, field, value) => {
+      stateChanger((prevState) => {
+        if (field === "size") {
+          // Update all items with same size
+          return {
+            ...prevState,
+            delivery: {
+              ...prevState.delivery,
+              items: prevState.delivery.items.map((item) => ({
+                ...item,
+                size: value,
+              })),
+            },
+          };
+        }
 
-  const toggleVerification = useCallback(
-    (type, checked) => {
-      stateChanger((prevState) => ({
-        ...prevState,
-        delivery: {
-          ...prevState.delivery,
-          required_verification: {
-            ...prevState.delivery.required_verification,
-            [type]: checked,
+        // Update specific item
+        const items = [...prevState.delivery.items];
+        const updatedItem = { ...items[index] };
+
+        if (field === "description") {
+          updatedItem.description = value;
+          if (prevState.delivery.items.length === 1) {
+            updatedItem.size = ITEM_TYPES[value] || updatedItem.size;
+          }
+        } else {
+          updatedItem[field] = value;
+        }
+
+        items[index] = updatedItem;
+
+        return {
+          ...prevState,
+          delivery: {
+            ...prevState.delivery,
+            items,
           },
-        },
-      }));
+        };
+      });
     },
     [stateChanger]
   );
 
+  const updateMeasurement = useCallback(
+    (index, field, value) => {
+      stateChanger((prevState) => {
+        const items = [...prevState.delivery.items];
+        const updatedItem = { ...items[index] };
+
+        // Set measurement properties directly on the item
+        updatedItem[field] = value === "" ? undefined : value;
+
+        items[index] = updatedItem;
+
+        return {
+          ...prevState,
+          delivery: {
+            ...prevState.delivery,
+            items,
+          },
+        };
+      });
+    },
+    [stateChanger]
+  );
+
+  const toggleMeasurements = useCallback(
+    (index) => {
+      if (useMeasurements) {
+        // Switching from measurements to size guide
+        setUseMeasurements(false);
+        // Clear measurement properties from all items
+        stateChanger((prevState) => ({
+          ...prevState,
+          delivery: {
+            ...prevState.delivery,
+            items: prevState.delivery.items.map((item) => {
+              const {
+                length,
+                width,
+                height,
+                weight,
+                ...itemWithoutMeasurements
+              } = item;
+              return itemWithoutMeasurements;
+            }),
+          },
+        }));
+      } else {
+        // Switching from size guide to measurements
+        setUseMeasurements(true);
+        // Clear size from all items when switching to measurements
+        stateChanger((prevState) => ({
+          ...prevState,
+          delivery: {
+            ...prevState.delivery,
+            items: prevState.delivery.items.map((item) => {
+              const { size, ...itemWithoutSize } = item;
+              return itemWithoutSize;
+            }),
+          },
+        }));
+      }
+    },
+    [useMeasurements, stateChanger]
+  );
+
+  const addItem = useCallback(() => {
+    const currentSize =
+      state?.delivery?.items?.[0]?.size ||
+      ITEM_TYPES[data?.item_type] ||
+      "xsmall";
+
+    updateDeliveryData({
+      items: [
+        ...state.delivery.items,
+        {
+          quantity: data?.item_quantity || 1,
+          description: data?.item_type || "",
+          size: currentSize,
+        },
+      ],
+    });
+  }, [state?.delivery?.items, data, updateDeliveryData]);
+
+  const removeItem = useCallback(
+    (index) => {
+      const items = [...state.delivery.items];
+      items.splice(index, 1);
+      updateDeliveryData({ items });
+    },
+    [state.delivery.items, updateDeliveryData]
+  );
+
+  const increaseQuantity = useCallback(
+    (index) =>
+      updateItem(index, "quantity", state.delivery.items[index].quantity + 1),
+    [updateItem, state.delivery.items]
+  );
+
+  const decreaseQuantity = useCallback(
+    (index) => {
+      if (state.delivery.items[index].quantity > 1) {
+        updateItem(index, "quantity", state.delivery.items[index].quantity - 1);
+      }
+    },
+    [updateItem, state.delivery.items]
+  );
+
+  // Tip handlers
+  const handleTipChange = useCallback((e) => setTip(e.target.value), []);
+
+  const handleTipBlur = useCallback(
+    (e) => {
+      const value = parseFloat(e.target.value || 0).toFixed(2);
+      const valueInCents = Math.round(parseFloat(value) * 100);
+      setTip(value);
+      updateDeliveryField("tip", valueInCents);
+    },
+    [updateDeliveryField]
+  );
+
+  // Verification handlers
+  const handleVerificationChange = useCallback(
+    (type) => (e) => {
+      updateDeliveryData({
+        required_verification: {
+          ...state.delivery.required_verification,
+          [type]: e.target.checked,
+        },
+      });
+    },
+    [state.delivery.required_verification, updateDeliveryData]
+  );
+
+  // Render phone-only form
+  if (!validation.isPhoneValid && state?.status === "new_order") {
+    return (
+      <div className="w-full bg-white rounded-2xl my-5">
+        <div className="py-5 px-2.5 flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <img src={DeliveredBwIcon} alt="" aria-hidden="true" />
+            <h2 className="text-2xl text-black font-bold heading">Delivery</h2>
+          </div>
+          <HeaderActions
+            isFormEmpty={validation.isFormEmpty}
+            status={state?.status}
+            onClipboardPaste={handleClipboardPaste}
+            onHomeAddressClick={handleHomeAddressClick}
+            onResetForm={handleResetForm}
+          />
+        </div>
+
+        <div className="w-full grid grid-cols-1 gap-2.5 px-5 pb-3">
+          <FormInput
+            label="Phone"
+            id="delivery_phone"
+            type="tel"
+            prefix="+1"
+            required
+            value={state?.delivery?.phone || ""}
+            onChange={handlePhoneChange}
+            onKeyUp={formatPhoneWithPrefix}
+            onKeyDown={enforcePhoneFormat}
+            isPhone
+            autoComplete="tel"
+            placeholder=""
+          />
+          <div className="flex items-center justify-between">
+            <img src={clipart} alt="delivery-clipart" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render full form
   return (
     <div className="w-full bg-white rounded-2xl my-5">
       {/* Header */}
       <div className="py-5 px-2.5 flex items-center justify-between gap-2.5">
-        {/* Left side */}
         <div className="flex items-center gap-2.5">
           <img
             src={
-              isCompleted(state).delivery &&
-              itemCompleted(state?.delivery?.items)
+              validation.isFormCompleted
                 ? DeliveredBwFilledIcon
                 : DeliveredBwIcon
             }
-            alt="icon"
+            alt=""
+            aria-hidden="true"
           />
-          <p className="text-2xl text-black font-bold heading">Delivery</p>
+          <h2 className="text-2xl text-black font-bold heading">Delivery</h2>
         </div>
-
-        {/* Right Side */}
-        <div>
-          {state?.status === "new_order" &&
-            (isEmpty(state).delivery ? (
-              <div className="flex items-center gap-5">
-                <p
-                  className="cursor-pointer text-themeDarkGray text-xs"
-                  onClick={handleClipboardPaste}
-                >
-                  Paste from clipboard
-                </p>
-                <img
-                  onClick={handleHomeAddressClick}
-                  src={homeIcon}
-                  alt="home-icon"
-                  className="cursor-pointer"
-                />
-              </div>
-            ) : (
-              <img
-                onClick={handleResetForm}
-                src={RefreshIcon}
-                alt="refresh-icon"
-              />
-            ))}
-        </div>
+        <HeaderActions
+          isFormEmpty={validation.isFormEmpty}
+          status={state?.status}
+          onClipboardPaste={handleClipboardPaste}
+          onHomeAddressClick={handleHomeAddressClick}
+          onResetForm={handleResetForm}
+        />
       </div>
 
-      {/* Delivery Forms Data */}
-      {!isPhoneValid && state?.status === "new_order" ? (
-        <div className="w-full grid grid-cols-1 gap-2.5 px-5 pb-3">
-          <div className="w-full">
-            <label className="text-themeDarkGray text-xs">
-              Phone <span className="text-themeRed">*</span>
-            </label>
-            <input
-              className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-              id="delivery_phone"
-              value={state?.delivery?.phone || ""}
-              onKeyUp={(e) => formatPhoneWithPrefix(e)}
-              onKeyDown={(e) => enforcePhoneFormat(e)}
-              onChange={(e) => handlePhoneInput(e.target.value)}
-            />
-          </div>
-          <img src={clipart} alt="delivery-clipart" />
-        </div>
-      ) : (
-        <div className="w-full grid grid-cols-2 gap-2.5 px-5 pb-3">
-          {/* Phone */}
-          <div className="w-full">
-            <label className="text-themeDarkGray text-xs">
-              Phone <span className="text-themeRed">*</span>
-            </label>
-            <input
-              disabled={isEditingDisabled}
-              className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-              id="delivery_phone"
-              value={state?.delivery?.phone || ""}
-              onKeyUp={(e) => formatPhoneWithPrefix(e)}
-              onKeyDown={(e) => enforcePhoneFormat(e)}
-              onChange={(e) => updateDeliveryField("phone", e.target.value)}
-            />
-          </div>
+      {/* Form Content */}
+      <div className="w-full grid grid-cols-2 gap-2.5 px-5 pb-3">
+        {/* Phone */}
+        <FormInput
+          label="Phone"
+          id="delivery_phone"
+          type="tel"
+          prefix="+1"
+          required
+          disabled={!permissions.canEdit}
+          value={state?.delivery?.phone || ""}
+          onChange={handlePhoneChange}
+          onKeyUp={formatPhoneWithPrefix}
+          onKeyDown={enforcePhoneFormat}
+          isPhone
+          autoComplete="tel"
+        />
 
-          {/* Name */}
-          <div className="w-full">
-            <label className="text-themeDarkGray text-xs">
-              Name <span className="text-themeRed">*</span>
-            </label>
-            <input
-              ref={nameInputRef2}
-              disabled={isEditingDisabled}
-              type="text"
-              id="delivery_name"
-              className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-              value={state?.delivery?.name || ""}
+        {/* Name */}
+        <FormInput
+          ref={nameInputRef}
+          label="Name"
+          id="delivery_name"
+          required
+          disabled={!permissions.canEdit}
+          value={state?.delivery?.name || ""}
+          onChange={handleNameChange}
+          capitalize
+        />
+
+        {/* Address */}
+        <div
+          className={`w-full ${
+            !state?.delivery?.address?.lat ? "col-span-2" : ""
+          }`}
+        >
+          <AddressAutocomplete
+            label="Address"
+            id="delivery_address"
+            required
+            disabled={!permissions.canEditAddress}
+            value={state?.delivery?.address}
+            onChange={handleAddressChange}
+            options={autoFillDropdown}
+            error={addressError}
+            placeholder=""
+          />
+        </div>
+
+        {/* Apt and Access Code */}
+        {state?.delivery?.address?.lat && (
+          <div className="w-full flex items-center justify-between gap-2.5">
+            <FormInput
+              ref={aptInputRef}
+              label="Apt"
+              id="delivery_apt"
+              disabled={!permissions.canEdit}
+              value={state?.delivery?.apt || ""}
+              onChange={(e) => updateDeliveryField("apt", e.target.value)}
+            />
+            <FormInput
+              label="Access code"
+              id="delivery_access_code"
+              disabled={!permissions.canEdit}
+              value={state?.delivery?.access_code || ""}
               onChange={(e) =>
-                updateDeliveryField("name", formatName(e.target.value))
+                updateDeliveryField("access_code", e.target.value)
               }
             />
           </div>
+        )}
 
-          {/* Address */}
-          <div
-            className={`w-full ${
-              !state?.delivery?.address?.lat ? "col-span-2" : ""
-            }`}
-          >
-            <label className="text-themeDarkGray text-xs">
-              Address <span className="text-themeRed">*</span>
-            </label>
-            <input
-              autoComplete="new-password"
-              disabled={isAddressEditingDisabled}
-              value={state?.delivery?.address?.street_address_1 || ""}
-              type="search"
-              className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-              list="delivery_autofill"
-              onChange={(e) => handleAddressInput(e.target.value)}
-            />
-
-            <datalist id="delivery_autofill">
-              {autoFillDropdown.map((item, key) => (
-                <option key={key} value={item.formatted || ""} />
-              ))}
-            </datalist>
-
-            {state?.delivery?.address?.zone_ids === null && (
-              <p className="text-themeRed text-xs">
-                Delivery address outside of zone.
-              </p>
-            )}
-          </div>
-
-          {/* Apt, Access code */}
-          {state?.delivery?.address?.lat && (
-            <div className="w-full flex items-center justify-between gap-2.5">
-              {/* Apt */}
-              <div className="w-full">
-                <label className="text-themeDarkGray text-xs">Apt</label>
-                <input
-                  ref={aptInputRef2}
-                  disabled={isEditingDisabled}
-                  type="text"
-                  id="delivery_apt"
-                  className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                  value={state?.delivery?.apt || ""}
-                  onChange={(e) => updateDeliveryField("apt", e.target.value)}
-                />
-              </div>
-
-              {/* Access code */}
-              <div className="w-full">
-                <label className="text-themeDarkGray text-xs">
-                  Access code
-                </label>
-                <input
-                  disabled={isEditingDisabled}
-                  type="text"
-                  id="delivery_access_code"
-                  className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                  value={state?.delivery?.access_code || ""}
-                  onChange={(e) =>
-                    updateDeliveryField("access_code", e.target.value)
-                  }
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Courier Note */}
-          <div className="w-full col-span-2 relative">
-            <div className="flex justify-between items-center">
-              <label className="text-themeDarkGray text-xs">Courier note</label>
-              <div className="text-xs text-themeDarkGray">
-                {state?.delivery?.note?.length || 0}/100
-              </div>
-            </div>
-            <textarea
-              disabled={isEditingDisabled}
-              id="delivery_note"
-              value={state?.delivery?.note || ""}
-              onChange={(e) => updateDeliveryField("note", e.target.value)}
-              className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-              maxLength={100}
-            />
-          </div>
-
-          {/* Verification Options */}
-          <div>
-            <label className="text-themeDarkGray text-xs">
-              Proof of delivery
-            </label>
-            <div className="flex items-center gap-2.5 mt-1">
-              {/* Picture */}
-              <div className="flex items-center gap-1.5">
-                <input
-                  disabled={isEditingDisabled}
-                  id="DeliveryPicture"
-                  type="checkbox"
-                  className="accent-themeLightOrangeTwo"
-                  checked={
-                    state?.delivery?.required_verification?.picture || false
-                  }
-                  onChange={(e) =>
-                    toggleVerification("picture", e.target.checked)
-                  }
-                />
-                <label
-                  htmlFor="DeliveryPicture"
-                  className="text-black text-sm leading-none pt-[3px] cursor-pointer"
-                >
-                  Picture
-                </label>
-              </div>
-
-              {/* Recipient */}
-              <div className="flex items-center gap-1.5">
-                <input
-                  disabled={isEditingDisabled}
-                  id="recipient"
-                  type="checkbox"
-                  className="accent-themeLightOrangeTwo"
-                  checked={
-                    state?.delivery?.required_verification?.recipient || false
-                  }
-                  onChange={(e) =>
-                    toggleVerification("recipient", e.target.checked)
-                  }
-                />
-                <label
-                  htmlFor="recipient"
-                  className="text-black text-sm leading-none pt-[3px] cursor-pointer"
-                >
-                  Recipient
-                </label>
-              </div>
-
-              {/* Signature */}
-              <div className="flex items-center gap-1.5">
-                <input
-                  disabled={isEditingDisabled}
-                  id="signature"
-                  type="checkbox"
-                  className="accent-themeLightOrangeTwo"
-                  checked={
-                    state?.delivery?.required_verification?.signature || false
-                  }
-                  onChange={(e) =>
-                    toggleVerification("signature", e.target.checked)
-                  }
-                />
-                <label
-                  htmlFor="signature"
-                  className="text-black text-sm leading-none pt-[3px] cursor-pointer"
-                >
-                  Signature
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Order Information Header */}
-          <div className="w-full flex col-span-2">
-            <p className="text-xl text-black font-bold heading py-3">
-              Order information
-            </p>
-          </div>
-
-          {/* Order Information Boxes */}
-          <div className="w-full flex items-center justify-between gap-2.5 col-span-2">
-            {/* Tip */}
-            <div className="w-full">
-              <label className="text-themeDarkGray text-xs">Tip</label>
-              <div className="w-full flex justify-between gap-2.5">
-                <i className="pb-[4px]">$</i>
-                <input
-                  disabled={isEditingDisabled}
-                  type="number"
-                  step=".01"
-                  min="0"
-                  className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                  value={tip}
-                  onBlur={(e) => {
-                    const formattedValue = parseFloat(e.target.value).toFixed(
-                      2
-                    );
-                    setTip(formattedValue);
-                    updateTip(parseFloat(formattedValue));
-                  }}
-                  onChange={(e) => setTip(e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Order ID */}
-            <div className="w-full">
-              <label className="text-themeDarkGray text-xs">
-                External order id
-              </label>
-              <input
-                disabled={isEditingDisabled}
-                type="text"
-                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                value={state?.delivery?.external_order_id || ""}
-                onChange={(e) =>
-                  updateDeliveryField("external_order_id", e.target.value)
-                }
-              />
-            </div>
-          </div>
-
-          {/* Items */}
-          {state?.delivery?.items?.map((item, index) => (
-            <Fragment key={index}>
-              <div className="w-full flex items-center justify-between gap-2.5 col-span-2">
-                {/* Type Field */}
-                <div className="w-full">
-                  <label className="text-themeDarkGray text-xs">
-                    Item name <span className="text-themeRed">*</span>
-                  </label>
-                  <input
-                    disabled={isEditingDisabled}
-                    value={item.description || ""}
-                    type="search"
-                    className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b border-b-contentBg outline-none"
-                    list={`type${index}`}
-                    onChange={(e) =>
-                      updateItem(index, "description", e.target.value)
-                    }
-                  />
-                  <datalist id={`type${index}`}>
-                    {Object.keys(items).map((itemOption) => (
-                      <option key={itemOption} value={itemOption} />
-                    ))}
-                  </datalist>
-                </div>
-
-                {/* Size Field */}
-                <div className="w-full">
-                  <label className="text-themeDarkGray text-xs">
-                    Size <span className="text-themeRed">*</span>
-                  </label>
-                  <div className="flex items-center gap-1 border-b border-b-contentBg pb-1">
-                    <select
-                      disabled={isEditingDisabled}
-                      className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack outline-none"
-                      id={`size${index}`}
-                      value={item.size || "xsmall"}
-                      onChange={(e) =>
-                        updateItem(index, "size", e.target.value)
-                      }
-                    >
-                      {sizes.map((size) => (
-                        <option key={size.key} value={size.key}>
-                          {size.value}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Quantity Field */}
-                <div className="">
-                  <label className="text-themeDarkGray text-xs">
-                    Quantity <span className="text-themeRed">*</span>
-                  </label>
-                  <div className="flex items-center justify-between gap-2.5">
-                    {item.quantity <= 1 && state?.delivery?.items.length > 1 ? (
-                      <span
-                        className="quantity-btn"
-                        onClick={() => !isEditingDisabled && removeItem(index)}
-                      >
-                        <img src={TashIcon} width="10px" alt="Remove" />
-                      </span>
-                    ) : (
-                      <span
-                        className="quantity-btn"
-                        onClick={() =>
-                          !isEditingDisabled && decreaseQuantity(index)
-                        }
-                      >
-                        -
-                      </span>
-                    )}
-
-                    <input
-                      disabled={isEditingDisabled}
-                      type="number"
-                      step={1}
-                      className="text-center text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 outline-none w-[60px]"
-                      value={item.quantity || 1}
-                      onChange={(e) =>
-                        updateItem(
-                          index,
-                          "quantity",
-                          parseInt(e.target.value) || 1
-                        )
-                      }
-                    />
-                    <span
-                      className="quantity-btn"
-                      onClick={() =>
-                        !isEditingDisabled && increaseQuantity(index)
-                      }
-                    >
-                      +
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Add item button (only on last item) */}
-              {index === state?.delivery?.items?.length - 1 && (
-                <div className="w-full flex justify-between gap-2.5 col-span-2 text-center">
-                  <button
-                    disabled={isEditingDisabled}
-                    className="bg-newOrderBtnBg py-1.5 px-themePadding rounded-[30px] text-white text-sm flex items-center gap-2"
-                    onClick={() => !isEditingDisabled && addItem()}
-                  >
-                    <img src={PlusIcon} alt="plus-icon" />
-                    Add item
-                  </button>
-                </div>
-              )}
-            </Fragment>
-          ))}
+        {/* Courier Note */}
+        <div className="w-full col-span-2">
+          <FormTextarea
+            label="Courier note"
+            id="delivery_note"
+            disabled={!permissions.canEdit}
+            value={state?.delivery?.note || ""}
+            onChange={(e) => updateDeliveryField("note", e.target.value)}
+            maxLength={100}
+            showCharacterCount
+            rows={1}
+            resizable={true}
+          />
         </div>
-      )}
+
+        {/* Verification Options */}
+        <div className="w-full">
+          <label className="text-themeDarkGray text-xs">
+            Proof of delivery
+          </label>
+          <div className="flex items-center gap-2.5 mt-1">
+            <FormCheckbox
+              id="delivery_picture"
+              value="Picture"
+              disabled={!permissions.canEdit}
+              checked={state?.delivery?.required_verification?.picture || false}
+              onChange={handleVerificationChange("picture")}
+            />
+            <FormCheckbox
+              id="delivery_recipient"
+              value="Recipient"
+              disabled={!permissions.canEdit}
+              checked={
+                state?.delivery?.required_verification?.recipient || false
+              }
+              onChange={handleVerificationChange("recipient")}
+            />
+            <FormCheckbox
+              id="delivery_signature"
+              value="Signature"
+              disabled={!permissions.canEdit}
+              checked={
+                state?.delivery?.required_verification?.signature || false
+              }
+              onChange={handleVerificationChange("signature")}
+            />
+          </div>
+        </div>
+
+        {/* Order Information Header */}
+        <div className="w-full col-span-2">
+          <h3 className="text-xl text-black font-bold heading py-3">
+            Order information
+          </h3>
+        </div>
+
+        {/* Tip and External Order ID */}
+        <div className="w-full flex items-center justify-between gap-2.5 col-span-2">
+          <FormInput
+            label="Tip"
+            id="tip"
+            type="number"
+            step="0.01"
+            prefix="$"
+            value={tip}
+            onChange={handleTipChange}
+            onBlur={handleTipBlur}
+          />
+
+          <FormInput
+            label="External order id"
+            id="delivery_external_order_id"
+            disabled={!permissions.canEdit}
+            value={state?.delivery?.external_order_id || ""}
+            onChange={(e) =>
+              updateDeliveryField("external_order_id", e.target.value)
+            }
+          />
+        </div>
+
+        {/* Items */}
+        {state?.delivery?.items?.map((item, index) => (
+          <Fragment key={index}>
+            <ItemRow
+              item={item}
+              index={index}
+              itemsLength={state.delivery.items.length}
+              permissions={permissions}
+              useMeasurements={useMeasurements}
+              onItemUpdate={updateItem}
+              onQuantityIncrease={increaseQuantity}
+              onQuantityDecrease={decreaseQuantity}
+              onItemRemove={removeItem}
+              onMeasurementUpdate={updateMeasurement}
+            />
+
+            {/* Add item button (only on last item) */}
+            {index === state?.delivery?.items?.length - 1 && (
+              <div className="w-full flex justify-between gap-2.5 col-span-2 text-center items-center mt-3">
+                <button
+                  disabled={!permissions.canEdit}
+                  className="bg-newOrderBtnBg py-1.5 px-themePadding rounded-[30px] text-white text-sm flex items-center gap-2 disabled:opacity-50"
+                  onClick={addItem}
+                >
+                  <img src={PlusIcon} alt="plus-icon" />
+                  Add item
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleMeasurements(index)}
+                  disabled={!permissions.canEdit}
+                  className="text-xs text-themeOrange hover:underline disabled:text-themeDarkGray disabled:hover:no-underline"
+                >
+                  {useMeasurements ? "Use size" : "Use measurements"}
+                </button>
+              </div>
+            )}
+          </Fragment>
+        ))}
+      </div>
     </div>
   );
-}
+});
 
-export default AddDelivery;
+DeliveryForm.displayName = "DeliveryForm";
+
+export default DeliveryForm;

@@ -7,14 +7,14 @@ interface OrderItem {
   pickup: {
     name: string;
     address: {
-      street: string;
+      street_address_1: string;
       state: string;
     };
   };
   delivery: {
     name: string;
     address: {
-      street: string;
+      street_address_1: string;
       state: string;
     };
   };
@@ -59,7 +59,7 @@ const TrackingOrderCard = ({ item }: { item: OrderItem }) => {
           {/* Pickup */}
           <div>
             <p className="text-xs text-themeDarkGray">
-              {item?.pickup?.address.street}
+              {item?.pickup?.address.street_address_1}
             </p>
             <p className="text-xs text-themeDarkGray">{item?.pickup?.name}</p>
           </div>
@@ -67,7 +67,7 @@ const TrackingOrderCard = ({ item }: { item: OrderItem }) => {
           {/* delivery */}
           <div className="text-right">
             <p className="text-xs text-themeDarkGray">
-              {item?.delivery.address.street}
+              {item?.delivery.address.street_address_1}
             </p>
             <p className="text-xs text-themeDarkGray">{item?.delivery?.name}</p>
           </div>

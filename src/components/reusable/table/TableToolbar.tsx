@@ -3,64 +3,24 @@ import SearchBox from "./SearchBox";
 import DownloadIcon from "../../../assets/download-icon.jsx";
 import UploadIcon from "../../../assets/upload-icon.jsx";
 import RefreshIcon from "../../../assets/refresh-icon.jsx";
-import {
-  FaCalendarAlt,
-  FaTruck,
-  FaChevronDown,
-  FaUpload,
-  FaStore,
-  FaDesktop,
-} from "react-icons/fa";
-import DatePicker from "react-datepicker"; // You'll need to install this
+import { FaCalendarAlt, FaChevronDown } from "react-icons/fa";
+import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 
-// Define the filter options interface
-export interface FilterOptions {
-  dateRange: {
-    startDate: Date | null;
-    endDate: Date | null;
-  };
-  statuses: string[];
-  storeType: string | null;
-  platforms: string[];
+// Generic filter configuration interface
+interface FilterConfig {
+  key: string; // Unique identifier for the filter
+  label: string; // Display label (e.g., "Role", "Status", "Platform")
+  icon: React.ReactNode; // Icon component
+  type: "dropdown" | "date-range" | "single-select"; // Filter type
+  options?: Array<{ value: string; label: string; description?: string }>; // For dropdown filters
+  multiple?: boolean; // Whether multiple selection is allowed (default: true for dropdown)
 }
 
-// Define available status options in correct order
-const STATUS_OPTIONS = [
-  "processing",
-  "assigned",
-  "arrived_at_pickup",
-  "picked_up",
-  "arrived_at_delivery",
-  "undeliverable", // Added
-  "delivered",
-  "returned",
-  "canceled",
-];
-
-// Status descriptions for tooltips
-const STATUS_DESCRIPTIONS: Record<string, string> = {
-  processing:
-    "The order has been placed but is not yet assigned with a driver.",
-  assigned: "The order has been assigned to a driver.",
-  arrived_at_pickup: "The driver has arrived at the order pick-up location.",
-  picked_up: "The order has been picked-up by the driver.",
-  arrived_at_delivery: "The driver has arrived at the order delivery location.",
-  undeliverable:
-    "The driver was unable to complete the delivery and the order will be returned to the pick-up location.",
-  delivered: "The order has been successfully delivered by the driver.",
-  returned:
-    "The order has been returned to the pick-up location by the driver after a failed delivery attempt.",
-  canceled: "The order was canceled prior to pick-up.",
-};
-
-// Define store filter options
-const STORE_OPTIONS = [
-  { value: "all", label: "All Location" },
-  { value: "pickup", label: "Pickup Location" },
-  { value: "delivery", label: "Delivery Location" },
-  { value: "neither", label: "Neither Location" },
-];
+// Generic filter state interface
+export interface FilterState {
+  [key: string]: any; // Dynamic keys based on filter configuration
+}
 
 interface TableToolbarProps {
   // Tool properties
@@ -69,22 +29,16 @@ interface TableToolbarProps {
   refreshEnabled?: boolean;
   uploadEnabled?: boolean;
 
-  // Filter properties
-  dateRangeFilterEnabled?: boolean;
-  statusFilterEnabled?: boolean;
-  storeFilterEnabled?: boolean;
-  platformFilterEnabled?: boolean; // New prop for platform filter
-
-  // Data for platform options
-  platformOptions?: Array<{ value: string; label: string }>;
+  // Filter configuration - pass an array of filter configs
+  filterConfigs?: FilterConfig[];
 
   // Action handlers
   onSearch?: (value: string) => void;
   onDownloadAll?: () => void;
   onDownloadCurrent?: () => void;
-  onRefresh?: (callback: () => void) => void; // Changed to accept a callback
+  onRefresh?: (callback: () => void) => void;
   onUpload?: () => void;
-  onFilterChange?: (filters: FilterOptions) => void;
+  onFilterChange?: (filters: FilterState) => void;
 }
 
 const TableToolbar = ({
@@ -94,14 +48,8 @@ const TableToolbar = ({
   refreshEnabled = false,
   uploadEnabled = false,
 
-  // Filter defaults
-  dateRangeFilterEnabled = false,
-  statusFilterEnabled = false,
-  storeFilterEnabled = false,
-  platformFilterEnabled = false,
-
-  // Platform options with default
-  platformOptions = [{ value: "portal", label: "Portal" }],
+  // Filter configuration
+  filterConfigs = [],
 
   // Action handlers
   onSearch,
@@ -112,30 +60,46 @@ const TableToolbar = ({
   onFilterChange,
 }: TableToolbarProps) => {
   const [showDownloadTooltip, setShowDownloadTooltip] = useState(false);
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [showStoreDropdown, setShowStoreDropdown] = useState(false);
-  const [showPlatformDropdown, setShowPlatformDropdown] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false); // State for tracking refresh animation
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Dynamic state for dropdown visibility
+  const [dropdownStates, setDropdownStates] = useState<{
+    [key: string]: boolean;
+  }>({});
+
+  // Refs for dropdown management - we'll create them dynamically
+  const dropdownRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const buttonRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
   const downloadTooltipRef = useRef<HTMLDivElement>(null);
   const downloadButtonRef = useRef<HTMLDivElement>(null);
-  const statusDropdownRef = useRef<HTMLDivElement>(null);
-  const statusButtonRef = useRef<HTMLDivElement>(null);
-  const storeDropdownRef = useRef<HTMLDivElement>(null);
-  const storeButtonRef = useRef<HTMLDivElement>(null);
-  const platformDropdownRef = useRef<HTMLDivElement>(null);
-  const platformButtonRef = useRef<HTMLDivElement>(null);
 
-  // State for filters
-  const [filters, setFilters] = useState<FilterOptions>({
-    dateRange: {
-      startDate: null,
-      endDate: null,
-    },
-    statuses: [],
-    storeType: "all", // Default to "all"
-    platforms: [], // Initialize platforms array
+  // Dynamic filter state based on configuration
+  const [filters, setFilters] = useState<FilterState>(() => {
+    const initialState: FilterState = {};
+
+    filterConfigs.forEach((config) => {
+      if (config.type === "dropdown") {
+        initialState[config.key] = [];
+      } else if (config.type === "single-select") {
+        initialState[config.key] = "all";
+      } else if (config.type === "date-range") {
+        initialState[config.key] = {
+          startDate: null,
+          endDate: null,
+        };
+      }
+    });
+
+    return initialState;
   });
+
+  // Toggle dropdown visibility
+  const toggleDropdown = (key: string) => {
+    setDropdownStates((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -150,221 +114,169 @@ const TableToolbar = ({
         setShowDownloadTooltip(false);
       }
 
-      // Handle status dropdown
-      if (
-        statusDropdownRef.current &&
-        statusButtonRef.current &&
-        !statusDropdownRef.current.contains(event.target as Node) &&
-        !statusButtonRef.current.contains(event.target as Node)
-      ) {
-        setShowStatusDropdown(false);
-      }
+      // Handle dynamic dropdowns
+      Object.keys(dropdownStates).forEach((key) => {
+        const dropdownRef = dropdownRefs.current[key];
+        const buttonRef = buttonRefs.current[key];
 
-      // Handle store dropdown
-      if (
-        storeDropdownRef.current &&
-        storeButtonRef.current &&
-        !storeDropdownRef.current.contains(event.target as Node) &&
-        !storeButtonRef.current.contains(event.target as Node)
-      ) {
-        setShowStoreDropdown(false);
-      }
-
-      // Handle platform dropdown
-      if (
-        platformDropdownRef.current &&
-        platformButtonRef.current &&
-        !platformDropdownRef.current.contains(event.target as Node) &&
-        !platformButtonRef.current.contains(event.target as Node)
-      ) {
-        setShowPlatformDropdown(false);
-      }
+        if (
+          dropdownRef &&
+          buttonRef &&
+          !dropdownRef.contains(event.target as Node) &&
+          !buttonRef.contains(event.target as Node)
+        ) {
+          setDropdownStates((prev) => ({ ...prev, [key]: false }));
+        }
+      });
     };
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [dropdownStates]);
 
-  // Handle date change
-  const handleDateChange = (type: "start" | "end", date: Date | null) => {
+  // Handle filter changes
+  const updateFilter = (key: string, value: any) => {
     const newFilters = {
       ...filters,
-      dateRange: {
-        ...filters.dateRange,
-        [type === "start" ? "startDate" : "endDate"]: date,
-      },
+      [key]: value,
     };
 
     setFilters(newFilters);
-
-    // Call the onFilterChange callback immediately when dates change
     if (onFilterChange) {
       onFilterChange(newFilters);
     }
   };
 
-  // Handle status filter change
-  const toggleStatus = (status: string) => {
-    let newStatuses: string[];
+  // Handle dropdown filter toggle
+  const toggleDropdownFilter = (filterKey: string, value: string) => {
+    const currentArray = filters[filterKey] || [];
+    let newArray: string[];
 
-    if (filters.statuses.includes(status)) {
-      // Remove status if already selected
-      newStatuses = filters.statuses.filter((s) => s !== status);
+    if (currentArray.includes(value)) {
+      newArray = currentArray.filter((item: string) => item !== value);
     } else {
-      // Add status if not selected
-      newStatuses = [...filters.statuses, status];
+      newArray = [...currentArray, value];
     }
 
-    const newFilters = {
-      ...filters,
-      statuses: newStatuses,
-    };
-
-    setFilters(newFilters);
-
-    // Call the onFilterChange callback immediately when statuses change
-    if (onFilterChange) {
-      onFilterChange(newFilters);
-    }
+    updateFilter(filterKey, newArray);
   };
 
-  // Handle platform filter change
-  const togglePlatform = (platform: string) => {
-    let newPlatforms: string[];
-
-    if (filters.platforms.includes(platform)) {
-      // Remove platform if already selected
-      newPlatforms = filters.platforms.filter((p) => p !== platform);
-    } else {
-      // Add platform if not selected
-      newPlatforms = [...filters.platforms, platform];
-    }
-
-    const newFilters = {
-      ...filters,
-      platforms: newPlatforms,
-    };
-
-    setFilters(newFilters);
-
-    // Call the onFilterChange callback immediately when platforms change
-    if (onFilterChange) {
-      onFilterChange(newFilters);
-    }
+  // Handle single select filter
+  const selectSingleFilter = (filterKey: string, value: string) => {
+    updateFilter(filterKey, value);
+    setDropdownStates((prev) => ({ ...prev, [filterKey]: false }));
   };
 
-  // Handle store filter change
-  const selectStore = (storeType: string) => {
-    const newFilters = {
-      ...filters,
-      storeType,
+  // Handle date range changes
+  const handleDateChange = (
+    filterKey: string,
+    type: "startDate" | "endDate",
+    date: Date | null
+  ) => {
+    const currentRange = filters[filterKey] || {
+      startDate: null,
+      endDate: null,
+    };
+    const newRange = {
+      ...currentRange,
+      [type]: date,
     };
 
-    setFilters(newFilters);
-    setShowStoreDropdown(false); // Close dropdown after selection
+    updateFilter(filterKey, newRange);
+  };
 
-    // Call the onFilterChange callback immediately
-    if (onFilterChange) {
-      onFilterChange(newFilters);
+  // Clear specific filter
+  const clearFilter = (filterKey: string, config: FilterConfig) => {
+    let clearedValue;
+
+    if (config.type === "dropdown") {
+      clearedValue = [];
+    } else if (config.type === "single-select") {
+      clearedValue = "all";
+    } else if (config.type === "date-range") {
+      clearedValue = { startDate: null, endDate: null };
     }
+
+    updateFilter(filterKey, clearedValue);
   };
 
   // Clear all filters
   const handleClearFilters = () => {
-    const clearedFilters = {
-      dateRange: {
-        startDate: null,
-        endDate: null,
-      },
-      statuses: [],
-      storeType: "all",
-      platforms: [],
-    };
+    const clearedFilters: FilterState = {};
+
+    filterConfigs.forEach((config) => {
+      if (config.type === "dropdown") {
+        clearedFilters[config.key] = [];
+      } else if (config.type === "single-select") {
+        clearedFilters[config.key] = "all";
+      } else if (config.type === "date-range") {
+        clearedFilters[config.key] = { startDate: null, endDate: null };
+      }
+    });
 
     setFilters(clearedFilters);
-
     if (onFilterChange) {
       onFilterChange(clearedFilters);
     }
   };
 
-  // Format selected statuses for display
-  const getStatusDisplayText = () => {
-    if (filters.statuses.length === 0) {
-      return "All Statuses";
-    } else if (filters.statuses.length === 1) {
-      // Convert snake_case to Title Case with spaces
-      const status = filters.statuses[0];
-      return status
-        .split("_")
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" ");
-    } else if (filters.statuses.length === STATUS_OPTIONS.length) {
-      return "All Statuses";
-    } else {
-      return `${filters.statuses.length} selected`;
-    }
-  };
-
-  // Format selected platforms for display
-  const getPlatformDisplayText = () => {
-    if (filters.platforms.length === 0) {
-      return "All Platforms";
-    } else if (filters.platforms.length === 1) {
-      const platform = platformOptions.find(
-        (p) => p.value === filters.platforms[0]
+  // Get display text for dropdown filters
+  const getDropdownDisplayText = (
+    config: FilterConfig,
+    selectedValues: string[]
+  ) => {
+    if (selectedValues.length === 0) {
+      return `All ${config.label}s`;
+    } else if (selectedValues.length === 1) {
+      const option = config.options?.find(
+        (opt) => opt.value === selectedValues[0]
       );
-      return platform ? platform.label : filters.platforms[0];
-    } else if (filters.platforms.length === platformOptions.length) {
-      return "All Platforms";
+      return option ? option.label : selectedValues[0];
+    } else if (selectedValues.length === config.options?.length) {
+      return `All ${config.label}s`;
     } else {
-      return `${filters.platforms.length} selected`;
+      return `${selectedValues.length} selected`;
     }
   };
 
-  // Get current store option label
-  const getStoreLabel = () => {
-    const option = STORE_OPTIONS.find(
-      (option) => option.value === filters.storeType
-    );
-    return option ? option.label : "All Locations";
+  // Get display text for single select filters
+  const getSingleSelectDisplayText = (
+    config: FilterConfig,
+    selectedValue: string
+  ) => {
+    if (selectedValue === "all") {
+      return `All ${config.label}s`;
+    }
+    const option = config.options?.find((opt) => opt.value === selectedValue);
+    return option ? option.label : selectedValue;
   };
 
-  // Handle refresh button click with animation using callback pattern
+  // Handle refresh
   const handleRefreshClick = () => {
     if (onRefresh && !isRefreshing) {
       setIsRefreshing(true);
 
-      // Record the start time
       const startTime = Date.now();
-
-      // Call the onRefresh function and pass a callback that ensures minimum animation time
       onRefresh(() => {
         const elapsedTime = Date.now() - startTime;
-        const minAnimationTime = 650; // Minimum time for one full rotation (in ms)
+        const minAnimationTime = 650;
 
         if (elapsedTime < minAnimationTime) {
-          // If the operation completed too quickly, delay stopping the animation
           setTimeout(() => {
             setIsRefreshing(false);
           }, minAnimationTime - elapsedTime);
         } else {
-          // Operation took longer than our minimum time, stop animation immediately
           setIsRefreshing(false);
         }
       });
     }
   };
 
-  // Add custom CSS to inject in the document head
+  // Add CSS for animations
   useEffect(() => {
-    // Create a style element
     const styleElement = document.createElement("style");
-
-    // Define the CSS to fix the z-index issue with the DatePicker
-    // and add our refresh spin animation
     styleElement.textContent = `
       .react-datepicker-popper {
         z-index: 9999 !important;
@@ -374,12 +286,8 @@ const TableToolbar = ({
       }
       
       @keyframes spin {
-        from {
-          transform: rotate(0deg);
-        }
-        to {
-          transform: rotate(360deg);
-        }
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
       }
       
       .refresh-spin {
@@ -387,296 +295,219 @@ const TableToolbar = ({
       }
     `;
 
-    // Append the style element to the document head
     document.head.appendChild(styleElement);
-
-    // Clean up function to remove the style element when component unmounts
     return () => {
       document.head.removeChild(styleElement);
     };
   }, []);
 
-  // Check if any filters are active and we should show the clear all button
-  const isAnyFilterActive =
-    filters.dateRange.startDate ||
-    filters.dateRange.endDate ||
-    filters.statuses.length > 0 ||
-    filters.storeType !== "all" ||
-    filters.platforms.length > 0;
+  // Check if any filters are active
+  const isAnyFilterActive = filterConfigs.some((config) => {
+    const value = filters[config.key];
+    if (config.type === "dropdown" && Array.isArray(value)) {
+      return value.length > 0;
+    } else if (config.type === "single-select") {
+      return value !== "all";
+    } else if (config.type === "date-range" && value) {
+      return value.startDate || value.endDate;
+    }
+    return false;
+  });
 
-  // Function to render a divider
   const renderDivider = () => <div className="h-5 w-px bg-gray-300 mx-3"></div>;
+
+  // Render date range filter
+  const renderDateRangeFilter = (config: FilterConfig) => {
+    const dateRange = filters[config.key] || { startDate: null, endDate: null };
+
+    return (
+      <div className="flex items-center">
+        <div className="flex items-center">
+          {config.icon}
+          <span className="text-sm font-medium text-gray-600 ml-1">
+            {config.label}:
+          </span>
+        </div>
+
+        <div className="flex items-center ml-2">
+          <DatePicker
+            selected={dateRange.startDate}
+            onChange={(date) => handleDateChange(config.key, "startDate", date)}
+            className="px-2 py-1 border-b border-gray-300 focus:outline-none hover:border-gray-500 text-sm w-24 sm:w-28"
+            placeholderText="Start Date"
+            dateFormat="MM/dd/yyyy"
+            popperClassName="datepicker-popper"
+            portalId="root"
+            popperPlacement="bottom-start"
+          />
+          <span className="text-gray-500 mx-1">to</span>
+          <DatePicker
+            selected={dateRange.endDate}
+            onChange={(date) => handleDateChange(config.key, "endDate", date)}
+            className="px-2 py-1 border-b border-gray-300 focus:outline-none hover:border-gray-500 text-sm w-24 sm:w-28"
+            placeholderText="End Date"
+            dateFormat="MM/dd/yyyy"
+            minDate={dateRange.startDate}
+            popperClassName="datepicker-popper"
+            portalId="root"
+            popperPlacement="bottom-start"
+          />
+        </div>
+      </div>
+    );
+  };
+
+  // Render dropdown filter
+  const renderDropdownFilter = (config: FilterConfig) => {
+    const selectedValues = filters[config.key] || [];
+    const isOpen = dropdownStates[config.key] || false;
+
+    return (
+      <div className="flex items-center">
+        <div className="flex items-center">
+          {config.icon}
+          <span className="text-sm font-medium text-gray-600 ml-1">
+            {config.label}:
+          </span>
+        </div>
+
+        <div className="relative ml-2">
+          <div
+            ref={(el) => (buttonRefs.current[config.key] = el)}
+            className="flex items-center justify-between gap-2 px-3 py-1 border-b border-gray-300 hover:border-gray-500 text-sm min-w-[120px] bg-white focus:outline-none cursor-pointer"
+            onClick={() => toggleDropdown(config.key)}
+          >
+            <span className="truncate">
+              {getDropdownDisplayText(config, selectedValues)}
+            </span>
+            <FaChevronDown size={10} className="text-gray-500" />
+          </div>
+
+          {isOpen && (
+            <div
+              ref={(el) => (dropdownRefs.current[config.key] = el)}
+              className="absolute left-0 top-full mt-1 bg-white shadow-dropdownShadow rounded-md z-[9999] w-64"
+            >
+              <div className="p-2 max-h-64 overflow-y-auto">
+                {config.options?.map((option) => (
+                  <div
+                    key={option.value}
+                    className="flex items-center px-2 py-1.5 hover:bg-gray-50 cursor-pointer"
+                    onClick={() =>
+                      toggleDropdownFilter(config.key, option.value)
+                    }
+                    title={option.description || ""}
+                  >
+                    <div className="w-5 h-5 flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedValues.includes(option.value)}
+                        onChange={() => {}}
+                        className="w-4 h-4 accent-gray-500"
+                      />
+                    </div>
+                    <span className="ml-2 text-sm">{option.label}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="border-t p-2 flex justify-between">
+                <button
+                  className="text-xs text-gray-500 hover:text-gray-700"
+                  onClick={() => clearFilter(config.key, config)}
+                >
+                  Clear {config.label}
+                </button>
+                <button
+                  className="text-xs text-gray-700 hover:text-gray-900"
+                  onClick={() => toggleDropdown(config.key)}
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Render single select filter
+  const renderSingleSelectFilter = (config: FilterConfig) => {
+    const selectedValue = filters[config.key] || "all";
+    const isOpen = dropdownStates[config.key] || false;
+
+    return (
+      <div className="flex items-center">
+        <div className="flex items-center">
+          {config.icon}
+          <span className="text-sm font-medium text-gray-600 ml-1">
+            {config.label}:
+          </span>
+        </div>
+
+        <div className="relative ml-2">
+          <div
+            ref={(el) => (buttonRefs.current[config.key] = el)}
+            className="flex items-center justify-between gap-2 px-3 py-1 border-b border-gray-300 hover:border-gray-500 text-sm min-w-[120px] bg-white focus:outline-none cursor-pointer"
+            onClick={() => toggleDropdown(config.key)}
+          >
+            <span className="truncate">
+              {getSingleSelectDisplayText(config, selectedValue)}
+            </span>
+            <FaChevronDown size={10} className="text-gray-500" />
+          </div>
+
+          {isOpen && (
+            <div
+              ref={(el) => (dropdownRefs.current[config.key] = el)}
+              className="absolute left-0 top-full mt-1 bg-white shadow-dropdownShadow rounded-md z-[9999] w-48"
+            >
+              {config.options?.map((option) => (
+                <div
+                  key={option.value}
+                  className={`px-4 py-2 hover:bg-gray-50 cursor-pointer ${
+                    selectedValue === option.value ? "bg-gray-50" : ""
+                  }`}
+                  onClick={() => selectSingleFilter(config.key, option.value)}
+                >
+                  <span className="text-sm">{option.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100">
       {/* Left side - Filters */}
       <div className="flex items-center">
-        {/* Date Range Filter */}
-        {dateRangeFilterEnabled && (
-          <div className="flex items-center">
-            <div className="flex items-center">
-              <FaCalendarAlt className="text-gray-500" size={14} />
-              <span className="text-sm font-medium text-gray-600 ml-1">
-                Range:
-              </span>
-            </div>
+        {filterConfigs.map((config, index) => (
+          <div key={config.key} className="flex items-center">
+            {config.type === "date-range" && renderDateRangeFilter(config)}
+            {config.type === "dropdown" && renderDropdownFilter(config)}
+            {config.type === "single-select" &&
+              renderSingleSelectFilter(config)}
 
-            <div className="flex items-center ml-2">
-              <DatePicker
-                selected={filters.dateRange.startDate}
-                onChange={(date) => handleDateChange("start", date)}
-                className="px-2 py-1 border-b border-gray-300 focus:outline-none hover:border-gray-500 text-sm w-24 sm:w-28"
-                placeholderText="Start Date"
-                dateFormat="MM/dd/yyyy"
-                popperClassName="datepicker-popper"
-                portalId="root"
-                popperPlacement="bottom-start"
-              />
-              <span className="text-gray-500 mx-1">to</span>
-              <DatePicker
-                selected={filters.dateRange.endDate}
-                onChange={(date) => handleDateChange("end", date)}
-                className="px-2 py-1 border-b border-gray-300 focus:outline-none hover:border-gray-500 text-sm w-24 sm:w-28"
-                placeholderText="End Date"
-                dateFormat="MM/dd/yyyy"
-                minDate={filters.dateRange.startDate}
-                popperClassName="datepicker-popper"
-                portalId="root"
-                popperPlacement="bottom-start"
-              />
-            </div>
+            {/* Render divider if not the last filter */}
+            {index < filterConfigs.length - 1 && renderDivider()}
           </div>
-        )}
+        ))}
 
-        {/* Divider between Date Range and Store */}
-        {dateRangeFilterEnabled && storeFilterEnabled && renderDivider()}
-
-        {/* Store Filter (renamed from Location) */}
-        {storeFilterEnabled && (
-          <div className="flex items-center">
-            <div className="flex items-center">
-              <FaStore className="text-gray-500" size={14} />
-              <span className="text-sm font-medium text-gray-600 ml-1">
-                Store:
-              </span>
-            </div>
-
-            <div className="relative ml-2" ref={storeButtonRef}>
-              <button
-                className="flex items-center justify-between gap-2 px-3 py-1 border-b border-gray-300 hover:border-gray-500 text-sm min-w-[120px] bg-white focus:outline-none"
-                onClick={() => setShowStoreDropdown(!showStoreDropdown)}
-              >
-                <span className="truncate">{getStoreLabel()}</span>
-                <FaChevronDown size={10} className="text-gray-500" />
-              </button>
-
-              {/* Store Dropdown */}
-              {showStoreDropdown && (
-                <div
-                  ref={storeDropdownRef}
-                  className="absolute left-0 top-full mt-1 bg-white shadow-dropdownShadow rounded-md z-[9999] w-48"
-                >
-                  {STORE_OPTIONS.map((option) => (
-                    <div
-                      key={option.value}
-                      className={`px-4 py-2 hover:bg-gray-50 cursor-pointer ${
-                        filters.storeType === option.value ? "bg-gray-50" : ""
-                      }`}
-                      onClick={() => selectStore(option.value)}
-                    >
-                      <span className="text-sm">{option.label}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Divider between Store and Platform */}
-        {storeFilterEnabled && platformFilterEnabled && renderDivider()}
-
-        {/* Platform Filter - New */}
-        {platformFilterEnabled && (
-          <div className="flex items-center">
-            <div className="flex items-center">
-              <FaDesktop className="text-gray-500" size={14} />
-              <span className="text-sm font-medium text-gray-600 ml-1">
-                Platform:
-              </span>
-            </div>
-
-            <div className="relative ml-2" ref={platformButtonRef}>
-              <button
-                className="flex items-center justify-between gap-2 px-3 py-1 border-b border-gray-300 hover:border-gray-500 text-sm min-w-[120px] bg-white focus:outline-none"
-                onClick={() => setShowPlatformDropdown(!showPlatformDropdown)}
-              >
-                <span className="truncate">{getPlatformDisplayText()}</span>
-                <FaChevronDown size={10} className="text-gray-500" />
-              </button>
-
-              {/* Platform Dropdown */}
-              {showPlatformDropdown && (
-                <div
-                  ref={platformDropdownRef}
-                  className="absolute left-0 top-full mt-1 bg-white shadow-dropdownShadow rounded-md z-[9999] w-64"
-                >
-                  <div className="p-2 max-h-64 overflow-y-auto">
-                    {platformOptions.map((platform) => (
-                      <div
-                        key={platform.value}
-                        className="flex items-center px-2 py-1.5 hover:bg-gray-50 cursor-pointer"
-                        onClick={() => togglePlatform(platform.value)}
-                      >
-                        <div className="w-5 h-5 flex items-center justify-center">
-                          <input
-                            type="checkbox"
-                            checked={filters.platforms.includes(platform.value)}
-                            onChange={() => {}} // Handled by the parent div click
-                            className="w-4 h-4 accent-gray-500"
-                          />
-                        </div>
-                        <span className="ml-2 text-sm">{platform.label}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="border-t p-2 flex justify-between">
-                    <button
-                      className="text-xs text-gray-500 hover:text-gray-700"
-                      onClick={() => {
-                        setFilters({
-                          ...filters,
-                          platforms: [],
-                        });
-                        if (onFilterChange) {
-                          onFilterChange({
-                            ...filters,
-                            platforms: [],
-                          });
-                        }
-                      }}
-                    >
-                      Clear Platforms
-                    </button>
-                    <button
-                      className="text-xs text-gray-700 hover:text-gray-900"
-                      onClick={() => setShowPlatformDropdown(false)}
-                    >
-                      Done
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Divider between Platform and Status */}
-        {platformFilterEnabled && statusFilterEnabled && renderDivider()}
-
-        {/* Status Filter */}
-        {statusFilterEnabled && (
-          <div className="flex items-center">
-            <div className="flex items-center">
-              <FaTruck className="text-gray-500" size={14} />
-              <span className="text-sm font-medium text-gray-600 ml-1">
-                Status:
-              </span>
-            </div>
-
-            <div className="relative ml-2" ref={statusButtonRef}>
-              <button
-                className="flex items-center justify-between gap-2 px-3 py-1 border-b border-gray-300 hover:border-gray-500 text-sm min-w-[120px] bg-white focus:outline-none"
-                onClick={() => setShowStatusDropdown(!showStatusDropdown)}
-              >
-                <span className="truncate">{getStatusDisplayText()}</span>
-                <FaChevronDown size={10} className="text-gray-500" />
-              </button>
-
-              {/* Status Dropdown */}
-              {showStatusDropdown && (
-                <div
-                  ref={statusDropdownRef}
-                  className="absolute left-0 top-full mt-1 bg-white shadow-dropdownShadow rounded-md z-[9999] w-64"
-                >
-                  <div className="p-2 max-h-64 overflow-y-auto">
-                    {STATUS_OPTIONS.map((status) => (
-                      <div
-                        key={status}
-                        className="flex items-center px-2 py-1.5 hover:bg-gray-50 cursor-pointer group"
-                        onClick={() => toggleStatus(status)}
-                        title={STATUS_DESCRIPTIONS[status]}
-                      >
-                        <div className="w-5 h-5 flex items-center justify-center">
-                          <input
-                            type="checkbox"
-                            checked={filters.statuses.includes(status)}
-                            onChange={() => {}} // Handled by the parent div click
-                            className="w-4 h-4 accent-gray-500"
-                          />
-                        </div>
-                        <span className="ml-2 text-sm capitalize">
-                          {/* Convert snake_case to Title Case with spaces */}
-                          {status
-                            .split("_")
-                            .map(
-                              (word) =>
-                                word.charAt(0).toUpperCase() + word.slice(1)
-                            )
-                            .join(" ")}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="border-t p-2 flex justify-between">
-                    <button
-                      className="text-xs text-gray-500 hover:text-gray-700"
-                      onClick={() => {
-                        setFilters({
-                          ...filters,
-                          statuses: [],
-                        });
-                        if (onFilterChange) {
-                          onFilterChange({
-                            ...filters,
-                            statuses: [],
-                          });
-                        }
-                      }}
-                    >
-                      Clear Status
-                    </button>
-                    <button
-                      className="text-xs text-gray-700 hover:text-gray-900"
-                      onClick={() => setShowStatusDropdown(false)}
-                    >
-                      Done
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Divider before Clear All button (if filters are active) */}
-        {isAnyFilterActive &&
-          (dateRangeFilterEnabled ||
-            statusFilterEnabled ||
-            storeFilterEnabled ||
-            platformFilterEnabled) &&
-          renderDivider()}
-
-        {/* Clear All Filters button - only show if any filter is active */}
-        {isAnyFilterActive && (
-          <button
-            className="text-xs text-gray-700 hover:text-gray-900"
-            onClick={handleClearFilters}
-          >
-            Clear All
-          </button>
+        {/* Clear All button */}
+        {isAnyFilterActive && filterConfigs.length > 0 && (
+          <>
+            {renderDivider()}
+            <button
+              className="text-xs text-gray-700 hover:text-gray-900"
+              onClick={handleClearFilters}
+            >
+              Clear All
+            </button>
+          </>
         )}
       </div>
 
@@ -685,9 +516,8 @@ const TableToolbar = ({
         {searchEnabled && <SearchBox onSearch={onSearch} />}
 
         {searchEnabled &&
-          (downloadEnabled || refreshEnabled || uploadEnabled) && (
-            <div className="h-5 w-px bg-gray-300 mx-3"></div>
-          )}
+          (downloadEnabled || refreshEnabled || uploadEnabled) &&
+          renderDivider()}
 
         {downloadEnabled && (
           <div className="relative">
@@ -699,7 +529,6 @@ const TableToolbar = ({
               <DownloadIcon className="w-4 h-4 text-themeLightBlack" />
             </div>
 
-            {/* Download Options Tooltip */}
             {showDownloadTooltip && (
               <div
                 ref={downloadTooltipRef}
@@ -728,9 +557,9 @@ const TableToolbar = ({
           </div>
         )}
 
-        {downloadEnabled && (refreshEnabled || uploadEnabled) && (
-          <div className="h-5 w-px bg-gray-300 mx-3"></div>
-        )}
+        {downloadEnabled &&
+          (refreshEnabled || uploadEnabled) &&
+          renderDivider()}
 
         {uploadEnabled && (
           <div
@@ -741,9 +570,7 @@ const TableToolbar = ({
           </div>
         )}
 
-        {uploadEnabled && refreshEnabled && (
-          <div className="h-5 w-px bg-gray-300 mx-3"></div>
-        )}
+        {uploadEnabled && refreshEnabled && renderDivider()}
 
         {refreshEnabled && (
           <div

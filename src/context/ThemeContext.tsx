@@ -9,7 +9,7 @@ interface ThemeContextValue {
   setExpandWidth: React.Dispatch<React.SetStateAction<boolean>>;
 
   expandSidebarWidth: boolean;
-  setExpSidebarandWidth: React.Dispatch<React.SetStateAction<boolean>>;
+  setExpandSidebarWidth: React.Dispatch<React.SetStateAction<boolean>>;
 
   searchInput: string;
   setSearchInput: React.Dispatch<React.SetStateAction<string>>;
@@ -23,6 +23,10 @@ interface ThemeContextValue {
   customerSearch: string;
   setCustomerSearch: React.Dispatch<React.SetStateAction<string>>;
 
+  // ADD THIS: User search for the users table
+  userSearch: string;
+  setUserSearch: React.Dispatch<React.SetStateAction<string>>;
+
   editApi: boolean;
   setEditApi: React.Dispatch<React.SetStateAction<boolean>>;
 
@@ -31,6 +35,15 @@ interface ThemeContextValue {
 
   showGeneratedApiKey: boolean;
   setShowGeneratedApiKey: React.Dispatch<React.SetStateAction<boolean>>;
+
+  editZapiet: boolean;
+  setEditZapiet: React.Dispatch<React.SetStateAction<boolean>>;
+
+  generateZapiet: boolean;
+  setGenerateZapiet: React.Dispatch<React.SetStateAction<boolean>>;
+
+  showGeneratedZapietKey: boolean;
+  setShowGeneratedZapietKey: React.Dispatch<React.SetStateAction<boolean>>;
 
   showSmsPopup: boolean;
   setShowSmsPopup: React.Dispatch<React.SetStateAction<boolean>>;
@@ -55,6 +68,19 @@ interface ThemeContextValue {
 
   showPopupStyles: string;
   hidePopupStyles: string;
+
+  // NEW: Order tracking and dispatch view management
+  selectedOrder: any | null;
+  setSelectedOrder: React.Dispatch<React.SetStateAction<any | null>>;
+
+  dispatchViewMode: "map" | "order-tracking";
+  setDispatchViewMode: React.Dispatch<
+    React.SetStateAction<"map" | "order-tracking">
+  >;
+
+  // Helper functions for dispatch view management
+  selectOrder: (order: any) => void;
+  clearOrderSelection: () => void;
 }
 
 export const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -64,7 +90,7 @@ export const ThemeProvider: React.FC<ThemeContextProps> = ({ children }) => {
   const [expandWidth, setExpandWidth] = useState<boolean>(false);
 
   // Expand width of sidebar
-  const [expandSidebarWidth, setExpSidebarandWidth] = useState<boolean>(false);
+  const [expandSidebarWidth, setExpandSidebarWidth] = useState<boolean>(false);
 
   // Order Page Search Input value
   const [searchInput, setSearchInput] = useState<string>("");
@@ -78,6 +104,9 @@ export const ThemeProvider: React.FC<ThemeContextProps> = ({ children }) => {
   // Customers Page Search Input value
   const [customerSearch, setCustomerSearch] = useState<string>("");
 
+  // ADD THIS: Users Page Search Input value
+  const [userSearch, setUserSearch] = useState<string>("");
+
   // api edit state
   const [editApi, setEditApi] = useState<boolean>(false);
 
@@ -86,6 +115,14 @@ export const ThemeProvider: React.FC<ThemeContextProps> = ({ children }) => {
 
   // show generated api key
   const [showGeneratedApiKey, setShowGeneratedApiKey] =
+    useState<boolean>(false);
+
+  // show generated api key
+  const [editZapiet, setEditZapiet] = useState<boolean>(false);
+
+  const [generateZapiet, setGenerateZapiet] = useState<boolean>(false);
+
+  const [showGeneratedZapietKey, setShowGeneratedZapietKey] =
     useState<boolean>(false);
 
   // Show SMS popup
@@ -109,6 +146,23 @@ export const ThemeProvider: React.FC<ThemeContextProps> = ({ children }) => {
   const [showImageUploaderPopup, setShowImageUploaderPopup] =
     useState<boolean>(false);
 
+  // NEW: Dispatch view management states
+  const [selectedOrder, setSelectedOrder] = useState<any | null>(null);
+  const [dispatchViewMode, setDispatchViewMode] = useState<
+    "map" | "order-tracking"
+  >("map");
+
+  // Helper functions for dispatch view management
+  const selectOrder = (order: any) => {
+    setSelectedOrder(order);
+    setDispatchViewMode("order-tracking");
+  };
+
+  const clearOrderSelection = () => {
+    setSelectedOrder(null);
+    setDispatchViewMode("map");
+  };
+
   // show popup styles
   const showPopupStyles = "left-1/2 visible opacity-100";
   const hidePopupStyles = "left-[55%] invisible opacity-0";
@@ -117,7 +171,7 @@ export const ThemeProvider: React.FC<ThemeContextProps> = ({ children }) => {
     expandWidth,
     setExpandWidth,
     expandSidebarWidth,
-    setExpSidebarandWidth,
+    setExpandSidebarWidth,
     searchInput,
     setSearchInput,
     activeSwitch,
@@ -126,6 +180,9 @@ export const ThemeProvider: React.FC<ThemeContextProps> = ({ children }) => {
     setInvoiceSearch,
     customerSearch,
     setCustomerSearch,
+    // ADD THIS: User search values
+    userSearch,
+    setUserSearch,
     showPopupStyles,
     hidePopupStyles,
     editApi,
@@ -134,6 +191,12 @@ export const ThemeProvider: React.FC<ThemeContextProps> = ({ children }) => {
     setGenerateAPI,
     showGeneratedApiKey,
     setShowGeneratedApiKey,
+    editZapiet,
+    setEditZapiet,
+    generateZapiet,
+    setGenerateZapiet,
+    showGeneratedZapietKey,
+    setShowGeneratedZapietKey,
     showSmsPopup,
     setShowSmsPopup,
     showCancelPopup,
@@ -148,6 +211,13 @@ export const ThemeProvider: React.FC<ThemeContextProps> = ({ children }) => {
     setAutofill,
     showImageUploaderPopup,
     setShowImageUploaderPopup,
+    // NEW: Order tracking values
+    selectedOrder,
+    setSelectedOrder,
+    dispatchViewMode,
+    setDispatchViewMode,
+    selectOrder,
+    clearOrderSelection,
   };
 
   return (

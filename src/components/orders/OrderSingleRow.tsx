@@ -10,10 +10,12 @@ import moment from "moment";
 
 interface OrderItem {
   order_id: string;
+  external_order_id: string;
   status: string;
   pickup: {
     name: string;
     address: {
+      street_address_1: string;
       street: string;
       state: string;
     };
@@ -22,6 +24,7 @@ interface OrderItem {
     external_order_id: string;
     name: string;
     address: {
+      street_address_1: string;
       street: string;
       state: string;
     };
@@ -39,7 +42,15 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
     useClickOutside<HTMLDivElement>(false);
 
   // Destructuring The Objects Data
-  const { delivery, last_updated, order_id, pickup, status, timeframe } = item;
+  const {
+    delivery,
+    last_updated,
+    order_id,
+    pickup,
+    status,
+    timeframe,
+    external_order_id,
+  } = item;
 
   // Navigate to other page
   const navigate = useNavigate();
@@ -50,8 +61,6 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
     });
   };
 
-  const contextValue = useContext(ThemeContext);
-
   return (
     <div className="flex w-full bg-white hover:bg-contentBg cursor-pointer duration-200 border-b border-b-themeLightGray">
       {/* Order */}
@@ -60,13 +69,13 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
         className="flex-1 py-3 pl-[30px] min-w-[170px] xl:min-w-[auto]"
       >
         <div className="py-1">
-          {delivery.external_order_id ? (
+          {external_order_id ? (
             <>
               <p className="text-xs">
                 <span className="text-themeOrange">DBX</span>
                 {order_id}
               </p>
-              <p className="leading-none mt-1">{delivery.external_order_id}</p>
+              <p className="leading-none mt-1">#{external_order_id}</p>
             </>
           ) : (
             <p>
@@ -93,7 +102,7 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
         className="flex-1 py-3 px-2.5 min-w-[170px] xl:min-w-[auto]"
       >
         <div>
-          <p className="text-xs">{pickup.address.street}</p>
+          <p className="text-xs">{pickup.address.street_address_1}</p>
           <p className="leading-none mt-1">{pickup.name}</p>
         </div>
       </div>
@@ -104,7 +113,7 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
         className="flex-1 py-3 px-2.5 min-w-[170px] xl:min-w-[auto]"
       >
         <div>
-          <p className="text-xs">{delivery.address.street}</p>
+          <p className="text-xs">{delivery.address.street_address_1}</p>
           <p className="leading-none mt-1">{delivery.name}</p>
         </div>
       </div>

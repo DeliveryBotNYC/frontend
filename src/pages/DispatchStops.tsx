@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import { ThemeContext } from "../context/ThemeContext";
-import OrdersCard from "../components/dispatch/OrdersCard";
+import OrdersCard from "../components/dispatch/orders/OrderCard";
 import { Link, useLocation } from "react-router-dom";
 import moment from "moment";
 

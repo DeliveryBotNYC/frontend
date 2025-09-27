@@ -5,6 +5,8 @@ const StatusBtn = ({ type }: { type: string }) => {
   const pickedStyle = "bg-pickedBtn text-black";
   const deliveredStyle = "bg-deliveredBtn text-themeDarkGreen";
   const cancelledStyle = "bg-cancelledBtn text-themeLightRed";
+  // New statuses use existing styles
+  const paidStyle = "bg-green-100 text-green-800"; // New style for paid
 
   return (
     <div
@@ -15,11 +17,15 @@ const StatusBtn = ({ type }: { type: string }) => {
           ? assignedStyle
           : type === "arrived_at_pickup"
           ? assignedStyle
+          : type === "arrived"
+          ? assignedStyle
           : type === "picked_up"
           ? pickedStyle
           : type === "arrived_at_delivery"
           ? pickedStyle
           : type === "delivered"
+          ? deliveredStyle
+          : type === "completed"
           ? deliveredStyle
           : type === "returned"
           ? cancelledStyle
@@ -33,6 +39,16 @@ const StatusBtn = ({ type }: { type: string }) => {
           ? deliveredStyle
           : type === "failed"
           ? cancelledStyle
+          : type === "pending"
+          ? processingStyle
+          : type === "open"
+          ? assignedStyle
+          : type === "paid"
+          ? paidStyle
+          : type === "uncollectible"
+          ? cancelledStyle
+          : type === "void"
+          ? pickedStyle
           : ""
       }`}
     >
@@ -40,12 +56,16 @@ const StatusBtn = ({ type }: { type: string }) => {
         ? "Processing"
         : type === "assigned"
         ? "Assigned"
+        : type === "arrived"
+        ? "Arrived"
         : type === "arrived_at_pickup"
         ? "Assigned"
         : type === "picked_up"
         ? "Picked-up"
         : type === "arrived_at_delivery"
         ? "Picked-up"
+        : type === "completed"
+        ? "Completed"
         : type === "delivered"
         ? "Delivered"
         : type === "returned"
@@ -60,6 +80,16 @@ const StatusBtn = ({ type }: { type: string }) => {
         ? "Received"
         : type === "failed"
         ? "Failed"
+        : type === "pending"
+        ? "Pending"
+        : type === "open"
+        ? "Open"
+        : type === "paid"
+        ? "Paid"
+        : type === "uncollectible"
+        ? "Uncollectible"
+        : type === "void"
+        ? "Void"
         : null}
     </div>
   );

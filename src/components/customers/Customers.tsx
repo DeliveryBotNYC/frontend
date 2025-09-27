@@ -80,16 +80,12 @@ const Customers = () => {
   // Update customer mutation
   const updateCustomerMutation = useMutation({
     mutationFn: async (customerData: CustomerUpdate) => {
-      return axios.patch(
-        `${url}/customer?customer_id=${customerId}`,
-        customerData,
-        config
-      );
+      return axios.patch(`${url}/customer/${customerId}`, customerData, config);
     },
     onSuccess: (response) => {
-      const newCustomerId = response.data.customer_id;
+      const newCustomerId = response.data.data?.customer_id;
       if (newCustomerId !== customerId) {
-        navigate(`/address-book/${newCustomerId}`);
+        navigate(`/customers/edit/${newCustomerId}`);
       }
       setUpdatedCustomer({});
       setCustomer(response.data.data);
