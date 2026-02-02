@@ -80,6 +80,17 @@ const AccountsDefault: React.FC = () => {
   const { accountsData, setAccountsData } = useOutletContext<OutletContext>();
   const [updatedDefaultsData, setUpdatedDefaultsData] =
     useState<UpdatedDefaultsData>({});
+  // Add tip state near the top of the component, after other state declarations
+  const [tip, setTip] = useState(() => {
+    const tipInCents = accountsData?.tip ?? 0;
+    return (tipInCents / 100).toFixed(2);
+  });
+
+  // Add useEffect to sync tip when accountsData changes
+  useEffect(() => {
+    const tipInCents = accountsData?.tip ?? 0;
+    setTip((tipInCents / 100).toFixed(2));
+  }, [accountsData?.tip]);
   const [submitStatus, setSubmitStatus] = useState<SubmitStatus>({
     type: "",
     message: "",
@@ -93,23 +104,10 @@ const AccountsDefault: React.FC = () => {
   const currentFormValues = useMemo(() => {
     const combined: AccountsData = { ...accountsData };
 
-    // Apply updates, but handle tip specially
+    // Apply updates directly
     Object.keys(updatedDefaultsData).forEach((key) => {
-      if (key === "tip") {
-        // If tip is being edited, show the raw dollar value
-        combined[parseInt(key)] =
-          typeof updatedDefaultsData[key] === "number"
-            ? ((updatedDefaultsData[key] as number) / 100).toFixed(2) // Convert cents to dollars
-            : (updatedDefaultsData[key] as string); // Keep raw input while typing
-      } else {
-        combined[key] = updatedDefaultsData[key];
-      }
+      combined[key] = updatedDefaultsData[key];
     });
-
-    // Convert tip from cents to dollars for display (only if not being edited)
-    if (combined.tip !== undefined && !updatedDefaultsData.tip) {
-      combined.tip = parseInt((combined.tip / 100).toFixed(2));
-    }
 
     return combined;
   }, [accountsData, updatedDefaultsData]);
@@ -143,17 +141,17 @@ const AccountsDefault: React.FC = () => {
       setSubmitStatus({ type: "", message: "" });
     }
 
-    // For tip field, just store the raw dollar value temporarily
-    const processedValue = value;
-    const originalValue =
-      id === "tip"
-        ? ((accountsData[id] as number) / 100).toFixed(2)
-        : accountsData[id];
+    // For tip field, update the display value
+    if (id === "tip") {
+      setTip(value);
+      return;
+    }
 
-    if (originalValue !== processedValue) {
+    // For other fields, check if value differs from original
+    if (accountsData[id] !== value) {
       setUpdatedDefaultsData((prev) => ({
         ...prev,
-        [id]: processedValue,
+        [id]: value,
       }));
     } else {
       const newData = { ...updatedDefaultsData };
@@ -164,21 +162,23 @@ const AccountsDefault: React.FC = () => {
 
   // Handle tip field when user finishes typing (onBlur)
   function handleTipBlur(e: React.FocusEvent<HTMLInputElement>) {
-    const { id, value } = e.target;
+    const { id } = e.target;
 
     if (id === "tip") {
-      // Convert to cents when user is done typing
-      const processedValue = Math.round(parseFloat(value || "0") * 100);
-      const originalValue = accountsData[id] as number;
+      const value = parseFloat(tip || "0").toFixed(2);
+      const valueInCents = Math.round(parseFloat(value) * 100);
+      const originalValue = accountsData.tip as number;
 
-      if (originalValue !== processedValue) {
+      setTip(value);
+
+      if (originalValue !== valueInCents) {
         setUpdatedDefaultsData((prev) => ({
           ...prev,
-          [id]: processedValue,
+          tip: valueInCents,
         }));
       } else {
         const newData = { ...updatedDefaultsData };
-        delete newData[id];
+        delete newData.tip;
         setUpdatedDefaultsData(newData);
       }
     }
@@ -421,7 +421,7 @@ const AccountsDefault: React.FC = () => {
                   type="number"
                   step="0.01"
                   prefix="$"
-                  value={currentFormValues?.tip?.toString() || ""}
+                  value={tip}
                   onChange={handleChange}
                   onBlur={handleTipBlur}
                   error={error.fieldErrors?.tip}

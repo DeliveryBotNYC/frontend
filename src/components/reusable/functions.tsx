@@ -10,7 +10,7 @@ export function isCompleted(input) {
     pickup:
       !/^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(input.pickup.phone) ||
       input.pickup.name === "" ||
-      input.pickup.address.street === "" ||
+      input.pickup.address.street_address_1 === "" ||
       input.pickup.address.lat === "" ||
       input.pickup.address.lon === ""
         ? false
@@ -18,9 +18,11 @@ export function isCompleted(input) {
     delivery:
       !/^\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/.test(input.delivery.phone) ||
       input.delivery.name === "" ||
-      input.delivery.address.street === "" ||
+      input.delivery.address.street_address_1 === "" ||
       input.delivery.address.lat === "" ||
-      input.delivery.address.lon === ""
+      input.delivery.address.lon === "" ||
+      !isSizeOrMeasurementsComplete(input.delivery) ||
+      !itemCompleted(input.delivery.items || [])
         ? false
         : true,
     timeframe:
@@ -30,6 +32,50 @@ export function isCompleted(input) {
         ? false
         : true,
   };
+}
+
+// Helper function to check if size or measurements are complete
+function isSizeOrMeasurementsComplete(delivery) {
+  // Check if size_category is set
+  if (delivery.size_category) {
+    return true;
+  }
+
+  // Check if all items have measurements
+  if (!delivery.items || delivery.items.length === 0) {
+    return false;
+  }
+
+  // All items must have length, width, and weight height
+  return delivery.items.every((item) => {
+    return (
+      item.length !== undefined &&
+      item.length !== null &&
+      item.length !== "" &&
+      item.width !== undefined &&
+      item.width !== null &&
+      item.width !== "" &&
+      item.weight !== undefined &&
+      item.weight !== null &&
+      item.weight !== "" &&
+      item.height !== null &&
+      item.height !== "" &&
+      item.description !== null &&
+      item.description !== ""
+    );
+  });
+}
+
+export function itemCompleted(items) {
+  let value = true;
+  for (let i = 0; i < items.length; ++i) {
+    if (items[i].description === "") {
+      value = false;
+      break;
+    }
+  }
+
+  return value;
 }
 
 export function isCustomerCompleted(input) {
@@ -54,24 +100,12 @@ export function isCustomerCompleted(input) {
   return true;
 }
 
-export function itemCompleted(items) {
-  let value = true;
-  for (let i = 0; i < items.length; ++i) {
-    if (items[i].description === "") {
-      value = false;
-      break;
-    }
-  }
-
-  return value;
-}
-
 export function isEmpty(input) {
   return {
     pickup:
       input.pickup.phone === "" &&
       input.pickup.name === "" &&
-      input.pickup.address.street === "" &&
+      input.pickup.address.street_address_1 === "" &&
       input.pickup.address.lat === "" &&
       input.pickup.address.lon === ""
         ? true
@@ -79,7 +113,7 @@ export function isEmpty(input) {
     delivery:
       input.delivery.phone === "" &&
       input.delivery.name === "" &&
-      input.delivery.address.street === "" &&
+      input.delivery.address.street_address_1 === "" &&
       input.delivery.address.lat === "" &&
       input.delivery.address.lon === ""
         ? true
@@ -135,12 +169,17 @@ export const formatName = (str) => {
 
 // Parse clipboard text function
 export const parseClipboardText = (text) => {
-  // Expected format: "Junior Nicolle, 100 Wall St, 10th Floor, New York New York 10005, United States, 9175737687"
   try {
-    // Basic split by commas
-    const parts = text.split(",").map((part) => part.trim());
+    // Normalize the text - replace newlines with commas for consistent parsing
+    const normalizedText = text.replace(/\n/g, ", ").trim();
 
-    if (parts.length < 3) {
+    // Basic split by commas
+    const parts = normalizedText
+      .split(",")
+      .map((part) => part.trim())
+      .filter((part) => part);
+
+    if (parts.length < 2) {
       console.error("Clipboard text doesn't match expected format");
       return null;
     }
@@ -153,16 +192,24 @@ export const parseClipboardText = (text) => {
     const phoneMatch = parts.find((part) => {
       // Remove all non-digit characters to count the digits
       const digitsOnly = part.replace(/\D/g, "");
-      // Check if it has exactly 10 digits
-      return digitsOnly.length === 10;
+      // Check if it has exactly 10 digits (or 11 with country code)
+      return digitsOnly.length === 10 || digitsOnly.length === 11;
     });
 
     let phone = "";
 
     if (phoneMatch) {
+      // Extract just the digits
+      let digitsOnly = phoneMatch.replace(/\D/g, "");
+
+      // Remove leading 1 if it's 11 digits (country code)
+      if (digitsOnly.length === 11 && digitsOnly.startsWith("1")) {
+        digitsOnly = digitsOnly.substring(1);
+      }
+
       // Create a mock event object to use with formatPhoneWithPrefix
       const mockEvent = {
-        target: { value: phoneMatch.trim() },
+        target: { value: digitsOnly },
         preventDefault: () => {},
       };
 
@@ -173,16 +220,38 @@ export const parseClipboardText = (text) => {
       phone = mockEvent.target.value;
     }
 
-    // Address parsing
+    // Address parsing - exclude name and phone parts
     const addressParts = parts.slice(
       1,
       phoneMatch ? parts.indexOf(phoneMatch) : undefined
     );
 
-    // 1. Street is the first part of the address
-    const street = addressParts[0]; // "100 Wall St"
+    // Remove empty parts and common noise words
+    const cleanedAddressParts = addressParts.filter((part) => {
+      const lower = part.toLowerCase();
+      return (
+        part &&
+        !lower.includes("united states") &&
+        !lower.includes("usa") &&
+        part.trim().length > 0
+      );
+    });
 
-    // 2. Apt/Floor is the second part ONLY if it's not a borough or ZIP
+    if (cleanedAddressParts.length === 0) {
+      return { name, phone, street: null, apt: null, zip: null };
+    }
+
+    // 1. Street is the first part of the address
+    const street = cleanedAddressParts[0];
+
+    // 2. ZIP is the last 5-digit number in the address
+    let zip = null;
+    const zipMatch = cleanedAddressParts.join(" ").match(/\b\d{5}\b/);
+    if (zipMatch) {
+      zip = zipMatch[0];
+    }
+
+    // 3. Apt/Floor detection - look for patterns
     const isNYCBorough = (str) =>
       [
         "new york",
@@ -197,22 +266,44 @@ export const parseClipboardText = (text) => {
         "mn",
         "bx",
         "si",
-      ].includes(str.toLowerCase());
-    let apt = null;
-    if (addressParts.length > 1) {
-      const possibleApt = addressParts[1];
-      const isNotBorough = !isNYCBorough(possibleApt);
-      const isNotZip = !/\b\d{5}\b/.test(possibleApt);
-      if (isNotBorough && isNotZip) {
-        apt = possibleApt;
-      }
-    }
+      ].includes(str.toLowerCase().trim());
 
-    // 3. ZIP is the last 5-digit number in the address
-    let zip = null;
-    const zipMatch = addressParts.join(" ").match(/\b\d{5}\b/);
-    if (zipMatch) {
-      zip = zipMatch[0]; // "10005"
+    const aptPatterns = [
+      /^apartment\s+/i,
+      /^apt\.?\s+/i,
+      /^apt$/i,
+      /^unit\s+/i,
+      /^#/,
+      /^\d+[a-z]$/i, // Like "5H"
+      /^floor\s+/i,
+      /^\d+(st|nd|rd|th)\s+floor$/i,
+    ];
+
+    let apt = null;
+
+    // Check each address part for apt patterns
+    for (let i = 1; i < cleanedAddressParts.length; i++) {
+      const part = cleanedAddressParts[i].trim();
+      const isBorough = isNYCBorough(part);
+      const hasZip = /\b\d{5}\b/.test(part);
+
+      // Skip if it's a borough or contains ZIP
+      if (isBorough || hasZip) continue;
+
+      // Check if it matches apartment patterns
+      const matchesAptPattern = aptPatterns.some((pattern) =>
+        pattern.test(part)
+      );
+
+      if (matchesAptPattern) {
+        // Clean up the apartment value
+        apt = part
+          .replace(/^apartment\s+/i, "")
+          .replace(/^apt\.?\s+/i, "")
+          .replace(/^unit\s+/i, "")
+          .trim();
+        break;
+      }
     }
 
     return {

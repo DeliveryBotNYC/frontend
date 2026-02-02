@@ -120,7 +120,7 @@ const RouteCard = memo(
             {/* Status Bar Section */}
             <div className="min-w-0 flex flex-col">
               <div>
-                <RouteBar data={item} />
+                <RouteBar currentStatus={item.status} disabled={true} />
               </div>
               <div className="mt-auto flex justify-end">
                 <p

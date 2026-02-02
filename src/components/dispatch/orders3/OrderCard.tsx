@@ -1,11 +1,13 @@
-// OrderCard.tsx - Fixed to use proper lock logic per operation type
+// ========================================
+// OrderCard.tsx - Fixed TypeScript errors
+// ========================================
 
 import React, { useContext } from "react";
 import StatusBtn from "../../reusable/StatusBtn";
 import moment from "moment";
 import { ThemeContext } from "../../../context/ThemeContext";
-import { canDragOrderFromStop } from "../orders/types";
 
+// Helper function to format time
 const formatTime = (time: string | null | undefined): string => {
   return time ? moment(time).format("h:mm A") : "--";
 };
@@ -47,12 +49,24 @@ interface OrderData {
   delivery: OrderLocation;
   pickup_note?: string;
   delivery_note?: string;
-  locked?: boolean;
+  locked: boolean;
   start_time?: string;
   end_time?: string;
   delivery_picture?: string;
   delivery_signature?: string;
   delivery_recipient?: string;
+}
+
+interface DragData {
+  type: string;
+  order: OrderData & {
+    delivery_customer_name: string;
+    delivery_address: string;
+    pickup_name: string;
+    pickup_address?: string;
+    customer_id: number;
+  };
+  orderType: "pickup" | "delivery";
 }
 
 interface OrderCardProps {
@@ -72,9 +86,6 @@ const OrderCard: React.FC<OrderCardProps> = ({
 }) => {
   const themeContext = useContext(ThemeContext);
   const { selectOrder } = themeContext || { selectOrder: () => {} };
-
-  // Check if this specific operation (pickup or delivery) can be dragged
-  const canDrag = canDragOrderFromStop(order, type);
 
   const handleOrderClick = (e: React.MouseEvent): void => {
     e.stopPropagation();
@@ -99,25 +110,22 @@ const OrderCard: React.FC<OrderCardProps> = ({
   };
 
   const handleOrderDragStart = (e: React.DragEvent): void => {
-    // Check if this specific operation can be dragged
-    if (!canDrag) {
+    // Check if order is locked before allowing drag
+    if (order.locked) {
       e.preventDefault();
-      console.log(
-        `${type === "pickup" ? "Pickup" : "Delivery"} is locked for order ${
-          order.order_id
-        }`
-      );
       return;
     }
 
     e.stopPropagation();
 
+    // Get customer_id from the order based on type
     const orderCustomerId =
       type === "pickup"
         ? order.pickup?.customer_id
         : order.delivery?.customer_id;
 
-    const dragData = {
+    // Set the drag data with order information
+    const dragData: DragData = {
       type: "individual_order",
       order: {
         ...order,
@@ -133,7 +141,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
     e.dataTransfer.setData("application/json", JSON.stringify(dragData));
     e.dataTransfer.effectAllowed = "move";
 
-    // Create custom drag image
+    // Create custom drag image for individual order
     const dragElement = document.createElement("div");
     dragElement.className =
       "bg-white border border-orange-300 rounded-lg p-3 shadow-lg max-w-xs";
@@ -145,7 +153,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
         ${type === "pickup" ? "Pickup" : "Delivery"}
       </div>
       <div class="text-xs text-gray-700 mt-1">
-        ${order.status === "processing" ? "Adding to route..." : "Moving..."}
+        Creating new stop...
       </div>
     `;
     dragElement.style.position = "absolute";
@@ -154,7 +162,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
 
     e.dataTransfer.setDragImage(dragElement, 75, 30);
 
-    // Dispatch custom event
+    // Dispatch a custom event to notify the parent about order dragging
     const event = new CustomEvent("orderDragStart", {
       detail: dragData,
       bubbles: true,
@@ -171,22 +179,23 @@ const OrderCard: React.FC<OrderCardProps> = ({
 
   const handleDragEnd = (e: React.DragEvent): void => {
     e.stopPropagation();
+    // Clean up any remaining drag state
   };
 
   return (
     <div
       className={`relative group ${
-        !canDrag
-          ? "bg-gray-50 cursor-default opacity-60"
+        order.locked
+          ? "bg-gray-50 cursor-default"
           : "bg-gray-50 hover:bg-gray-100 cursor-grab active:cursor-grabbing"
       }`}
-      draggable={canDrag}
+      draggable={!order.locked}
       onDragStart={handleOrderDragStart}
       onDragEnd={handleDragEnd}
       onClick={handleOrderClick}
     >
       <div className="ml-15 p-2 rounded cursor-pointer transition-colors">
-        {/* Order ID and Status */}
+        {/* First row: Order ID and Status Button */}
         <div className="flex items-center justify-between mb-1">
           <span className="text-xs font-medium">
             <span className="text-orange-500">DBX</span>
@@ -195,13 +204,13 @@ const OrderCard: React.FC<OrderCardProps> = ({
           <StatusBtn type={order.status} />
         </div>
 
-        {/* Pickup name, Delivery name, and Timeframe */}
+        {/* Second row: Pickup name, Delivery name, and Timeframe */}
         <div className="grid grid-cols-3 gap-3 mb-1 text-xs">
           <div className="text-gray-900 font-medium truncate leading-tight">
-            {order.pickup?.name}
+            {order.pickup?.name || "Pickup Location"}
           </div>
           <div className="text-gray-900 font-medium truncate leading-tight">
-            {order.delivery?.name}
+            {order.delivery?.name || "Delivery Location"}
           </div>
           <div className="text-gray-600 truncate leading-tight text-right">
             {moment(order.timeframe.start_time).format("h:mm A")} -{" "}
@@ -209,16 +218,16 @@ const OrderCard: React.FC<OrderCardProps> = ({
           </div>
         </div>
 
-        {/* Addresses and Remove button */}
+        {/* Third row: Pickup address, Delivery address, and Remove button */}
         <div className="grid grid-cols-3 gap-3 mb-1 text-xs items-center">
           <div className="text-gray-600 truncate leading-tight">
-            {order.pickup.address.street_address_1}
+            {order.pickup.address.street_address_1 || "Address not available"}
           </div>
           <div className="text-gray-600 truncate leading-tight">
-            {order.delivery.address.street_address_1}
+            {order.delivery.address.street_address_1 || "Address not available"}
           </div>
           <div className="text-right">
-            {onRemoveOrder && canDrag && (
+            {onRemoveOrder && !order.locked && order.status !== "completed" && (
               <button
                 onClick={handleRemoveClick}
                 className="text-red-500 hover:text-red-700 text-xs font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
@@ -230,7 +239,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
           </div>
         </div>
 
-        {/* Time information */}
+        {/* Time information for individual order */}
         {(order.start_time || order.end_time) && (
           <div className="text-xs text-gray-500 mb-1">
             {formatTime(order.start_time)} - {formatTime(order.end_time)}
@@ -239,18 +248,10 @@ const OrderCard: React.FC<OrderCardProps> = ({
       </div>
 
       {/* Notes */}
-      {((type === "pickup" && order.pickup_note) ||
-        (type === "delivery" && order.delivery_note)) && (
+      {(order.pickup_note || order.delivery_note) && (
         <div className="text-xs text-gray-700 bg-yellow-50 p-1.5 rounded border-l-2 border-yellow-200">
           <span className="font-medium">Note: </span>
-          {type === "pickup" ? order.pickup_note : order.delivery_note}
-        </div>
-      )}
-
-      {/* Lock indicator */}
-      {!canDrag && (
-        <div className="absolute top-2 right-2 text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
-          🔒 Locked
+          {order.pickup_note || order.delivery_note}
         </div>
       )}
     </div>

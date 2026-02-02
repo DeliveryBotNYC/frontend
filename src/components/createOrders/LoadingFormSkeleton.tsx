@@ -2,16 +2,22 @@ import PickupIconToDo from "../../assets/pickupToDo.svg";
 import DeliveredBwIcon from "../../assets/delivery-bw.svg";
 import TimeIcon from "../../assets/time.svg";
 
-const LoadingFormSkeleton = () => {
+const LoadingFormSkeleton = ({ section = "all" }) => {
   const skeletonSections = [
-    { title: "Pickup", icon: PickupIconToDo },
-    { title: "Delivery", icon: DeliveredBwIcon },
-    { title: "Time-frame", icon: TimeIcon },
+    { title: "Pickup", icon: PickupIconToDo, key: "pickup" },
+    { title: "Delivery", icon: DeliveredBwIcon, key: "delivery" },
+    { title: "Time-frame", icon: TimeIcon, key: "timeframe" },
   ];
+
+  // Filter sections based on the section prop
+  const sectionsToShow =
+    section === "all"
+      ? skeletonSections
+      : skeletonSections.filter((s) => s.key === section);
 
   return (
     <>
-      {skeletonSections.map((section, index) => (
+      {sectionsToShow.map((sectionData, index) => (
         <div
           className="w-full bg-white rounded-2xl my-5 min-h-[25%]"
           key={index}
@@ -21,9 +27,9 @@ const LoadingFormSkeleton = () => {
             className="max-w-sm animate-pulse py-5 px-2.5 items-center justify-between gap-2.5 h-full"
           >
             <div className="flex items-center gap-2.5 pb-3">
-              <img src={section.icon} alt={`${section.title} icon`} />
+              <img src={sectionData.icon} alt={`${sectionData.title} icon`} />
               <p className="text-2xl text-black font-bold heading">
-                {section.title}
+                {sectionData.title}
               </p>
             </div>
             <div className="h-2.5 bg-themeDarkGray rounded-full w-48 mb-4"></div>

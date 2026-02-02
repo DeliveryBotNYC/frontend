@@ -9,15 +9,23 @@ import { isCompleted, initialState } from "../reusable/functions";
 import clipart from "../../assets/timeframeClipArt.svg";
 import { useConfig, url } from "../../hooks/useConfig";
 
-const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
+const TIMEFRAME_EDITABLE_STATUSES = ["new_order", "processing"];
+
+const SelectDateandTime = ({
+  data,
+  stateChanger,
+  addressesChanged,
+  ...rest
+}) => {
   const [fastest, setFastest] = useState({});
-  const [selectedDate, setSelectedDate] = useState(
-    moment().hours() > 18
-      ? moment().add(1, "days").format("YYYY-MM-DD")
-      : moment().format("YYYY-MM-DD")
-  );
+  const [selectedDate, setSelectedDate] = useState("");
   const config = useConfig();
   const [timeframes, setTimeframes] = useState([]);
+
+  // Check if timeframe can be edited
+  const canEditTimeframe = TIMEFRAME_EDITABLE_STATUSES.includes(
+    rest?.state?.status
+  );
 
   // Helper function to format service names for display
   const formatServiceName = (serviceName) => {
@@ -48,7 +56,6 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
       ) {
         return {
           service: service.service,
-          service_id: i,
           start_time: service.slots[0].start_time,
           end_time: service.slots[0].end_time,
         };
@@ -61,52 +68,6 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
       if (service.slots && service.slots.length > 0) {
         return {
           service: service.service,
-          service_id: i,
-          start_time: service.slots[0].start_time,
-          end_time: service.slots[0].end_time,
-        };
-      }
-    }
-
-    return null;
-  };
-
-  // Alternative helper function if service names are more structured
-  const findPreferredServiceAlternative = (timeframesData) => {
-    if (!Array.isArray(timeframesData) || timeframesData.length === 0) {
-      return null;
-    }
-
-    // Define preferred service patterns for exact matching
-    const preferredPatterns = ["one_hour", "same_day", "three_hour"];
-
-    // Try to find services matching preferred patterns
-    for (const pattern of preferredPatterns) {
-      for (let i = 0; i < timeframesData.length; i++) {
-        const service = timeframesData[i];
-        if (
-          service.slots &&
-          service.slots.length > 0 &&
-          service.service &&
-          service.service === pattern // Exact match instead of regex test
-        ) {
-          return {
-            service: service.service,
-            service_id: i,
-            start_time: service.slots[0].start_time,
-            end_time: service.slots[0].end_time,
-          };
-        }
-      }
-    }
-
-    // Fall back to first available service
-    for (let i = 0; i < timeframesData.length; i++) {
-      const service = timeframesData[i];
-      if (service.slots && service.slots.length > 0) {
-        return {
-          service: service.service,
-          service_id: i,
           start_time: service.slots[0].start_time,
           end_time: service.slots[0].end_time,
         };
@@ -117,48 +78,43 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
   };
 
   const addTodoMutation = useMutation({
-    mutationFn: (getTimeframes) =>
-      axios.post(
-        url + "/slots?date=" + moment(selectedDate).format("MM-DD-YYYY"),
+    mutationFn: (getTimeframes) => {
+      // Don't pass order_id when addresses changed (backend will return fresh slots)
+      const orderId = addressesChanged ? "" : rest?.state?.order_id;
+      const orderParam = orderId ? `&order_id=${orderId}` : "";
+
+      return axios.post(
+        url +
+          "/slots?date=" +
+          (moment(selectedDate).format("MM-DD-YYYY") ||
+            moment().format("YYYY-MM-DD")) +
+          orderParam,
         rest?.state,
         config
-      ),
+      );
+    },
     onSuccess: (response) => {
-      // The API response structure is: response.data.data (nested data)
       const timeframesData = response?.data?.data || [];
 
       if (Array.isArray(timeframesData) && timeframesData.length > 0) {
-        // Find preferred service (3-hour if available, otherwise fastest)
-        const preferredService = findPreferredService(timeframesData);
+        setTimeframes(timeframesData);
 
-        if (preferredService) {
-          setFastest(preferredService);
-
-          if (rest?.state?.status == "new_order") {
+        // Only auto-select for new orders or when addresses changed
+        if (rest?.state?.status == "new_order" || addressesChanged) {
+          const preferredService = findPreferredService(timeframesData);
+          if (preferredService) {
+            setFastest(preferredService);
             stateChanger({
               ...rest?.state,
               timeframe: preferredService,
             });
-            setTimeframes(timeframesData);
-          } else if (
-            moment().isBefore(moment(rest?.state?.timeframe?.start_time))
-          ) {
-            setTimeframes(timeframesData);
-          } else {
-            setTimeframes([
-              {
-                service: rest?.state?.timeframe?.service,
-                slots: [
-                  {
-                    start_time: rest?.state?.timeframe?.start_time,
-                    end_time: rest?.state?.timeframe?.end_time,
-                  },
-                ],
-              },
-            ]);
           }
         } else {
-          setTimeframes(timeframesData);
+          // For other cases, just set fastest for the recharge button
+          const preferredService = findPreferredService(timeframesData);
+          if (preferredService) {
+            setFastest(preferredService);
+          }
         }
       } else {
         setTimeframes([]);
@@ -169,43 +125,58 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
     },
   });
 
-  // Initial date for timeframe in edit
+  // Set initial date for timeframe
   useEffect(() => {
-    if (
-      rest?.state?.status != "new_order" &&
-      rest?.state?.timeframe?.start_time
-    ) {
-      setSelectedDate(
-        moment(rest?.state?.timeframe?.start_time).format("YYYY-MM-DD")
+    if (rest?.state?.timeframe?.start_time) {
+      // For existing orders with timeframe, use the timeframe's date in UTC to preserve calendar date
+      const timeframeDate = moment(rest.state.timeframe.start_time).format(
+        "YYYY-MM-DD"
       );
-      setTimeframes([
-        {
-          service: rest?.state?.timeframe?.service,
-          slots: [
-            {
-              start_time: rest?.state?.timeframe?.start_time,
-              end_time: rest?.state?.timeframe?.end_time,
-            },
-          ],
-        },
-      ]);
+      setSelectedDate(timeframeDate);
+    } else if (rest?.state?.status === "new_order" && !selectedDate) {
+      // For new orders without timeframe, use today or tomorrow if after 6pm
+      const defaultDate =
+        moment().hours() > 18
+          ? moment().add(1, "days").format("YYYY-MM-DD")
+          : moment().format("YYYY-MM-DD");
+      setSelectedDate(defaultDate);
     }
-  }, [rest?.state?.timeframe]);
+  }, [rest?.state?.timeframe?.start_time, rest?.state?.status]);
 
   // Reloading timeframe
   useEffect(() => {
     if (isCompleted(rest?.state).pickup && isCompleted(rest?.state).delivery) {
-      if (
-        rest?.state?.status == "new_order" ||
-        !timeframes[0] ||
-        (rest?.state?.status == "processing" &&
-          rest?.state?.pickup?.location?.address_id !=
-            data?.pickup?.location?.address_id)
-      ) {
+      // Only fetch slots when timeframe can be edited
+      if (canEditTimeframe && selectedDate) {
         setTimeframes([]);
         addTodoMutation.mutate(rest?.state);
+      } else {
+        // Timeframe can't be edited - just display current timeframe without API call
+        const currentTimeframe = rest?.state?.timeframe;
+        if (currentTimeframe?.start_time && currentTimeframe?.end_time) {
+          setTimeframes([
+            {
+              service: currentTimeframe.service,
+              slots: [
+                {
+                  start_time: currentTimeframe.start_time,
+                  end_time: currentTimeframe.end_time,
+                },
+              ],
+            },
+          ]);
+          setFastest({
+            service: currentTimeframe.service,
+            start_time: currentTimeframe.start_time,
+            end_time: currentTimeframe.end_time,
+          });
+        }
       }
-    } else if (rest?.state?.status != "new_order" && rest?.state?.timeframe) {
+    } else if (
+      rest?.state?.status != "new_order" &&
+      rest?.state?.timeframe?.start_time
+    ) {
+      // If pickup/delivery incomplete but we have a timeframe (editing existing order)
       setTimeframes([
         {
           service: rest?.state?.timeframe?.service,
@@ -217,10 +188,22 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
           ],
         },
       ]);
+      setFastest({
+        service: rest?.state?.timeframe?.service,
+        start_time: rest?.state?.timeframe?.start_time,
+        end_time: rest?.state?.timeframe?.end_time,
+      });
     } else {
       setTimeframes([]);
     }
-  }, [rest?.state?.pickup, rest?.state?.delivery]);
+  }, [
+    rest?.state?.pickup,
+    rest?.state?.delivery,
+    rest?.state?.status,
+    addressesChanged,
+    canEditTimeframe,
+    selectedDate,
+  ]);
 
   const handleDateChange = (e) => {
     setSelectedDate(e.target.value);
@@ -237,7 +220,6 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
       timeframe: {
         ...rest?.state?.timeframe,
         service: item?.service,
-        service_id: index,
         start_time: item?.slots[0].start_time,
         end_time: item?.slots[0].end_time,
       },
@@ -256,14 +238,16 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
     });
   };
 
-  // Get current service slots based on service_id
+  // Get current service slots based on service name (not service_id)
   const getCurrentServiceSlots = () => {
-    const serviceId = rest?.state?.timeframe?.service_id || 0;
-    // Ensure timeframes is an array and has the service at the given index
-    if (Array.isArray(timeframes) && timeframes[serviceId]) {
-      return timeframes[serviceId]?.slots || [];
+    const currentService = rest?.state?.timeframe?.service;
+    if (!currentService || !Array.isArray(timeframes)) {
+      return [];
     }
-    return [];
+
+    // Find the service by name
+    const serviceData = timeframes.find((tf) => tf.service === currentService);
+    return serviceData?.slots || [];
   };
 
   // Check if pickup and delivery are completed
@@ -309,7 +293,7 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
         {/* Right Side - Recharge button */}
         {!isCurrentTimeframeFastest() &&
         isPickupDeliveryCompleted &&
-        rest?.state?.status === "new_order" &&
+        canEditTimeframe &&
         Object.keys(fastest).length > 0 ? (
           <div>
             <img
@@ -344,14 +328,21 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
               {Array.isArray(timeframes) &&
                 timeframes?.map((item, index) => (
                   <p
-                    onClick={() => handleServiceSelection(item, index)}
+                    onClick={() =>
+                      canEditTimeframe &&
+                      item.slots &&
+                      item.slots.length > 0 &&
+                      handleServiceSelection(item, index)
+                    }
                     key={index}
-                    className={`text-sm cursor-pointer transition-colors ${
-                      !item.slots || item.slots.length < 1
+                    className={`text-sm transition-colors ${
+                      !canEditTimeframe
+                        ? "cursor-not-allowed opacity-50"
+                        : !item.slots || item.slots.length < 1
                         ? "text-gray-400 line-through cursor-not-allowed"
                         : rest?.state?.timeframe?.service === item?.service
-                        ? "font-bold"
-                        : "text font-normal hover:text-themeOrange transition-color;"
+                        ? "font-bold cursor-pointer"
+                        : "cursor-pointer font-normal hover:text-themeOrange transition-color"
                     }`}
                   >
                     {formatServiceName(item?.service)}
@@ -368,10 +359,11 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
             <div className="border-b border-b-contentBg pb-[2px] mt-1">
               <input
                 type="date"
-                className="w-full text-sm outline-none"
+                className="w-full text-sm outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                 value={selectedDate}
                 onChange={handleDateChange}
                 min={moment().format("YYYY-MM-DD")}
+                disabled={!canEditTimeframe}
               />
             </div>
           </div>
@@ -383,7 +375,7 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
             </label>
             <div className="flex items-center gap-1 border-b border-b-contentBg pb-1 mt-1">
               <select
-                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 outline-none"
+                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                 id="timeframe"
                 value={
                   rest?.state?.timeframe?.start_time &&
@@ -394,6 +386,7 @@ const SelectDateandTime = ({ data, stateChanger, ...rest }) => {
                     : ""
                 }
                 onChange={handleTimeSlotChange}
+                disabled={!canEditTimeframe}
               >
                 <option value="">Select time slot</option>
                 {getCurrentServiceSlots().map((slot) => (

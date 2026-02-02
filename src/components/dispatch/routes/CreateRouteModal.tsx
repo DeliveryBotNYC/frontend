@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { url, useConfig } from "../../../hooks/useConfig";
@@ -6,7 +6,6 @@ import {
   FormInput,
   FormSelect,
   AddressAutocomplete,
-  CheckboxGroup,
 } from "../../reusable/FormComponents";
 import moment from "moment";
 
@@ -143,6 +142,152 @@ const TipInput: React.FC<{
   );
 };
 
+// Driver Selector Component
+const DriverSelector: React.FC<{
+  selectedDriverId: string;
+  availableDrivers: Driver[];
+  onDriverChange: (driverId: string) => void;
+  required: boolean;
+  error?: string;
+}> = ({
+  selectedDriverId,
+  availableDrivers,
+  onDriverChange,
+  required,
+  error,
+}) => {
+  const [driverSearchTerm, setDriverSearchTerm] = useState("");
+  const [isDriverDropdownOpen, setIsDriverDropdownOpen] = useState(false);
+  const driverDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        driverDropdownRef.current &&
+        !driverDropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDriverDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredDrivers = availableDrivers.filter((driver) =>
+    `${driver.firstname} ${driver.lastname}`
+      .toLowerCase()
+      .includes(driverSearchTerm.toLowerCase())
+  );
+
+  const selectDriver = (driverId: string | null): void => {
+    onDriverChange(driverId || "");
+    setIsDriverDropdownOpen(false);
+    setDriverSearchTerm("");
+  };
+
+  const currentDriver = availableDrivers.find(
+    (d) => d.driver_id.toString() === selectedDriverId
+  );
+
+  const currentDriverName = currentDriver
+    ? `${currentDriver.firstname} ${currentDriver.lastname}`
+    : "Select driver...";
+
+  return (
+    <div className="w-full">
+      <label className="text-themeDarkGray text-xs block mb-1">
+        Assign Driver {required && <span className="text-themeRed">*</span>}
+      </label>
+      <div className="relative" ref={driverDropdownRef}>
+        <div
+          className={`flex items-center border-b cursor-pointer ${
+            error
+              ? "border-red-500"
+              : "border-gray-300 hover:border-gray-500 focus-within:border-themeOrange"
+          }`}
+          onClick={() => setIsDriverDropdownOpen(!isDriverDropdownOpen)}
+        >
+          <input
+            type="text"
+            placeholder={currentDriverName}
+            value={driverSearchTerm}
+            onChange={(e) => {
+              e.stopPropagation();
+              setDriverSearchTerm(e.target.value);
+              setIsDriverDropdownOpen(true);
+            }}
+            className="text-sm w-full py-1 focus:outline-none bg-transparent"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="ml-1 flex-shrink-0"
+          >
+            <path
+              d="M19 9l-7 7-7-7"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+
+        {isDriverDropdownOpen && (
+          <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+            {/* Option to clear driver */}
+            <div
+              className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-200"
+              onClick={() => selectDriver(null)}
+            >
+              <em>No Driver (Unassign)</em>
+            </div>
+            {filteredDrivers.length > 0 ? (
+              filteredDrivers.map((driver) => (
+                <div
+                  key={driver.driver_id}
+                  className={`px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm ${
+                    selectedDriverId === driver.driver_id.toString()
+                      ? "bg-blue-50"
+                      : ""
+                  }`}
+                  onClick={() => selectDriver(driver.driver_id.toString())}
+                >
+                  {driver.firstname} {driver.lastname}
+                  <span className="text-xs text-gray-500 ml-2">
+                    ({driver.make} {driver.model})
+                  </span>
+                </div>
+              ))
+            ) : (
+              <div className="px-3 py-2 text-sm text-gray-500">
+                No drivers found
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      {error && (
+        <div className="mt-1 text-xs text-red-500 flex items-center gap-1">
+          <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fillRule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+              clipRule="evenodd"
+            />
+          </svg>
+          <span>{error}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const CreateRouteModal: React.FC<CreateRouteModalProps> = ({
   isOpen,
   onClose,
@@ -239,11 +384,6 @@ const CreateRouteModal: React.FC<CreateRouteModalProps> = ({
       }));
     }
   }, [formData.start_time, formData.polyline]);
-
-  const driverOptions = availableDrivers.map((driver) => ({
-    value: driver.driver_id.toString(),
-    label: `${driver.firstname} ${driver.lastname} (${driver.make} ${driver.model})`,
-  }));
 
   const typeOptions = [
     { value: "instant", label: "Instant Route" },
@@ -379,6 +519,13 @@ const CreateRouteModal: React.FC<CreateRouteModalProps> = ({
     }
   };
 
+  const handleDriverChange = (driverId: string) => {
+    setFormData((prev) => ({ ...prev, driver_id: driverId }));
+    if (errors.driver_id) {
+      setErrors((prev) => ({ ...prev, driver_id: "" }));
+    }
+  };
+
   const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const addressValue = e.target.value;
 
@@ -414,20 +561,8 @@ const CreateRouteModal: React.FC<CreateRouteModalProps> = ({
     return "N/A";
   };
 
-  const getCustomerName = (order: UnassignedOrder): string => {
-    return order.pickup?.name || order.delivery?.name || "Unknown Customer";
-  };
-
   const getOrderNumber = (order: UnassignedOrder): string => {
     return order.external_order_id || order.order_id;
-  };
-
-  const getAddress = (order: UnassignedOrder): string => {
-    if (order.pickup?.address?.formatted) return order.pickup.address.formatted;
-    if (typeof order.pickup?.address === "string") return order.pickup.address;
-    if (typeof order.delivery?.address === "string")
-      return order.delivery.address;
-    return "Address not available";
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -444,7 +579,8 @@ const CreateRouteModal: React.FC<CreateRouteModalProps> = ({
 
     if (formData.driver_id) submitData.driver_id = formData.driver_id;
     if (formData.address_id) submitData.address_id = formData.address_id;
-    if (formData.pay) submitData.pay = formData.pay;
+    // Convert pay from dollars to cents (integer)
+    if (formData.pay) submitData.pay = Math.round(Number(formData.pay) * 100);
     if (formData.time) submitData.time = formData.time;
     if (formData.distance) submitData.distance = formData.distance;
     if (formData.polyline) submitData.polyline = formData.polyline;
@@ -523,15 +659,12 @@ const CreateRouteModal: React.FC<CreateRouteModalProps> = ({
             />
           </div>
 
-          {/* Driver - Required if status != created */}
-          {driverOptions.length > 0 && (
-            <FormSelect
-              label="Assign Driver"
-              name="driver_id"
-              value={formData.driver_id}
-              onChange={handleInputChange}
-              options={driverOptions}
-              placeholder="Select a driver"
+          {/* Driver Selector with Search */}
+          {availableDrivers.length > 0 && (
+            <DriverSelector
+              selectedDriverId={formData.driver_id}
+              availableDrivers={availableDrivers}
+              onDriverChange={handleDriverChange}
               required={statusNotCreated}
               error={errors.driver_id}
             />

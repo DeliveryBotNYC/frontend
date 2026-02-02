@@ -7,35 +7,79 @@ import TrackingOrderCard from "./TrackingOrderCard";
 import { useConfig, url } from "../../hooks/useConfig";
 import SearchIcon from "../../assets/search.svg";
 
-const AllOrders = ({ activeOrderId }) => {
+interface AllOrdersProps {
+  activeOrderId: string;
+  filters?: any;
+  sortBy?: {
+    header: string;
+    order: "asc" | "desc";
+  };
+}
+
+const AllOrders = ({
+  activeOrderId,
+  filters = {},
+  sortBy = { header: "last_updated", order: "desc" },
+}: AllOrdersProps) => {
   const config = useConfig();
   const { searchInput, setSearchInput } = useContext(ThemeContext) || {};
 
-  // Fetch all orders
+  // Fetch all orders with filters and sorting from URL
   const {
     isLoading,
     data: orders,
     error,
   } = useQuery({
-    queryKey: ["orders"],
+    queryKey: ["tracking-orders", searchInput, filters, sortBy],
     queryFn: async () => {
-      const response = await axios.get(`${url}/order/all`, config);
+      const params: any = {
+        search: searchInput || "",
+        sortBy: sortBy.header,
+        sortOrder: sortBy.order,
+        limit: 100, // Get more orders for tracking view
+      };
+
+      // Add date range filters if set
+      if (filters.dateRange?.startDate) {
+        params.startDate = filters.dateRange.startDate.toISOString();
+      }
+      if (filters.dateRange?.endDate) {
+        params.endDate = filters.dateRange.endDate.toISOString();
+      }
+
+      // Add status filters if set
+      if (filters.statuses && filters.statuses.length > 0) {
+        params.statuses = filters.statuses.join(",");
+      }
+
+      // Add store type filter if not "all"
+      if (filters.storeType && filters.storeType !== "all") {
+        params.storeType = filters.storeType;
+      }
+
+      // Add platform filters if set
+      if (filters.platforms && filters.platforms.length > 0) {
+        params.platforms = filters.platforms.join(",");
+      }
+
+      const response = await axios.get(`${url}/order/all`, {
+        ...config,
+        params,
+      });
       return response.data.data.orders;
     },
-    staleTime: 60000, // Consider data fresh for 1 minute to reduce unnecessary fetches
+    staleTime: 60000,
   });
 
-  // Filter orders based on search input
+  // Filter orders based on search input (client-side for immediate feedback)
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
 
-    // If no search input, return all orders
     if (!searchInput) return orders;
 
     const searchLower = searchInput.toLowerCase();
 
     return orders.filter((item) => {
-      // Search through various fields
       return (
         (item?.order_id && item.order_id.toLowerCase().includes(searchLower)) ||
         (item?.pickup?.name &&

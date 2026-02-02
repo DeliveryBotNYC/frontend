@@ -1,5 +1,6 @@
-// OrdersContent.jsx - Using Universal Toolbar
-import { useContext, useState } from "react";
+// OrdersContent.jsx - Add URL sync
+import { useContext, useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import ContentBox2 from "../reusable/ContentBox2";
 import TableToolbar from "../reusable/table/TableToolbar";
 import TableContent from "../reusable/table/TableContent";
@@ -16,23 +17,93 @@ import { FaCalendarAlt, FaTruck, FaDesktop, FaStore } from "react-icons/fa";
 
 const OrdersContent = () => {
   const contextValue = useContext(ThemeContext);
-  const [currentActivePage, setCurrentActivePage] = useState(1);
-  const [totalValuesPerPage, setTotalValuesPerPage] = useState(50);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Initialize state from URL params
+  const searchParams = new URLSearchParams(location.search);
+
+  const [currentActivePage, setCurrentActivePage] = useState(
+    parseInt(searchParams.get("page") || "1")
+  );
+  const [totalValuesPerPage, setTotalValuesPerPage] = useState(
+    parseInt(searchParams.get("limit") || "50")
+  );
   const [totalPages, setTotalPages] = useState(1);
   const [sortBy, setSortBy] = useState({
-    header: "last_updated",
-    order: "desc" as "asc" | "desc",
+    header: searchParams.get("sortBy") || "last_updated",
+    order: (searchParams.get("sortOrder") || "desc") as "asc" | "desc",
   });
 
-  // Add state for image uploader popup
   const { setShowImageUploaderPopup, showImageUploaderPopup } =
     useContext(ThemeContext) || {};
 
-  // State to track if a refresh is in progress
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [filters, setFilters] = useState<any>({});
+
+  // Initialize filters from URL
+  const initializeFilters = () => {
+    const filters: any = {};
+
+    if (searchParams.get("startDate") && searchParams.get("endDate")) {
+      filters.dateRange = {
+        startDate: new Date(searchParams.get("startDate")!),
+        endDate: new Date(searchParams.get("endDate")!),
+      };
+    }
+
+    if (searchParams.get("statuses")) {
+      filters.statuses = searchParams.get("statuses")!.split(",");
+    }
+
+    if (searchParams.get("storeType")) {
+      filters.storeType = searchParams.get("storeType");
+    }
+
+    if (searchParams.get("platforms")) {
+      filters.platforms = searchParams.get("platforms")!.split(",");
+    }
+
+    return filters;
+  };
+
+  const [filters, setFilters] = useState<any>(initializeFilters());
 
   const config = useConfig();
+
+  // Update URL when filters/sorting change
+  useEffect(() => {
+    const params = new URLSearchParams();
+
+    params.set("page", currentActivePage.toString());
+    params.set("limit", totalValuesPerPage.toString());
+    params.set("sortBy", sortBy.header);
+    params.set("sortOrder", sortBy.order);
+
+    if (filters.dateRange?.startDate) {
+      params.set("startDate", filters.dateRange.startDate.toISOString());
+    }
+    if (filters.dateRange?.endDate) {
+      params.set("endDate", filters.dateRange.endDate.toISOString());
+    }
+    if (filters.statuses && filters.statuses.length > 0) {
+      params.set("statuses", filters.statuses.join(","));
+    }
+    if (filters.storeType && filters.storeType !== "all") {
+      params.set("storeType", filters.storeType);
+    }
+    if (filters.platforms && filters.platforms.length > 0) {
+      params.set("platforms", filters.platforms.join(","));
+    }
+
+    navigate(`${location.pathname}?${params.toString()}`, { replace: true });
+  }, [
+    currentActivePage,
+    totalValuesPerPage,
+    sortBy,
+    filters,
+    navigate,
+    location.pathname,
+  ]);
 
   // Define filter configurations for orders
   const orderFilterConfigs = [

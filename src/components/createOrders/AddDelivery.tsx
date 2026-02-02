@@ -1,4 +1,12 @@
-import { useState, useCallback, memo, useRef, useMemo, Fragment } from "react";
+import {
+  useState,
+  useCallback,
+  memo,
+  useRef,
+  useMemo,
+  Fragment,
+  useEffect,
+} from "react";
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import { Link } from "react-router-dom";
@@ -12,6 +20,12 @@ import TashIcon from "../../assets/trash-icn.svg";
 import homeIcon from "../../assets/store-bw.svg";
 import PlusIcon from "../../assets/plus-icon.svg";
 import clipart from "../../assets/deliveryClipArt.svg";
+import tvIcon from "../../assets/tv.svg";
+import boxIcon from "../../assets/box.svg";
+import envelopeIcon from "../../assets/envelope.svg";
+import luggageIcon from "../../assets/luggage.svg";
+
+import LoadingFormSkeleton from "./LoadingFormSkeleton";
 
 // Reusable Components
 import {
@@ -66,7 +80,7 @@ const normalizeDeliveryData = (data) => {
   if (!data) return {};
 
   return {
-    customer_id: data.customer_id || null,
+    customer_id: data.customer_id || undefined,
     phone: data.phone_formatted || "",
     name: data.name || "",
     note: data.default_delivery_note || "",
@@ -74,10 +88,12 @@ const normalizeDeliveryData = (data) => {
     access_code: data.access_code || "",
     tip: data.tip || 0,
     address: {
+      address_id: data.address?.address_id,
       formatted:
         data.address?.formatted || data.address?.formatted_address || "",
       street_address_1:
         data.address?.street_address_1 || data.address?.street || "",
+      street: data.address?.street || data.address?.street_address_1 || "",
       city: data.address?.city || "",
       state: data.address?.state || "",
       zip: data.address?.zip || "",
@@ -85,7 +101,8 @@ const normalizeDeliveryData = (data) => {
       lon: data.address?.lon || "",
     },
     required_verification: {
-      picture: data.delivery_picture || false,
+      picture:
+        data.required_verification?.picture || data.delivery_picture || false,
       recipient: data.delivery_recipient || false,
       signature: data.delivery_signature || false,
     },
@@ -93,7 +110,6 @@ const normalizeDeliveryData = (data) => {
       {
         quantity: data.item_quantity || 1,
         description: data.item_type || "",
-        size: ITEM_TYPES[data.item_type] || "xsmall",
       },
     ],
   };
@@ -217,13 +233,12 @@ const ItemRow = memo(
     onQuantityDecrease,
     onItemRemove,
     onMeasurementUpdate,
-    onToggleMeasurements,
   }) => (
     <div className="w-full col-span-2">
       {/* Single row with all fields */}
       <div className="w-full grid grid-cols-12 gap-2.5">
         {/* Item Name - 4 columns */}
-        <div className="col-span-4">
+        <div className={useMeasurements ? "col-span-4" : "col-span-9"}>
           <label className="text-themeDarkGray text-xs">
             Item name <span className="text-themeRed">*</span>
           </label>
@@ -242,8 +257,8 @@ const ItemRow = memo(
           </datalist>
         </div>
         {/* Measurements or Size - 5 columns */}
-        <div className="col-span-5">
-          {useMeasurements ? (
+        {useMeasurements ? (
+          <div className="col-span-5">
             <div className="w-full">
               <label className="text-themeDarkGray text-xs">
                 Measurements <span className="text-themeRed">*</span>
@@ -333,27 +348,11 @@ const ItemRow = memo(
                   </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="w-full">
-              <label className="text-themeDarkGray text-xs">
-                Size <span className="text-themeRed">*</span>
-              </label>
-              <select
-                disabled={!permissions.canEdit}
-                className="w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack outline-none border-b border-b-contentBg pb-1"
-                value={item.size || "xsmall"}
-                onChange={(e) => onItemUpdate(index, "size", e.target.value)}
-              >
-                {ITEM_SIZES.map((size) => (
-                  <option key={size.key} value={size.key}>
-                    {size.value}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
+            </div>{" "}
+          </div>
+        ) : (
+          ""
+        )}
         {/* Quantity - 3 columns */}
         <div className="col-span-3">
           <label className="text-themeDarkGray text-xs">
@@ -378,20 +377,32 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
   const config = useConfig();
   const apiService = useMemo(() => createApiService(config), [config]);
   const [autoFillDropdown, setAutoFillDropdown] = useState([]);
-  const [useMeasurements, setUseMeasurements] = useState(false);
+  const [useMeasurements, setUseMeasurements] = useState(() => {
+    const items = state?.delivery?.items || [];
+    // Only use measurements mode if items actually have measurement data
+    return items.some(
+      (item) =>
+        (item.length !== undefined && item.length !== null) ||
+        (item.width !== undefined && item.width !== null) ||
+        (item.height !== undefined && item.height !== null) ||
+        (item.weight !== undefined && item.weight !== null)
+    );
+  });
+  const [isClipboardLoading, setIsClipboardLoading] = useState(false);
 
   const nameInputRef = useRef(null);
   const aptInputRef = useRef(null);
 
   // Optimize tip state - convert once and memoize
   const [tip, setTip] = useState(() => {
-    const tipInCents = state?.delivery?.tip;
-    return tipInCents !== undefined
-      ? (tipInCents / 100).toFixed(2)
-      : data?.tip
-      ? (data.tip / 100).toFixed(2)
-      : "0.00";
+    const tipInCents = state?.delivery?.tip ?? data?.tip ?? 0;
+    return (tipInCents / 100).toFixed(2);
   });
+
+  useEffect(() => {
+    const tipInCents = state?.delivery?.tip ?? data?.tip ?? 0;
+    setTip((tipInCents / 100).toFixed(2));
+  }, [state?.delivery?.tip, data?.tip]);
 
   // Memoized computations
   const permissions = useMemo(
@@ -463,6 +474,20 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
     },
   });
 
+  // Initialize selectedSize - but only if NOT using measurements
+  const [selectedSize, setSelectedSize] = useState(() => {
+    const items = state?.delivery?.items || [];
+    const hasMeasurements = items.some(
+      (item) =>
+        (item.length !== undefined && item.length !== null) ||
+        (item.width !== undefined && item.width !== null) ||
+        (item.height !== undefined && item.height !== null) ||
+        (item.weight !== undefined && item.weight !== null)
+    );
+
+    // Only set size if items don't have measurements
+    return hasMeasurements ? "" : state?.delivery?.size_category || "";
+  });
   // Optimized state updaters
   const updateDeliveryData = useCallback(
     (updates) => {
@@ -479,6 +504,14 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
     [updateDeliveryData]
   );
 
+  const handleSizeSelect = useCallback(
+    (size) => {
+      setSelectedSize(size);
+      updateDeliveryField("size_category", size);
+    },
+    [updateDeliveryField]
+  );
+
   // Event handlers
   const handlePhoneChange = useCallback(
     (e) => {
@@ -486,10 +519,29 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
 
       stateChanger((prevState) => ({
         ...prevState,
-        timeframe: initialState.timeframe,
+        timeframe: {
+          service: "",
+          start_time: "",
+          end_time: "",
+        },
         delivery: {
-          ...initialState.delivery,
+          customer_id: undefined, // Always clear customer_id on phone change
           phone,
+          name: "",
+          note: "",
+          tip: data?.tip || 0,
+          apt: "",
+          access_code: "",
+          address: {
+            formatted: "",
+            street_address_1: "",
+            street: "",
+            city: "",
+            state: "",
+            zip: "",
+            lat: "",
+            lon: "",
+          },
           required_verification: {
             picture: data?.delivery_picture || false,
             recipient: data?.delivery_recipient || false,
@@ -499,23 +551,26 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
             {
               quantity: data?.item_quantity || 1,
               description: data?.item_type || "",
-              size: ITEM_TYPES[data?.item_type] || "xsmall",
             },
           ],
-          tip: data?.tip || 0,
         },
       }));
 
       if (PHONE_REGEX.test(phone) && data?.autofill) {
-        checkPhoneExist.mutate(phone);
+        checkPhoneExist.mutate(phone); // This will set customer_id if found
       }
     },
     [data, checkPhoneExist, stateChanger]
   );
 
   const handleNameChange = useCallback(
-    (e) => updateDeliveryField("name", formatName(e.target.value)),
-    [updateDeliveryField]
+    (e) => {
+      updateDeliveryData({
+        customer_id: undefined, // Clear customer_id when name changes
+        name: formatName(e.target.value),
+      });
+    },
+    [updateDeliveryData]
   );
 
   const handleAddressChange = useCallback(
@@ -524,8 +579,10 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
 
       if (typeof value === "object" && value !== null) {
         updateDeliveryData({
+          customer_id: undefined, // Clear customer_id when address changes
           address: {
             ...value,
+            address_id: value.address_id,
             street_address_1: value.street_address_1 || value.street || "",
             formatted: value.formatted || value.formatted_address || "",
           },
@@ -533,8 +590,10 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
         aptInputRef.current?.focus();
       } else {
         updateDeliveryData({
+          customer_id: undefined, // Clear customer_id when address changes
           address: {
             ...state?.delivery?.address,
+            address_id: undefined,
             street_address_1: value,
             formatted: "",
             city: "",
@@ -549,6 +608,17 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
     [state?.delivery?.address, updateDeliveryData]
   );
 
+  // Add handler for apt changes
+  const handleAptChange = useCallback(
+    (e) => {
+      updateDeliveryData({
+        customer_id: undefined, // Clear customer_id when apt changes
+        apt: e.target.value,
+      });
+    },
+    [updateDeliveryData]
+  );
+
   const handleHomeAddressClick = useCallback(() => {
     const tipValue = data?.tip ? (data.tip / 100).toFixed(2) : "0.00";
     setTip(tipValue);
@@ -556,19 +626,32 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
   }, [data, updateDeliveryData]);
 
   const handleClipboardPaste = useCallback(async () => {
+    setIsClipboardLoading(true); // Start loading
     try {
       const clipboardText = await navigator.clipboard.readText();
       const parsedData = parseClipboardText(clipboardText);
 
-      if (!parsedData) return;
+      if (!parsedData) {
+        setIsClipboardLoading(false);
+        return;
+      }
+
+      // Build address object from parsed data
+      const addressToValidate =
+        parsedData.street && parsedData.zip
+          ? {
+              street: parsedData.street,
+              zip: parsedData.zip,
+            }
+          : null;
+
+      let validatedAddress = null;
 
       // Validate address if available
-      if (parsedData.address?.street && parsedData.address?.zip) {
+      if (addressToValidate) {
         try {
-          const validatedAddress = await validateAddress.mutateAsync(
-            parsedData.address
-          );
-          parsedData.address = validatedAddress;
+          const response = await validateAddress.mutateAsync(addressToValidate);
+          validatedAddress = response.data?.data || null;
         } catch (error) {
           console.error("Address validation failed:", error);
         }
@@ -578,14 +661,26 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
         phone: parsedData.phone || state?.delivery?.phone,
         name: parsedData.name || "",
         apt: parsedData.apt || "",
-        address: parsedData.address || state?.delivery?.address,
+        address: validatedAddress || state?.delivery?.address,
       });
 
       if (parsedData.phone && PHONE_REGEX.test(parsedData.phone)) {
-        checkPhoneExist.mutate(parsedData.phone);
+        try {
+          await checkPhoneExist.mutateAsync(parsedData.phone);
+        } catch (error) {
+          // Silently handle 404 - it just means this is a new customer
+          if (error?.response?.status !== 404) {
+            console.error("Unexpected phone lookup error:", error);
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to read clipboard:", error);
+      alert(
+        "Failed to read clipboard text. Please enable permission and try again."
+      );
+    } finally {
+      setIsClipboardLoading(false); // End loading
     }
   }, [state?.delivery, updateDeliveryData, validateAddress, checkPhoneExist]);
 
@@ -593,11 +688,33 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
     const tipValue = data?.tip ? (data.tip / 100).toFixed(2) : "0.00";
     setTip(tipValue);
     setUseMeasurements(false);
+
+    // Match the exact structure from normalizeDeliveryData
     stateChanger((prevState) => ({
       ...prevState,
-      timeframe: initialState.timeframe,
+      timeframe: {
+        service: "",
+        start_time: "",
+        end_time: "",
+      },
       delivery: {
-        ...initialState.delivery,
+        customer_id: undefined,
+        phone: "",
+        name: "",
+        note: "",
+        tip: data?.tip || 0,
+        apt: "",
+        access_code: "",
+        address: {
+          formatted: "",
+          street_address_1: "",
+          street: "", // Add this for isEmpty check
+          city: "",
+          state: "",
+          zip: "",
+          lat: "",
+          lon: "",
+        },
         required_verification: {
           picture: data?.delivery_picture || false,
           recipient: data?.delivery_recipient || false,
@@ -607,10 +724,8 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
           {
             quantity: data?.item_quantity || 1,
             description: data?.item_type || "",
-            size: ITEM_TYPES[data?.item_type] || "xsmall",
           },
         ],
-        tip: data?.tip || 0,
       },
     }));
   }, [data, stateChanger]);
@@ -619,33 +734,11 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
   const updateItem = useCallback(
     (index, field, value) => {
       stateChanger((prevState) => {
-        if (field === "size") {
-          // Update all items with same size
-          return {
-            ...prevState,
-            delivery: {
-              ...prevState.delivery,
-              items: prevState.delivery.items.map((item) => ({
-                ...item,
-                size: value,
-              })),
-            },
-          };
-        }
-
-        // Update specific item
         const items = [...prevState.delivery.items];
         const updatedItem = { ...items[index] };
 
-        if (field === "description") {
-          updatedItem.description = value;
-          if (prevState.delivery.items.length === 1) {
-            updatedItem.size = ITEM_TYPES[value] || updatedItem.size;
-          }
-        } else {
-          updatedItem[field] = value;
-        }
-
+        // Just update the field directly - no automatic size assignment
+        updatedItem[field] = value;
         items[index] = updatedItem;
 
         return {
@@ -683,60 +776,48 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
     [stateChanger]
   );
 
-  const toggleMeasurements = useCallback(
-    (index) => {
-      if (useMeasurements) {
-        // Switching from measurements to size guide
-        setUseMeasurements(false);
-        // Clear measurement properties from all items
-        stateChanger((prevState) => ({
+  const toggleMeasurements = useCallback(() => {
+    if (useMeasurements) {
+      // Switching from measurements to size guide
+      setUseMeasurements(false);
+      // Clear measurement properties from all items - DO NOT set size_category
+      stateChanger((prevState) => ({
+        ...prevState,
+        delivery: {
+          ...prevState.delivery,
+          items: prevState.delivery.items.map((item) => {
+            const {
+              length,
+              width,
+              height,
+              weight,
+              ...itemWithoutMeasurements
+            } = item;
+            return itemWithoutMeasurements;
+          }),
+        },
+      }));
+    } else {
+      // Switching from size guide to measurements
+      setUseMeasurements(true);
+      // Remove size_category when using measurements
+      stateChanger((prevState) => {
+        const { size_category, ...deliveryWithoutSize } = prevState.delivery;
+        return {
           ...prevState,
-          delivery: {
-            ...prevState.delivery,
-            items: prevState.delivery.items.map((item) => {
-              const {
-                length,
-                width,
-                height,
-                weight,
-                ...itemWithoutMeasurements
-              } = item;
-              return itemWithoutMeasurements;
-            }),
-          },
-        }));
-      } else {
-        // Switching from size guide to measurements
-        setUseMeasurements(true);
-        // Clear size from all items when switching to measurements
-        stateChanger((prevState) => ({
-          ...prevState,
-          delivery: {
-            ...prevState.delivery,
-            items: prevState.delivery.items.map((item) => {
-              const { size, ...itemWithoutSize } = item;
-              return itemWithoutSize;
-            }),
-          },
-        }));
-      }
-    },
-    [useMeasurements, stateChanger]
-  );
+          delivery: deliveryWithoutSize,
+        };
+      });
+    }
+  }, [useMeasurements, stateChanger]);
 
   const addItem = useCallback(() => {
-    const currentSize =
-      state?.delivery?.items?.[0]?.size ||
-      ITEM_TYPES[data?.item_type] ||
-      "xsmall";
-
     updateDeliveryData({
       items: [
         ...state.delivery.items,
         {
           quantity: data?.item_quantity || 1,
           description: data?.item_type || "",
-          size: currentSize,
         },
       ],
     });
@@ -793,6 +874,9 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
   );
 
   // Render phone-only form
+  if (isClipboardLoading) {
+    return <LoadingFormSkeleton section="delivery" />;
+  }
   if (!validation.isPhoneValid && state?.status === "new_order") {
     return (
       <div className="w-full bg-white rounded-2xl my-5">
@@ -917,7 +1001,7 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
               id="delivery_apt"
               disabled={!permissions.canEdit}
               value={state?.delivery?.apt || ""}
-              onChange={(e) => updateDeliveryField("apt", e.target.value)}
+              onChange={handleAptChange}
             />
             <FormInput
               label="Access code"
@@ -1011,6 +1095,115 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
           />
         </div>
 
+        {/* Size Selection Buttons - Only show when NOT using measurements */}
+        {!useMeasurements && (
+          <div className="w-full col-span-2">
+            <label className="block text-themeDarkGray text-xs mb-2">
+              Package Size <span className="text-themeRed">*</span>
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              <button
+                type="button"
+                disabled={!permissions.canEdit}
+                onClick={() => handleSizeSelect("xsmall")}
+                className={`p-3 rounded-lg border-2 transition-all disabled:opacity-50 ${
+                  state?.delivery?.size_category === "xsmall"
+                    ? "border-themeOrange bg-orange-50"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <img
+                    src={envelopeIcon}
+                    alt=""
+                    className="w-8 h-8 mt-0.5 flex-shrink-0"
+                  />
+                  <div className="text-left">
+                    <div className="text-sm">Extra Small</div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      Fits in an envelope
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                disabled={!permissions.canEdit}
+                onClick={() => handleSizeSelect("small")}
+                className={`p-3 rounded-lg border-2 transition-all disabled:opacity-50 ${
+                  state?.delivery?.size_category === "small"
+                    ? "border-themeOrange bg-orange-50"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <img
+                    src={boxIcon}
+                    alt=""
+                    className="w-8 h-8 mt-0.5 flex-shrink-0"
+                  />
+                  <div className="text-left">
+                    <div className="text-sm">Small</div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      Fits in large backpack
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                disabled={!permissions.canEdit}
+                onClick={() => handleSizeSelect("medium")}
+                className={`p-3 rounded-lg border-2 transition-all disabled:opacity-50 ${
+                  state?.delivery?.size_category === "medium"
+                    ? "border-themeOrange bg-orange-50"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <img
+                    src={luggageIcon}
+                    alt=""
+                    className="w-8 h-8 mt-0.5 flex-shrink-0"
+                  />
+                  <div className="text-left">
+                    <div className="text-sm">Medium</div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      Fits in front seat
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                disabled={!permissions.canEdit}
+                onClick={() => handleSizeSelect("large")}
+                className={`p-3 rounded-lg border-2 transition-all disabled:opacity-50 ${
+                  state?.delivery?.size_category === "large"
+                    ? "border-themeOrange bg-orange-50"
+                    : "border-gray-200 hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <img
+                    src={tvIcon}
+                    alt=""
+                    className="w-8 h-8 mt-0.5 flex-shrink-0"
+                  />
+                  <div className="text-left">
+                    <div className="text-sm">Large</div>
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      Fits in a car trunk
+                    </div>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        )}
         {/* Items */}
         {state?.delivery?.items?.map((item, index) => (
           <Fragment key={index}>

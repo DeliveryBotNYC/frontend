@@ -30,27 +30,6 @@ interface PickupOrder {
   end_time?: string;
 }
 
-interface Order {
-  pickup: {
-    name: string;
-    address: OrderAddress;
-  };
-  delivery: {
-    name: string;
-    address: OrderAddress;
-  };
-  order_id: number;
-  status: string;
-  items?: never[];
-  pickup_note?: string;
-  delivery_note?: string;
-  start_time?: string;
-  end_time?: string;
-  delivery_picture?: string;
-  delivery_signature?: string;
-  delivery_recipient?: string;
-}
-
 interface DeliveryOrder {
   order_id: number;
   status: string;
@@ -77,11 +56,11 @@ interface OrderItem {
   o_order: number;
   pickup: {
     count?: number;
-    orders?: Order[];
+    orders?: PickupOrder[];
   };
   deliver: {
     count?: number;
-    orders?: Order[];
+    orders?: DeliveryOrder[];
   };
   address: OrderAddress;
 }
@@ -111,7 +90,7 @@ const StopCard: React.FC<StopCardProps> = ({
     item.deliver?.orders && item.deliver.orders.length > 0;
 
   // Convert order data to format expected by OrderCard
-  const formatPickupOrderForCard = (order: Order) => ({
+  const formatPickupOrderForCard = (order: PickupOrder) => ({
     order_id: order.order_id.toString(),
     status: order.status,
     timeframe: {
@@ -121,13 +100,13 @@ const StopCard: React.FC<StopCardProps> = ({
     pickup: {
       name: order.pickup.name,
       address: {
-        street_address_1: order.pickup.address.street_address_1,
+        street_address_1: item.address.street_address_1,
       },
     },
     delivery: {
-      name: order.delivery.name,
+      name: item.name,
       address: {
-        street_address_1: order.delivery.address.street_address_1,
+        street_address_1: item.address.street_address_1,
       },
     },
     pickup_note: order.pickup_note,
@@ -138,7 +117,7 @@ const StopCard: React.FC<StopCardProps> = ({
     end_time: order.end_time,
   });
 
-  const formatDeliveryOrderForCard = (order: Order) => ({
+  const formatDeliveryOrderForCard = (order: DeliveryOrder) => ({
     order_id: order.order_id.toString(),
     status: order.status,
     timeframe: {
@@ -146,15 +125,15 @@ const StopCard: React.FC<StopCardProps> = ({
       end_time: order.end_time || item.timeframe.end_time,
     },
     pickup: {
-      name: order.pickup.name,
+      name: item.name,
       address: {
-        street_address_1: order.pickup.address.street_address_1,
+        street_address_1: item.address.street_address_1,
       },
     },
     delivery: {
-      name: order.delivery.name,
+      name: item.name,
       address: {
-        street_address_1: order.delivery.address.street_address_1,
+        street_address_1: item.address.street_address_1,
       },
     },
     pickup_note: undefined,

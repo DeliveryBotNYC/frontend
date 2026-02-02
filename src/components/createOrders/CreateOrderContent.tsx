@@ -1,4 +1,11 @@
-import { useContext, useState, useEffect, useMemo, useCallback } from "react";
+import {
+  useContext,
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
@@ -26,24 +33,14 @@ import useAuth from "../../hooks/useAuth";
 const DEFAULT_ORDER_STATE = {
   status: "new_order",
   pickup: {
-    customer_id: null,
-    phone: "",
-    name: "",
-    note: "",
-    apt: "",
-    access_code: "",
     address: {
-      address_id: "",
       formatted: "",
-      street: "",
+      street_address_1: "",
       city: "",
       state: "",
       zip: "",
       lat: "",
       lon: "",
-    },
-    required_verification: {
-      picture: false,
     },
   },
   delivery: {
@@ -55,9 +52,8 @@ const DEFAULT_ORDER_STATE = {
     apt: "",
     access_code: "",
     address: {
-      address_id: "",
       formatted: "",
-      street: "",
+      street_address_1: "",
       city: "",
       state: "",
       zip: "",
@@ -73,7 +69,6 @@ const DEFAULT_ORDER_STATE = {
       {
         quantity: 1,
         description: "box",
-        size: "xsmall",
       },
     ],
   },
@@ -89,7 +84,6 @@ const createDefaultItems = (data) => [
   {
     quantity: data?.item_quantity || 1,
     description: data?.item_type || "box",
-    size: "xsmall",
   },
 ];
 
@@ -122,6 +116,10 @@ const CreateOrderContent = () => {
     return auth?.roles?.includes(5150);
   }, [auth?.roles]);
 
+  const [userSearchTerm, setUserSearchTerm] = useState("");
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const userDropdownRef = useRef(null);
+
   // Always fetch users for admins, or retail data for regular users
   const shouldFetchUsers = isAdmin && orderId === "create-order";
   const shouldFetchRetail = !isAdmin && orderId === "create-order";
@@ -132,7 +130,7 @@ const CreateOrderContent = () => {
     if (shouldFetchOrder) {
       return `${url}/orders?order_id=${orderId}`;
     } else if (shouldFetchUsers) {
-      return `${url}/retail/all`;
+      return `${url}/retail/all?status=active`;
     } else if (shouldFetchRetail) {
       return `${url}/retail`;
     }
@@ -269,6 +267,21 @@ const CreateOrderContent = () => {
     selectedUserId,
   ]);
 
+  // Add click outside handler
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (
+        userDropdownRef.current &&
+        !userDropdownRef.current.contains(event.target)
+      ) {
+        setIsUserDropdownOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Event handlers
   const handleOpenImageUploader = useCallback(() => {
     setShowImageUploaderPopup(true);
@@ -278,8 +291,10 @@ const CreateOrderContent = () => {
     setShowImageUploaderPopup(false);
   }, [setShowImageUploaderPopup]);
 
-  const handleUserSelect = useCallback((e) => {
-    setSelectedUserId(e.target.value);
+  const handleUserSelect = useCallback((userId) => {
+    setSelectedUserId(userId);
+    setIsUserDropdownOpen(false);
+    setUserSearchTerm("");
   }, []);
 
   // Render user dropdown for admins
@@ -287,23 +302,96 @@ const CreateOrderContent = () => {
     if (!isAdmin || orderId !== "create-order" || !Array.isArray(data))
       return null;
 
+    // Filter users based on search term
+    const filteredUsers = data.filter((user) =>
+      (user.firstname + " " + user.lastname + " " + user.email)
+        .toLowerCase()
+        .includes(userSearchTerm.toLowerCase())
+    );
+
+    // Get current selected user
+    const currentUser = data.find((u) => u.user_id === selectedUserId);
+    const currentUserName = currentUser
+      ? `${currentUser.firstname} ${currentUser.lastname}`
+      : "Select a user...";
+
     return (
       <div className="bg-white rounded-2xl my-5 px-5 py-4">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Select User
         </label>
-        <select
-          value={selectedUserId || ""}
-          onChange={handleUserSelect}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        >
-          <option value="">Select a user...</option>
-          {data.map((user) => (
-            <option key={user.user_id} value={user.user_id}>
-              {user.firstname} {user.lastname} ({user.email})
-            </option>
-          ))}
-        </select>
+        <div className="relative" ref={userDropdownRef}>
+          <div
+            className="flex items-center border border-gray-300 rounded-md px-3 py-2 cursor-pointer bg-white"
+            onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
+          >
+            <input
+              type="text"
+              placeholder={currentUserName}
+              value={userSearchTerm}
+              onChange={(e) => {
+                e.stopPropagation();
+                setUserSearchTerm(e.target.value);
+                setIsUserDropdownOpen(true);
+              }}
+              className="text-sm w-full focus:outline-none bg-transparent"
+              onClick={(e) => e.stopPropagation()}
+            />
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              className="ml-1 flex-shrink-0"
+            >
+              <path
+                d="M19 9l-7 7-7-7"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </div>
+
+          {isUserDropdownOpen && (
+            <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+              {/* Option to clear selection */}
+              <div
+                className="px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm border-b border-gray-200"
+                onClick={() => {
+                  setSelectedUserId(null);
+                  setIsUserDropdownOpen(false);
+                  setUserSearchTerm("");
+                }}
+              >
+                <em>Clear selection</em>
+              </div>
+
+              {filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => (
+                  <div
+                    key={user.user_id}
+                    className={`px-3 py-2 hover:bg-gray-100 cursor-pointer text-sm ${
+                      selectedUserId === user.user_id ? "bg-blue-50" : ""
+                    }`}
+                    onClick={() => handleUserSelect(user.user_id)}
+                  >
+                    <div className="font-medium">
+                      {user.firstname} {user.lastname}
+                    </div>
+                    <div className="text-xs text-gray-500">{user.email}</div>
+                  </div>
+                ))
+              ) : (
+                <div className="px-3 py-2 text-sm text-gray-500">
+                  No users found
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     );
   };

@@ -9,6 +9,8 @@ import RefreshIcon from "../../assets/refresh-icon.svg";
 import homeIcon from "../../assets/store-bw.svg";
 import clipart from "../../assets/pickupClipArt.svg";
 
+import LoadingFormSkeleton from "./LoadingFormSkeleton";
+
 // Reusable Components
 import {
   FormInput,
@@ -39,16 +41,19 @@ const normalizePickupData = (data) => {
   if (!data) return {};
 
   return {
+    customer_id: data.customer_id || null,
     phone: data.phone_formatted || "",
     name: data.name || "",
     note: data.default_pickup_note || data.pickup_note || "",
     apt: data.apt || "",
     access_code: data.access_code || "",
     address: {
+      address_id: data.address?.address_id,
       formatted:
         data.address?.formatted || data.address?.formatted_address || "",
       street_address_1:
         data.address?.street_address_1 || data.address?.street || "",
+      street: data.address?.street || data.address?.street_address_1 || "",
       city: data.address?.city || "",
       state: data.address?.state || "",
       zip: data.address?.zip || "",
@@ -69,7 +74,7 @@ const createApiService = (config) => ({
   validateAddress: (address) =>
     axios.get(
       `${url}/address/validate?street=${encodeURI(
-        address.street_address_1
+        address.street
       )}&zip=${encodeURI(address.zip)}`,
       config
     ),
@@ -78,6 +83,7 @@ const createApiService = (config) => ({
 const PickupForm = memo(({ data, stateChanger, state }) => {
   const config = useConfig();
   const apiService = useMemo(() => createApiService(config), [config]);
+  const [isClipboardLoading, setIsClipboardLoading] = useState(false);
 
   const nameInputRef = useRef<HTMLInputElement>(null);
   const aptInputRef = useRef<HTMLInputElement>(null);
@@ -108,16 +114,17 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
       const customerData = response?.data?.data;
       if (customerData) {
         updatePickupData({
+          customer_id: customerData.customer_id || "",
           name: customerData.name || "",
           address: customerData.address || initialState.pickup.address,
+          apt: customerData.apt || "",
+          access_code: customerData.access_code || "",
         });
       }
     },
     onError: (error) => {
       // Focus name input after auto-filling
-      if (nameInputRef.current) {
-        nameInputRef.current.focus();
-      }
+      nameInputRef.current?.focus();
       console.error("Phone lookup error:", error);
     },
   });
@@ -163,27 +170,47 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
       const phone = e.target.value;
 
       // Reset the entire form whenever phone changes, keeping only the new phone and defaults
-      updatePickupData({
-        ...initialState.pickup,
-        phone: phone,
-        required_verification: {
-          picture: data?.pickup_picture || false,
+      stateChanger((prevState) => ({
+        ...prevState,
+        pickup: {
+          customer_id: null, // Always clear customer_id on phone change
+          phone,
+          name: "",
+          note: "",
+          apt: "",
+          access_code: "",
+          address: {
+            formatted: "",
+            street_address_1: "",
+            street: "",
+            city: "",
+            state: "",
+            zip: "",
+            lat: "",
+            lon: "",
+          },
+          required_verification: {
+            picture: data?.pickup_picture || false,
+          },
         },
-      });
+      }));
 
       // Auto-lookup customer if phone is valid
       if (PHONE_REGEX.test(phone) && data?.autofill) {
-        checkPhoneExist.mutate(phone);
+        checkPhoneExist.mutate(phone); // This will set customer_id if found
       }
     },
-    [data?.autofill, data?.pickup_picture, checkPhoneExist, updatePickupData]
+    [data?.autofill, data?.pickup_picture, checkPhoneExist, stateChanger]
   );
 
   const handleNameChange = useCallback(
     (e) => {
-      updatePickupField("name", formatName(e.target.value));
+      updatePickupData({
+        customer_id: null, // Clear customer_id when name changes
+        name: formatName(e.target.value),
+      });
     },
-    [updatePickupField]
+    [updatePickupData]
   );
 
   const handleAddressChange = useCallback(
@@ -193,22 +220,24 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
       if (typeof value === "object" && value !== null) {
         // Address object from autocomplete
         updatePickupData({
+          customer_id: null, // Clear customer_id when address changes
           address: {
             ...value,
+            address_id: value.address_id,
             street_address_1: value.street_address_1 || value.street || "",
             formatted: value.formatted || value.formatted_address || "",
           },
         });
 
         // Focus apt input after address selection
-        if (aptInputRef.current) {
-          aptInputRef.current.focus();
-        }
+        aptInputRef.current?.focus();
       } else {
         // Manual text input
         updatePickupData({
+          customer_id: null, // Clear customer_id when address changes
           address: {
             ...state.pickup.address,
+            address_id: undefined,
             street_address_1: value,
             formatted: "",
             city: "",
@@ -223,55 +252,107 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
     [state?.pickup?.address, updatePickupData]
   );
 
+  // Add handler for apt changes
+  const handleAptChange = useCallback(
+    (e) => {
+      updatePickupData({
+        customer_id: null, // Clear customer_id when apt changes
+        apt: e.target.value,
+      });
+    },
+    [updatePickupData]
+  );
+
   const handleHomeAddressClick = useCallback(() => {
     const defaultData = normalizePickupData(data);
     updatePickupData(defaultData);
   }, [data, updatePickupData]);
 
   const handleClipboardPaste = useCallback(async () => {
+    setIsClipboardLoading(true); // Start loading
     try {
       const clipboardText = await navigator.clipboard.readText();
       const parsedData = parseClipboardText(clipboardText);
 
-      if (parsedData) {
-        // Validate address if available
-        if (parsedData.address?.street_address_1 && parsedData.address?.zip) {
-          try {
-            const validatedAddress = await validateAddress.mutateAsync(
-              parsedData.address
-            );
-            parsedData.address = validatedAddress;
-          } catch (error) {
-            console.error("Address validation failed:", error);
-          }
+      if (!parsedData) {
+        setIsClipboardLoading(false);
+        return;
+      }
+
+      // Build address object from parsed data
+      const addressToValidate =
+        parsedData.street && parsedData.zip
+          ? {
+              street: parsedData.street,
+              zip: parsedData.zip,
+            }
+          : null;
+
+      let validatedAddress = null;
+
+      // Validate address if available
+      if (addressToValidate) {
+        try {
+          const response = await validateAddress.mutateAsync(addressToValidate);
+          validatedAddress = response.data?.data || null;
+        } catch (error) {
+          console.error("Address validation failed:", error);
         }
+      }
 
-        updatePickupData({
-          phone: parsedData.phone || state.pickup.phone,
-          name: parsedData.name || "",
-          apt: parsedData.apt || "",
-          address: parsedData.address || state.pickup.address,
-        });
+      updatePickupData({
+        phone: parsedData.phone || state?.pickup?.phone,
+        name: parsedData.name || "",
+        apt: parsedData.apt || "",
+        address: validatedAddress || state?.pickup?.address,
+      });
 
-        // Auto-lookup customer if phone is valid
-        if (parsedData.phone && PHONE_REGEX.test(parsedData.phone)) {
-          checkPhoneExist.mutate(parsedData.phone);
+      if (parsedData.phone && PHONE_REGEX.test(parsedData.phone)) {
+        try {
+          await checkPhoneExist.mutateAsync(parsedData.phone);
+        } catch (error) {
+          // Silently handle 404 - it just means this is a new customer
+          if (error?.response?.status !== 404) {
+            console.error("Unexpected phone lookup error:", error);
+          }
         }
       }
     } catch (error) {
       console.error("Failed to read clipboard:", error);
+      alert(
+        "Failed to read clipboard text. Please enable permission and try again."
+      );
+    } finally {
+      setIsClipboardLoading(false); // End loading
     }
-  }, [state.pickup, updatePickupData, validateAddress, checkPhoneExist]);
+  }, [state?.pickup, updatePickupData, validateAddress, checkPhoneExist]);
 
   const handleResetForm = useCallback(() => {
-    updatePickupData({
-      ...initialState.pickup,
-      phone: "",
-      required_verification: {
-        picture: data?.pickup_picture || false,
+    stateChanger((prevState) => ({
+      ...prevState,
+      pickup: {
+        customer_id: null,
+        phone: "",
+        name: "",
+        note: "",
+        apt: "",
+        access_code: "",
+        address: {
+          formatted: "",
+          street_address_1: "",
+          street: "",
+          city: "",
+          state: "",
+          zip: "",
+          lat: "",
+          lon: "",
+        },
+        required_verification: {
+          picture: data?.pickup_picture || false,
+        },
       },
-    });
-  }, [data?.pickup_picture, updatePickupData]);
+    }));
+  }, [data?.pickup_picture, stateChanger]);
 
   const handlePictureVerificationChange = useCallback(
     (e) => {
@@ -403,7 +484,7 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
             id="pickup_apt"
             disabled={!permissions.canEdit}
             value={state?.pickup?.apt || ""}
-            onChange={(e) => updatePickupField("apt", e.target.value)}
+            onChange={handleAptChange}
           />
           <FormInput
             label="Access code"
@@ -443,6 +524,11 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
       </div>
     </div>
   );
+
+  // Render loading skeleton during clipboard operation
+  if (isClipboardLoading) {
+    return <LoadingFormSkeleton section="pickup" />;
+  }
 
   return (
     <div className="w-full bg-white rounded-2xl my-5">

@@ -5,6 +5,7 @@ import {
   updateStopOrdersDirectly,
 } from "../utils/apiHelpers";
 import { isStopLocked } from "../utils/stopHelpers";
+
 import {
   getOrderCustomerId,
   canExtractOrderFromStop,
@@ -25,7 +26,7 @@ export const useOrderOperations = (
     try {
       setIsRemovingOrder(true);
 
-      await removeOrderFromRoute(orderId, url);
+      await removeOrderFromRoute(orderId, url, config);
 
       const newOrderedItems = orderedItems
         .map((stop) => {

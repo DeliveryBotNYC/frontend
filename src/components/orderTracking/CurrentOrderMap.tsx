@@ -21,39 +21,131 @@ import { stadia, mapStyle } from "../reusable/functions";
 const CurrentOrderMap = ({ data }) => {
   const mapRef = useRef(null);
 
-  // Initialize polyline array for route visualization
-  const betweensPoly = [];
+  // Separate stops by completion status
+  const completedStops =
+    data?.stops?.filter((stop) => stop.status === "completed") || [];
+  const remainingStops =
+    data?.stops?.filter((stop) => stop.status === "to_do") || [];
 
-  // Add driver location to polyline if available and order not delivered
-  if (data?.driver?.location?.lat && data.status !== "delivered") {
-    betweensPoly.push([data.driver?.location?.lat, data.driver?.location?.lon]);
-  }
+  // Sort remaining stops by stop_number
+  const sortedRemainingStops = [...remainingStops].sort(
+    (a, b) => a.stop_number - b.stop_number
+  );
 
-  // Add stops to polyline if available
-  if (data?.stops && Array.isArray(data.stops)) {
-    data.stops.forEach((item) => {
-      if (item.lat && item.lon) {
-        betweensPoly.push([item.lat, item.lon]);
+  // Build estimated route polyline based on status
+  const buildEstimatedRoute = () => {
+    const route = [];
+
+    if (data?.status === "processing") {
+      // For processing: just show driver location to pickup to delivery (no stops)
+      if (data?.driver?.location?.lat) {
+        route.push([data.driver.location.lat, data.driver.location.lon]);
       }
-    });
-  } else {
-    // If no stops array, add pickup and delivery locations
-    if (data?.pickup?.address?.lat && data?.pickup?.address?.lon) {
-      betweensPoly.push([data.pickup.address.lat, data.pickup.address.lon]);
+      if (data?.pickup?.address?.lat) {
+        route.push([data.pickup.address.lat, data.pickup.address.lon]);
+      }
+      if (data?.delivery?.address?.lat) {
+        route.push([data.delivery.address.lat, data.delivery.address.lon]);
+      }
+    } else if (
+      data?.status === "assigned" ||
+      data?.status === "arrived_at_pickup"
+    ) {
+      // For assigned/arrived_at_pickup: driver → stops before pickup → pickup → stops after pickup → delivery
+
+      // Start with driver location
+      if (data?.driver?.location?.lat) {
+        route.push([data.driver.location.lat, data.driver.location.lon]);
+      }
+
+      // Get pickup and delivery stop numbers (assuming they exist in your data structure)
+      const pickupStopNumber = data?.pickup?.stop || 0;
+      const deliveryStopNumber = data?.delivery?.stop || 999;
+
+      // Add stops before pickup
+      const stopsBeforePickup = sortedRemainingStops.filter(
+        (stop) => stop.stop_number < pickupStopNumber
+      );
+      stopsBeforePickup.forEach((stop) => {
+        if (stop.lat && stop.lon) {
+          route.push([stop.lat, stop.lon]);
+        }
+      });
+
+      // Add pickup
+      if (data?.pickup?.address?.lat) {
+        route.push([data.pickup.address.lat, data.pickup.address.lon]);
+      }
+
+      // Add stops after pickup but before delivery
+      const stopsAfterPickup = sortedRemainingStops.filter(
+        (stop) =>
+          stop.stop_number > pickupStopNumber &&
+          stop.stop_number < deliveryStopNumber
+      );
+      stopsAfterPickup.forEach((stop) => {
+        if (stop.lat && stop.lon) {
+          route.push([stop.lat, stop.lon]);
+        }
+      });
+
+      // Add delivery
+      if (data?.delivery?.address?.lat) {
+        route.push([data.delivery.address.lat, data.delivery.address.lon]);
+      }
+    } else if (
+      data?.status === "picked_up" ||
+      data?.status === "in_transit" ||
+      data?.status === "arrived_at_delivery"
+    ) {
+      // For picked_up/in_transit: show remaining route from current location
+      if (data?.driver?.location?.lat) {
+        route.push([data.driver.location.lat, data.driver.location.lon]);
+      }
+
+      // Add remaining incomplete stops
+      sortedRemainingStops.forEach((stop) => {
+        if (stop.lat && stop.lon) {
+          route.push([stop.lat, stop.lon]);
+        }
+      });
+
+      // Add delivery if not completed
+      if (data?.status !== "delivered" && data?.delivery?.address?.lat) {
+        route.push([data.delivery.address.lat, data.delivery.address.lon]);
+      }
     }
-    if (data?.delivery?.address?.lat && data?.delivery?.address?.lon) {
-      betweensPoly.push([data.delivery.address.lat, data.delivery.address.lon]);
+
+    return route;
+  };
+
+  // Build completed (historical) path from driver.path array
+  const buildCompletedPath = () => {
+    if (
+      !data?.driver?.path ||
+      data?.status === "processing" ||
+      data?.status === "assigned" ||
+      data?.status === "arrived_at_pickup"
+    ) {
+      return [];
     }
-  }
+
+    // Use the driver's actual GPS breadcrumb trail
+    return data.driver.path
+      .filter((point) => point.lat && point.lon)
+      .map((point) => [point.lat, point.lon]);
+  };
+
+  const estimatedRoute = buildEstimatedRoute();
+  const completedPath = buildCompletedPath();
 
   // Icon definitions
   const currentLocationIcon = new Icon({
     iconUrl: CRIcon,
     iconSize: [40, 40],
-    iconAnchor: [20, 20], // Center the icon
+    iconAnchor: [20, 20],
   });
 
-  // Fixed divIcon implementations with proper positioning
   const deliveryMarker = new divIcon({
     className: "delivery-icon",
     html: `<img src="${
@@ -90,10 +182,10 @@ const CurrentOrderMap = ({ data }) => {
   const betweenMarker = new Icon({
     iconUrl: BetweenIcon,
     iconSize: [15, 15],
-    iconAnchor: [7, 7], // Center the icon
+    iconAnchor: [7, 7],
   });
 
-  // Simple bounds component like HomeMap
+  // Bounds component
   function Bounds() {
     const map = useMap();
 
@@ -102,20 +194,31 @@ const CurrentOrderMap = ({ data }) => {
 
       let bounds = [];
 
-      // Determine bounds based on available data
+      // Add all points from completed path
+      if (completedPath.length > 0) {
+        bounds.push(...completedPath);
+      }
+
+      // Add all points from estimated route
+      if (estimatedRoute.length > 0) {
+        bounds.push(...estimatedRoute);
+      }
+
+      // Add stops to bounds (both completed and remaining)
       if (Array.isArray(data?.stops) && data?.stops?.length > 0) {
-        // Add stops to bounds
         data.stops.forEach((stop) => {
           if (stop.lat && stop.lon) {
             bounds.push([stop.lat, stop.lon]);
           }
         });
-      } else if (data?.pickup?.address?.lat && data?.delivery?.address?.lat) {
-        // Add pickup and delivery locations
-        bounds.push(
-          [data.delivery?.address?.lat, data.delivery?.address?.lon],
-          [data.pickup?.address?.lat, data.pickup?.address?.lon]
-        );
+      }
+
+      // Add pickup and delivery locations as fallback
+      if (data?.pickup?.address?.lat && data?.pickup?.address?.lon) {
+        bounds.push([data.pickup.address.lat, data.pickup.address.lon]);
+      }
+      if (data?.delivery?.address?.lat && data?.delivery?.address?.lon) {
+        bounds.push([data.delivery.address.lat, data.delivery.address.lon]);
       }
 
       // Add driver location to bounds if available
@@ -146,7 +249,7 @@ const CurrentOrderMap = ({ data }) => {
       <MapContainer
         ref={mapRef}
         className="h-full w-full"
-        center={[40.7540497, -73.9843973]} // Default to NYC
+        center={[40.7540497, -73.9843973]}
         zoom={13}
         zoomControl={true}
         zoomControlPosition="topright"
@@ -162,28 +265,29 @@ const CurrentOrderMap = ({ data }) => {
           maxNativeZoom={19}
         />
 
-        {/* Polyline for route */}
-        {betweensPoly.length > 1 && (
+        {/* Completed path (solid bright line) - for picked_up and later statuses */}
+        {completedPath.length > 1 && (
           <Polyline
-            pathOptions={{ color: "rgba(238, 182, 120, 0.4)", weight: 4 }}
-            positions={betweensPoly}
+            pathOptions={{
+              color: "#EEB678",
+              weight: 4,
+              opacity: 1,
+            }}
+            positions={completedPath}
           />
         )}
 
-        {/* Historical driver path */}
-        {data?.driver?.location?.history &&
-          data?.pickup?.address?.lat &&
-          data?.pickup?.address?.lon && (
-            <Polyline
-              pathOptions={{ color: "#EEB678", weight: 3 }}
-              positions={
-                [
-                  [data.pickup.address.lat, data.pickup.address.lon],
-                  [data.driver.location.lat, data.driver.location.lon],
-                ] as LatLngExpression[]
-              }
-            />
-          )}
+        {/* Estimated route (light dashed line) */}
+        {estimatedRoute.length > 1 && (
+          <Polyline
+            pathOptions={{
+              color: "rgba(238, 182, 120, 0.4)",
+              weight: 4,
+              dashArray: "10, 10",
+            }}
+            positions={estimatedRoute}
+          />
+        )}
 
         {/* Pickup Marker */}
         {data?.pickup?.address?.lat && data?.pickup?.address?.lon && (
@@ -209,40 +313,46 @@ const CurrentOrderMap = ({ data }) => {
           </Marker>
         )}
 
-        {/* Driver's Current Location Marker */}
-        {data?.driver?.location?.lat && data?.driver?.location?.lon && (
-          <Marker
-            icon={currentLocationIcon}
-            key="driver-marker"
-            position={[data.driver.location.lat, data.driver.location.lon]}
-          >
-            <Popup>Driver Location</Popup>
-          </Marker>
-        )}
+        {/* Driver's Current Location Marker - hide when delivered */}
+        {data?.driver?.location?.lat &&
+          data?.driver?.location?.lon &&
+          data?.status !== "delivered" && (
+            <Marker
+              icon={currentLocationIcon}
+              key="driver-marker"
+              position={[data.driver.location.lat, data.driver.location.lon]}
+            >
+              <Popup>Driver Location</Popup>
+            </Marker>
+          )}
 
-        {/* In-between Stops Markers */}
-        {Array.isArray(data?.stops) &&
-          data.stops.map((item, index) => {
-            // Skip if missing coordinates
-            if (!item.lat || !item.lon) return null;
+        {/* Remaining Stops Markers (to_do status) */}
+        {sortedRemainingStops.map((item, index) => {
+          if (!item.lat || !item.lon) return null;
+          return (
+            <Marker
+              key={`stop-remaining-${item.stop_number || index}`}
+              icon={betweenMarker}
+              position={[item.lat, item.lon]}
+            >
+              <Popup>Stop #{item.stop_number || index + 1} (Remaining)</Popup>
+            </Marker>
+          );
+        })}
 
-            // Only show markers for stops that aren't pickup or delivery
-            if (
-              item.o_order !== data?.delivery?.o_order &&
-              item.o_order !== data?.pickup?.o_order
-            ) {
-              return (
-                <Marker
-                  key={`stop-${index}`}
-                  icon={betweenMarker}
-                  position={[item.lat, item.lon]}
-                >
-                  <Popup>Stop #{index + 1}</Popup>
-                </Marker>
-              );
-            }
-            return null;
-          })}
+        {/* Completed Stops Markers (could use different styling if desired) */}
+        {completedStops.map((item, index) => {
+          if (!item.lat || !item.lon) return null;
+          return (
+            <Marker
+              key={`stop-completed-${item.stop_number || index}`}
+              icon={betweenMarker}
+              position={[item.lat, item.lon]}
+            >
+              <Popup>Stop #{item.stop_number || index + 1} (Completed)</Popup>
+            </Marker>
+          );
+        })}
 
         <Bounds />
       </MapContainer>

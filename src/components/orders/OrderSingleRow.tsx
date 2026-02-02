@@ -5,7 +5,7 @@ import OrderDropdown from "./OrderDropdown";
 import DotIcon from "../../assets/dot.svg";
 import CloseIcon from "../../assets/closeIcon.svg";
 import useClickOutside from "../../hooks/useHandleOutsideClick";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import moment from "moment";
 
 interface OrderItem {
@@ -54,9 +54,14 @@ const OrderSingleRow = ({ item }: { item: OrderItem }) => {
 
   // Navigate to other page
   const navigate = useNavigate();
+  const location = useLocation();
 
   const redirectToTracking = () => {
-    navigate(`tracking/${order_id}`, {
+    // Preserve current URL params when navigating to tracking
+    const currentParams = new URLSearchParams(location.search);
+
+    // Navigate to tracking page with current filters/sorting
+    navigate(`/orders/tracking/${order_id}?${currentParams.toString()}`, {
       state: item,
     });
   };

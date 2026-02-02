@@ -26,22 +26,20 @@ const ProcessingInfo = ({ items }) => {
               <div className="flex items-start gap-2.5">
                 {/* Dot */}
                 <div
-                  className={`w-3.5 h-3.5 rounded-full border-2 ${
-                    item.is_completed === true
-                      ? "bg-themeOrange border-transparent"
-                      : "bg-white border-themeOrange"
-                  }`}
+                  className={
+                    "w-3.5 h-3.5 rounded-full border-2 bg-themeOrange border-white"
+                  }
                 ></div>
                 <div>
                   <p
                     className={`text-xs text-${
-                      item.log === "processing" && item.is_completed === true
+                      item.log === "processing"
                         ? "themeOrange font-bold"
-                        : item.log == "assigned" && item.is_completed === true
+                        : item.log == "assigned"
                         ? "themeBlue font-bold"
-                        : item.log == "picked_up" && item.is_completed === true
+                        : item.log == "picked_up"
                         ? "black font-bold"
-                        : item.log == "delivered" && item.is_completed === true
+                        : item.log == "delivered"
                         ? "themeDarkGreen font-bold"
                         : "black"
                     }`}
@@ -96,22 +94,14 @@ const ProcessingInfo = ({ items }) => {
                 </p>
 
                 <p className="text-xs">
-                  {item.is_completed
-                    ? moment(item.datetime).format("h:mm a")
-                    : moment(item.datetime.start).format("h:mm a") +
-                      " - " +
-                      moment(item.datetime.end).format("h:mm a")}
+                  {moment(item.datetime).format("h:mm a")}
                 </p>
               </div>
             </div>
             {/* Left Side */}
             {index != 0 ? (
               <div
-                className={`w-full h-[calc(100%-0.8rem)] border-l-2 border-l-themeOrange ${
-                  items.logs[index - 1]?.is_completed === true
-                    ? "border-solid"
-                    : "border-dashed"
-                } absolute left-1.5 bottom-3.5 z-10`}
+                className={`w-full h-[calc(100%-0.8rem)] border-l-2 border-l-themeOrange border-solid absolute left-1.5 bottom-3.5 z-10`}
               ></div>
             ) : null}
           </div>

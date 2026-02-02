@@ -1,9 +1,8 @@
-// Control.tsx - Simplified orders control with filters
-
 import { useState, useRef, useEffect } from "react";
-import { FaChevronDown, FaClipboardList } from "react-icons/fa";
+import { FaChevronDown, FaTruck, FaClipboardList } from "react-icons/fa";
 import ForwardIcon from "../../../assets/forward.svg";
 
+// Order status options with their display labels
 const ORDER_STATUS_OPTIONS = [
   { value: "processing", label: "Processing" },
   { value: "assigned", label: "Assigned" },
@@ -24,10 +23,7 @@ interface StatItem {
 }
 
 interface StateData {
-  orders?: StatItem[];
-  items?: StatItem[];
-  stops?: StatItem[];
-  overall?: StatItem[];
+  [key: string]: StatItem[];
 }
 
 interface Filters {
@@ -45,7 +41,9 @@ const OrdersControl: React.FC<OrdersControlProps> = ({
   filters,
   setFilters,
 }) => {
-  const [showOrderStatusDropdown, setShowOrderStatusDropdown] = useState(false);
+  const [showOrderStatusDropdown, setShowOrderStatusDropdown] =
+    useState<boolean>(false);
+
   const orderStatusRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns when clicking outside
@@ -63,7 +61,8 @@ const OrdersControl: React.FC<OrdersControlProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const toggleOrderStatus = (status: OrderStatus) => {
+  // Toggle order status selection
+  const toggleOrderStatus = (status: OrderStatus): void => {
     const newStatuses = filters.orderStatuses.includes(status)
       ? filters.orderStatuses.filter((s) => s !== status)
       : [...filters.orderStatuses, status];
@@ -71,6 +70,7 @@ const OrdersControl: React.FC<OrdersControlProps> = ({
     setFilters({ ...filters, orderStatuses: newStatuses });
   };
 
+  // Get display text for order statuses
   const getOrderStatusDisplayText = (): string => {
     if (filters.orderStatuses.length === 0) return "All Statuses";
     if (filters.orderStatuses.length === 1) {
@@ -82,22 +82,33 @@ const OrdersControl: React.FC<OrdersControlProps> = ({
     return `${filters.orderStatuses.length} selected`;
   };
 
-  const handleClearFilters = () => {
-    setFilters({ orderStatuses: [] });
+  // Clear all filters
+  const handleClearFilters = (): void => {
+    setFilters({
+      orderStatuses: [],
+    });
   };
 
+  // Check if any filters are active
   const isAnyFilterActive = filters.orderStatuses.length > 0;
+
+  // Render divider
+  const renderDivider = (): JSX.Element => (
+    <div className="h-4 w-px bg-gray-300 mx-2"></div>
+  );
 
   return (
     <div className="flex justify-between items-center px-4 py-2 border-b border-gray-100">
       {/* Left side - Filters */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center">
         {/* Order Status Filter */}
         <div className="flex items-center">
-          <FaClipboardList className="text-gray-500" size={14} />
-          <span className="text-sm font-medium text-gray-600 ml-1">
-            Order Status:
-          </span>
+          <div className="flex items-center">
+            <FaClipboardList className="text-gray-500" size={14} />
+            <span className="text-sm font-medium text-gray-600 ml-1">
+              Order Status:
+            </span>
+          </div>
 
           <div className="relative ml-2" ref={orderStatusRef}>
             <button
@@ -110,6 +121,7 @@ const OrdersControl: React.FC<OrdersControlProps> = ({
               <FaChevronDown size={10} className="text-gray-500" />
             </button>
 
+            {/* Order Status Dropdown */}
             {showOrderStatusDropdown && (
               <div className="absolute left-0 top-full mt-1 bg-white shadow-lg rounded-md z-[9999] w-72 border max-h-80 overflow-y-auto">
                 <div className="p-2">
@@ -136,10 +148,10 @@ const OrdersControl: React.FC<OrdersControlProps> = ({
           </div>
         </div>
 
-        {/* Clear Filters */}
+        {/* Clear All Filters button - only show if any filter is active */}
         {isAnyFilterActive && (
           <>
-            <div className="h-4 w-px bg-gray-300" />
+            {renderDivider()}
             <button
               className="text-xs text-gray-700 hover:text-gray-900 px-2 py-1 rounded hover:bg-gray-50"
               onClick={handleClearFilters}
@@ -152,85 +164,33 @@ const OrdersControl: React.FC<OrdersControlProps> = ({
 
       {/* Right side - Stats */}
       <div className="flex gap-8 items-center">
-        {/* Orders Stats */}
-        {state?.orders && state.orders.length > 0 && (
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Orders</p>
-            <div className="flex gap-6">
-              {state.orders.map((item) => (
-                <div key={item.title}>
-                  <div className="flex gap-2 items-center mb-1">
-                    <p className="text-xl font-semibold text-gray-900">
-                      {item.value}
-                    </p>
-                    <img src={ForwardIcon} alt="icon" className="w-3 h-3" />
-                  </div>
-                  <p className="text-xs text-gray-500">{item.title}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+        {Object.entries(state || {}).map(([key, value]) => {
+          // Skip empty arrays to avoid showing empty sections
+          if (!value || value.length === 0) return null;
 
-        {/* Items Stats */}
-        {state?.items && state.items.length > 0 && (
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Items</p>
-            <div className="flex gap-6">
-              {state.items.map((item) => (
-                <div key={item.title}>
-                  <div className="flex gap-2 items-center mb-1">
-                    <p className="text-xl font-semibold text-gray-900">
-                      {item.value}
-                    </p>
-                    <img src={ForwardIcon} alt="icon" className="w-3 h-3" />
+          return (
+            <div key={key}>
+              <p className="text-xs text-gray-500 capitalize mb-1">{key}</p>
+              <div className="flex gap-6">
+                {(value || []).map((item: StatItem) => (
+                  <div key={key + "-" + item.title}>
+                    <div className="flex gap-2 items-center mb-1">
+                      <p className="text-xl font-semibold text-gray-900">
+                        {item?.value}
+                      </p>
+                      <img
+                        src={ForwardIcon}
+                        alt="forward-icon"
+                        className="w-3 h-3"
+                      />
+                    </div>
+                    <p className="text-xs text-gray-500">{item?.title}</p>
                   </div>
-                  <p className="text-xs text-gray-500">{item.title}</p>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        )}
-
-        {/* Stops Stats */}
-        {state?.stops && state.stops.length > 0 && (
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Stops</p>
-            <div className="flex gap-6">
-              {state.stops.map((item) => (
-                <div key={item.title}>
-                  <div className="flex gap-2 items-center mb-1">
-                    <p className="text-xl font-semibold text-gray-900">
-                      {item.value}
-                    </p>
-                    <img src={ForwardIcon} alt="icon" className="w-3 h-3" />
-                  </div>
-                  <p className="text-xs text-gray-500">{item.title}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Overall Stats */}
-        {state?.overall && state.overall.length > 0 && (
-          <div>
-            <p className="text-xs text-gray-500 mb-1">Overall</p>
-            <div className="flex gap-6">
-              {state.overall.map((item) => (
-                <div key={item.title}>
-                  <div className="flex gap-2 items-center mb-1">
-                    <p className="text-xl font-semibold text-gray-900">
-                      {item.value}
-                    </p>
-                    <img src={ForwardIcon} alt="icon" className="w-3 h-3" />
-                  </div>
-                  <p className="text-xs text-gray-500">{item.title}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+          );
+        })}
       </div>
     </div>
   );

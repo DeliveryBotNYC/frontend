@@ -3,6 +3,7 @@ import {
   MapContainer,
   Marker,
   Polyline,
+  Polygon,
   TileLayer,
   useMap,
 } from "react-leaflet";
@@ -11,6 +12,8 @@ import * as L from "leaflet";
 import { renderToString } from "react-dom/server";
 import { StopIcon } from "../reusable/StopIcon";
 import CRIcon from "../../assets/current-loc.svg";
+import { getStatusColor, getStatusPriority } from "./orders/statusUtils";
+import { Stop } from "./orders/types";
 
 // Constants
 const GRID_SIZE = 0.0005;
@@ -35,29 +38,13 @@ const HEAT_COLORS = {
   },
 };
 
-const STATUS_COLORS = {
-  completed: "#B2D235",
-  arrived: "#74C2F8",
-  assigned: "#E68A00",
-  default: "#F03F3F",
-};
-
-const STATUS_PRIORITIES = {
-  assigned: 1000,
-  arrived: 900,
-  started: 800,
-  processing: 700,
-  completed: 100,
-  delivered: 90,
-  cancelled: 10,
-  default: 500,
-};
-
-// Driver status colors based on your API structure
 const DRIVER_STATUS_COLORS = {
-  active: "#4CAF50", // Green for drivers with routes (has_route: true)
-  available: "#2196F3", // Blue for available drivers (available_now: true but no route)
+  active: "#4CAF50",
+  available: "#2196F3",
 };
+
+// Processing status color (orange)
+const PROCESSING_COLOR = getStatusColor("processing");
 
 // Utility functions
 const getHeatColor = (intensity: number, alpha = 1): string => {
@@ -67,43 +54,25 @@ const getHeatColor = (intensity: number, alpha = 1): string => {
   return HEAT_COLORS.veryHighIntensity(intensity, alpha);
 };
 
-const getStatusColor = (status: string): string =>
-  STATUS_COLORS[status as keyof typeof STATUS_COLORS] || STATUS_COLORS.default;
-
-const getStatusPriority = (status: string): number =>
-  STATUS_PRIORITIES[status as keyof typeof STATUS_PRIORITIES] ||
-  STATUS_PRIORITIES.default;
-
 const extractRgbValues = (colorString: string): number[] =>
   colorString
     .match(/\d+/g)
     ?.slice(0, 3)
     .map((x) => parseInt(x)) || [255, 0, 0];
 
-// Helper function to get driver initials
 const getDriverInitials = (firstname: string, lastname: string): string => {
   const firstInitial = firstname?.charAt(0)?.toUpperCase() || "";
   const lastInitial = lastname?.charAt(0)?.toUpperCase() || "";
   return `${firstInitial}${lastInitial}`;
 };
 
-// Helper function to determine driver status based on your API structure
 const getDriverStatus = (driver: any, route?: any): "active" | "available" => {
-  // For drivers from routes API - they are active if they have a route
-  if (route) {
-    return "active"; // All drivers in routes are active by definition
-  }
-
-  // For standalone drivers from /driver/all?active=true API
-  // has_route: true means active (green)
+  if (route) return "active";
   if (driver.has_route === true) return "active";
-  // available_now: true (but no route) means available (blue)
   if (driver.available_now === true) return "available";
-  // Default to available if neither condition is clear
   return "available";
 };
 
-// Create driver circle icon
 const createDriverCircleIcon = (
   firstname: string,
   lastname: string,
@@ -151,6 +120,60 @@ const createDriverCircleIcon = (
   });
 };
 
+// Function to determine if route start should be shown
+const shouldShowRouteStart = (route: any, isMultipleView: boolean): boolean => {
+  if (isMultipleView) return false;
+
+  // Check if route has valid status
+  const validStatuses = ["created", "assigned", "acknowledged"];
+  if (!validStatuses.includes(route?.status)) return false;
+
+  // Check if route has valid address with coordinates
+  if (!route?.address?.lat || !route?.address?.lon) return false;
+
+  return true;
+};
+
+// Function to create route start icon
+const createRouteStartIcon = (status: string, isHovered = false) => {
+  const bgColor = getStatusColor(status);
+  const iconWidth = isHovered ? 62 : 52;
+  const iconHeight = isHovered ? 49 : 41;
+
+  const wrapperStyle = isHovered
+    ? `
+        transform: scale(1.1); 
+        filter: drop-shadow(0 0 8px rgba(0,0,0,0.4));
+        transition: all 0.15s ease-out; 
+        cursor: pointer;
+      `
+    : `
+        transition: all 0.15s ease-in-out; 
+        cursor: pointer;
+      `;
+
+  const iconHtml = `
+    <div style="width: ${iconWidth}px; height: ${iconHeight}px; position: relative; ${wrapperStyle}">
+      ${renderToString(
+        <StopIcon
+          stopNumber={0}
+          hasPickup={false}
+          hasDelivery={false}
+          bgColor={bgColor}
+        />
+      )}
+    </div>
+  `;
+
+  return divIcon({
+    html: iconHtml,
+    className: "custom-route-start-icon",
+    iconSize: [iconWidth, iconHeight],
+    iconAnchor: [iconWidth / 2, iconHeight],
+    popupAnchor: [0, -iconHeight],
+  });
+};
+
 // Heatmap component
 const HeatmapLayer = ({ data }: { data: any[] }) => {
   const map = useMap();
@@ -159,7 +182,6 @@ const HeatmapLayer = ({ data }: { data: any[] }) => {
   useEffect(() => {
     if (!map || !data?.length) return;
 
-    // Remove existing heatmap layer
     if (heatmapRef.current) {
       map.removeLayer(heatmapRef.current);
     }
@@ -167,7 +189,6 @@ const HeatmapLayer = ({ data }: { data: any[] }) => {
     const heatmapLayer = L.layerGroup();
     const locationGrid = new Map();
 
-    // Group locations into grid cells
     data.forEach((location) => {
       const gridLat = Math.floor(location.lat / GRID_SIZE) * GRID_SIZE;
       const gridLon = Math.floor(location.lon / GRID_SIZE) * GRID_SIZE;
@@ -187,12 +208,10 @@ const HeatmapLayer = ({ data }: { data: any[] }) => {
       ...Array.from(locationGrid.values()).map((cell) => cell.count)
     );
 
-    // Create heat visualization
     locationGrid.forEach((cell) => {
       const intensity = Math.pow(cell.count / maxCount, 0.7);
       const baseRadius = 25 + intensity * 45;
 
-      // Create overlapping circles
       for (let i = 0; i < 6; i++) {
         const radiusMultiplier = 1 + i * 0.4;
         const baseOpacity = 0.4 + intensity * 0.4;
@@ -210,7 +229,6 @@ const HeatmapLayer = ({ data }: { data: any[] }) => {
         heatmapLayer.addLayer(circle);
       }
 
-      // Add bright center core for high-intensity areas
       if (intensity > 0.6) {
         const [r, g, b] = extractRgbValues(
           getHeatColor(Math.min(intensity * 1.2, 1))
@@ -239,28 +257,23 @@ const HeatmapLayer = ({ data }: { data: any[] }) => {
   return null;
 };
 
-// Simple bounds component like HomeMap
 const Bounds = ({ bounds }: { bounds: LatLngBounds | null }) => {
   const map = useMap();
+  const hasFitRef = useRef(false);
 
   useEffect(() => {
-    if (!map) return;
+    if (!map || !bounds?.isValid()) return;
 
-    if (bounds?.isValid()) {
+    // Only fit bounds once (initially)
+    if (!hasFitRef.current) {
       map.fitBounds(bounds, { padding: [10, 10], maxZoom: 16 });
-    } else {
-      // Default bounds for NYC
-      map.fitBounds([
-        [40.84, -73.91],
-        [40.63, -74.02],
-      ]);
+      hasFitRef.current = true;
     }
   }, [map, bounds]);
 
   return null;
 };
 
-// Dynamic Tile Layer component
 const DynamicTileLayer = ({ satellite }: { satellite?: boolean }) => {
   const map = useMap();
   const [currentLayer, setCurrentLayer] = useState<L.TileLayer | null>(null);
@@ -305,6 +318,62 @@ const DynamicTileLayer = ({ satellite }: { satellite?: boolean }) => {
   return null;
 };
 
+const ZonePolygon = ({
+  polygon,
+}: {
+  polygon: Array<{ lat: number; lon: number }> | null;
+}) => {
+  if (!polygon || polygon.length === 0) return null;
+
+  const positions = polygon.map(
+    (point) => [point.lat, point.lon] as LatLngExpression
+  );
+
+  return (
+    <Polygon
+      positions={positions}
+      pathOptions={{
+        color: "#FF6B35",
+        weight: 2,
+        opacity: 0.8,
+        fillColor: "#FF6B35",
+        fillOpacity: 0.15,
+      }}
+    />
+  );
+};
+
+// Interface for unassigned orders
+interface UnassignedOrder {
+  order_id: string;
+  external_order_id?: string;
+  status: string;
+  timeframe?: {
+    service: string;
+    start_time: string;
+    end_time: string;
+  };
+  pickup?: {
+    customer_id: number;
+    name: string;
+    phone?: string;
+    phone_formatted?: string;
+    apt?: string;
+    access_code?: string;
+    address: any;
+  };
+  delivery?: {
+    customer_id: number;
+    name: string;
+    phone?: string;
+    phone_formatted?: string;
+    apt?: string;
+    access_code?: string;
+    address: any;
+  };
+  fee?: number;
+}
+
 interface MapProps {
   routes: any;
   filteredOrders?: any[] | null;
@@ -323,6 +392,9 @@ interface MapProps {
   isMultipleRouteView?: boolean;
   hoveredRouteId?: string | null;
   onRouteHover?: (routeId: string | null) => void;
+  currentPolygon?: Array<{ lat: number; lon: number }> | null;
+  creatingRouteStops?: Stop[];
+  unassignedOrders?: UnassignedOrder[];
 }
 
 const DispatchMap: React.FC<MapProps> = ({
@@ -338,6 +410,9 @@ const DispatchMap: React.FC<MapProps> = ({
   isMultipleRouteView = false,
   hoveredRouteId,
   onRouteHover,
+  currentPolygon,
+  creatingRouteStops,
+  unassignedOrders,
 }) => {
   const [internalHover, setInternalHover] = useState<string | null>(null);
   const [internalDriverHover, setInternalDriverHover] = useState<string | null>(
@@ -345,21 +420,29 @@ const DispatchMap: React.FC<MapProps> = ({
   );
   const mapRef = useRef<any>(null);
 
-  // Create custom divIcon from StopIcon component
+  // Use centralized color and priority logic
   const createStopIcon = (
-    stopNumber: number,
+    stopNumber: number | null,
     hasPickup: boolean,
     hasDelivery: boolean,
     status: string,
     isHovered = false
   ) => {
     const bgColor = getStatusColor(status);
-    const iconWidth = 52;
-    const iconHeight = 41;
+    const iconWidth = isHovered ? 62 : 52;
+    const iconHeight = isHovered ? 49 : 41;
 
     const wrapperStyle = isHovered
-      ? "transform: scale(1.15); filter: drop-shadow(0 0 15px rgba(255,255,255,0.9)) drop-shadow(0 0 80px rgba(255,255,255,0.6)) hue-rotate(-15deg); transition: all 0.1s ease-out; cursor: pointer;"
-      : "transition: all 0.2s ease-in-out; cursor: pointer;";
+      ? `
+        transform: scale(1.1); 
+        filter: drop-shadow(0 0 8px rgba(0,0,0,0.4));
+        transition: all 0.15s ease-out; 
+        cursor: pointer;
+      `
+      : `
+        transition: all 0.15s ease-in-out; 
+        cursor: pointer;
+      `;
 
     const iconHtml = `
       <div style="width: ${iconWidth}px; height: ${iconHeight}px; position: relative; ${wrapperStyle}">
@@ -383,113 +466,120 @@ const DispatchMap: React.FC<MapProps> = ({
     });
   };
 
-  // Process orders to create markers (only for single route view)
-  const processOrdersToMarkers = (orders: any[]) => {
+  // Use API status directly and generate consistent stop IDs
+  const processStopsToMarkers = (stops: any[]) => {
     const markers: any[] = [];
-    const locationGroups = new Map();
 
-    // Group orders by location
-    orders.forEach((order, index) => {
-      const address =
-        order.address || order.pickup?.address || order.delivery?.address;
+    if (!stops || !Array.isArray(stops)) {
+      return markers;
+    }
+
+    stops.forEach((stop, index) => {
+      const address = stop.address;
 
       if (!address?.lat || !address?.lon) {
-        console.warn("Order missing coordinates:", order);
         return;
       }
 
-      const locationKey = `${address.lat},${address.lon}`;
-
-      if (!locationGroups.has(locationKey)) {
-        locationGroups.set(locationKey, []);
-      }
-
-      const hasPickup = order.parentStop?.hasPickup ?? order.pickup?.count > 0;
+      const stopOrder = stop.o_order || index + 1;
+      const stopId = `${stop.customer_id}-${stopOrder}`;
+      const hasPickup =
+        (stop.pickup?.count || stop.pickup?.orders?.length || 0) > 0;
       const hasDelivery =
-        order.parentStop?.hasDelivery ?? order.deliver?.count > 0;
+        (stop.deliver?.count || stop.deliver?.orders?.length || 0) > 0;
 
-      locationGroups.get(locationKey).push({
-        order,
-        index,
-        stopId: `${order.customer_id || "unknown"}-${order.o_order || index}`,
+      const stopStatus = stop.status || "pending";
+
+      const isHovered = hoveredStopId === stopId || internalHover === stopId;
+      const customIcon = createStopIcon(
+        stopOrder,
         hasPickup,
         hasDelivery,
-        address,
+        stopStatus,
+        isHovered
+      );
+
+      const baseZIndex = getStatusPriority(stopStatus);
+      const zIndex = isHovered ? 10000 : baseZIndex;
+
+      markers.push({
+        id: `stop-${stop.customer_id}-${stopOrder}`,
+        stopId,
+        geoCode: [address.lat, address.lon],
+        icon: customIcon,
+        stop,
+        zIndexOffset: zIndex,
       });
     });
 
-    // Create markers with proper z-index handling
-    locationGroups.forEach((ordersAtLocation, locationKey) => {
-      const [lat, lon] = locationKey.split(",").map(Number);
+    return markers;
+  };
 
-      if (ordersAtLocation.length === 1) {
-        const { order, index, stopId, hasPickup, hasDelivery } =
-          ordersAtLocation[0];
-        const isHovered = hoveredStopId === stopId || internalHover === stopId;
-        const customIcon = createStopIcon(
-          order.o_order || index + 1,
-          hasPickup,
-          hasDelivery,
-          order.status || "assigned",
-          isHovered
+  // Process unassigned orders to markers with hover support
+  const processUnassignedOrdersToMarkers = (
+    orders: UnassignedOrder[],
+    hoveredId: string | null
+  ) => {
+    const markers: any[] = [];
+
+    if (!orders || !Array.isArray(orders)) {
+      return markers;
+    }
+
+    orders.forEach((order) => {
+      const pickupStopId = `unassigned-pickup-${order.order_id}`;
+      const deliveryStopId = `unassigned-delivery-${order.order_id}`;
+
+      // Determine if either pickup or delivery is hovered for this order
+      const isOrderHovered =
+        hoveredId === pickupStopId ||
+        hoveredId === deliveryStopId ||
+        internalHover === pickupStopId ||
+        internalHover === deliveryStopId;
+
+      // Show pickup location marker
+      if (order.pickup?.address?.lat && order.pickup?.address?.lon) {
+        const pickupIcon = createStopIcon(
+          null, // No stop number for unassigned orders
+          true, // hasPickup
+          false, // hasDelivery
+          "processing", // status
+          isOrderHovered // Highlight if either pickup or delivery is hovered
         );
 
-        const baseZIndex = getStatusPriority(order.status || "assigned");
-        const zIndex = isHovered ? 10000 : baseZIndex;
+        markers.push({
+          id: pickupStopId,
+          stopId: pickupStopId,
+          orderId: order.order_id,
+          type: "pickup",
+          geoCode: [order.pickup.address.lat, order.pickup.address.lon],
+          icon: pickupIcon,
+          order,
+          zIndexOffset: isOrderHovered ? 10000 : 100,
+          relatedStopId: deliveryStopId, // Link to delivery stop
+        });
+      }
+
+      // Show delivery location marker
+      if (order.delivery?.address?.lat && order.delivery?.address?.lon) {
+        const deliveryIcon = createStopIcon(
+          null, // No stop number for unassigned orders
+          false, // hasPickup
+          true, // hasDelivery
+          "processing", // status
+          isOrderHovered // Highlight if either pickup or delivery is hovered
+        );
 
         markers.push({
-          id: `order-${order.customer_id || "unknown"}-${index}`,
-          stopId,
-          geoCode: [lat, lon],
-          icon: customIcon,
+          id: deliveryStopId,
+          stopId: deliveryStopId,
+          orderId: order.order_id,
+          type: "delivery",
+          geoCode: [order.delivery.address.lat, order.delivery.address.lon],
+          icon: deliveryIcon,
           order,
-          zIndexOffset: zIndex,
-        });
-      } else {
-        // Handle multiple orders at same location
-        const sortedOrders = [...ordersAtLocation].sort((a, b) => {
-          const priorityDiff =
-            getStatusPriority(b.order.status || "assigned") -
-            getStatusPriority(a.order.status || "assigned");
-          return priorityDiff !== 0 ? priorityDiff : b.index - a.index;
-        });
-
-        sortedOrders.forEach((orderData, stackIndex) => {
-          const { order, index, stopId, hasPickup, hasDelivery } = orderData;
-          const isHovered =
-            hoveredStopId === stopId || internalHover === stopId;
-          const customIcon = createStopIcon(
-            order.o_order || index + 1,
-            hasPickup,
-            hasDelivery,
-            order.status || "assigned",
-            isHovered
-          );
-
-          const offsetDistance = stackIndex * 0.00005;
-          const offsetLat =
-            lat +
-            (stackIndex > 0
-              ? offsetDistance * (stackIndex % 2 === 0 ? 1 : -1)
-              : 0);
-          const offsetLon =
-            lon +
-            (stackIndex > 0
-              ? offsetDistance * (stackIndex % 2 === 0 ? -1 : 1)
-              : 0);
-
-          const baseZIndex =
-            getStatusPriority(order.status || "assigned") + stackIndex * 10;
-          const zIndex = isHovered ? 10000 + stackIndex : baseZIndex;
-
-          markers.push({
-            id: `order-${order.customer_id || "unknown"}-${index}`,
-            stopId,
-            geoCode: [offsetLat, offsetLon],
-            icon: customIcon,
-            order,
-            zIndexOffset: zIndex,
-          });
+          zIndexOffset: isOrderHovered ? 10000 : 100,
+          relatedStopId: pickupStopId, // Link to pickup stop
         });
       }
     });
@@ -497,19 +587,11 @@ const DispatchMap: React.FC<MapProps> = ({
     return markers;
   };
 
-  // Process routes to create driver markers for multiple route view
   const processRoutesToDriverMarkers = (routesList: any[]) => {
     const markers: any[] = [];
 
     routesList.forEach((route) => {
-      // Check if route has driver and driver has coordinates (lat/lon directly on driver object)
       if (!route.driver?.lat || !route.driver?.lon) {
-        console.warn(
-          "Route missing driver location:",
-          route.route_id,
-          "Driver:",
-          route.driver
-        );
         return;
       }
 
@@ -528,7 +610,7 @@ const DispatchMap: React.FC<MapProps> = ({
       markers.push({
         id: `route-driver-${route.route_id}`,
         routeId: route.route_id,
-        geoCode: [route.driver.lat, route.driver.lon], // Use lat/lon directly from driver
+        geoCode: [route.driver.lat, route.driver.lon],
         icon: driverIcon,
         driver: route.driver,
         route: route,
@@ -539,13 +621,11 @@ const DispatchMap: React.FC<MapProps> = ({
     return markers;
   };
 
-  // Process active drivers to create driver location markers (standalone drivers)
   const processActiveDriversToMarkers = (drivers: any[]) => {
     const markers: any[] = [];
 
-    drivers.forEach((driver, index) => {
+    drivers.forEach((driver) => {
       if (!driver.location?.lat || !driver.location?.lon) {
-        console.warn("Driver missing location:", driver);
         return;
       }
 
@@ -568,57 +648,107 @@ const DispatchMap: React.FC<MapProps> = ({
     return markers;
   };
 
-  // Determine what to display based on view mode
-  const isMultipleView = isMultipleRouteView || Array.isArray(routes);
-  const route = Array.isArray(routes) ? routes[0] : routes?.data || routes;
+  const isMultipleView =
+    isMultipleRouteView || (Array.isArray(routes) && routes.length > 1);
+  const route =
+    Array.isArray(routes) && routes.length === 1
+      ? routes[0]
+      : Array.isArray(routes)
+      ? routes[0]
+      : routes?.data || routes;
 
-  // For single route view: show orders
-  // For multiple route view: show driver circles from routes and active drivers
-  const orderMarkers =
-    !isMultipleView && route?.orders
-      ? processOrdersToMarkers(filteredOrders || route.orders)
-      : [];
+  // Check if route start should be shown
+  const showRouteStart = useMemo(() => {
+    return shouldShowRouteStart(route, isMultipleView);
+  }, [route, isMultipleView]);
 
-  // Process route driver markers with hover state dependency
+  // Create route start marker
+  const routeStartMarker = useMemo(() => {
+    if (!showRouteStart || !route?.address) return null;
+
+    const routeStartIcon = createRouteStartIcon(route.status);
+
+    return {
+      id: `route-start-${route.route_id}`,
+      geoCode: [route.address.lat, route.address.lon],
+      icon: routeStartIcon,
+      zIndexOffset: 9000,
+    };
+  }, [showRouteStart, route]);
+
+  // Process stop markers with dependency on hoveredStopId
+  const stopMarkers = useMemo(() => {
+    if (isMultipleView) {
+      return [];
+    }
+    if (creatingRouteStops && creatingRouteStops.length > 0) {
+      return processStopsToMarkers(creatingRouteStops);
+    }
+    if (!route?.orders) {
+      return [];
+    }
+
+    return processStopsToMarkers(route.orders);
+  }, [
+    isMultipleView,
+    route?.orders,
+    creatingRouteStops,
+    hoveredStopId,
+    internalHover,
+  ]);
+
+  // Process unassigned order markers with hover support
+  const unassignedOrderMarkers = useMemo(() => {
+    if (!unassignedOrders || unassignedOrders.length === 0) {
+      return [];
+    }
+    return processUnassignedOrdersToMarkers(unassignedOrders, hoveredStopId);
+  }, [unassignedOrders, hoveredStopId, internalHover]);
+
   const routeDriverMarkers = useMemo(() => {
     return isMultipleView && Array.isArray(routes)
       ? processRoutesToDriverMarkers(routes)
       : [];
   }, [routes, isMultipleView, hoveredRouteId, internalDriverHover]);
 
-  // Process standalone driver markers
   const standaloneDriverMarkers = useMemo(() => {
     return isMultipleView && activeDrivers && !Array.isArray(routes)
       ? processActiveDriversToMarkers(activeDrivers)
       : [];
   }, [activeDrivers, isMultipleView, routes]);
 
-  // Combine all driver markers for multiple view
   const allDriverMarkers = [...routeDriverMarkers, ...standaloneDriverMarkers];
 
-  // Center map on hovered stop for external hover only (single route view)
+  // Pan to hovered marker (both route stops and unassigned orders)
   useEffect(() => {
-    if (
-      hoveredStopId &&
-      isExternalHover &&
-      mapRef.current &&
-      orderMarkers.length > 0 &&
-      !isMultipleView
-    ) {
-      const hoveredMarker = orderMarkers.find(
+    if (hoveredStopId && isExternalHover && mapRef.current) {
+      // Check route stop markers first
+      const hoveredStopMarker = stopMarkers.find(
         (marker) => marker.stopId === hoveredStopId
       );
-      if (hoveredMarker) {
-        const [lat, lon] = hoveredMarker.geoCode;
+      if (hoveredStopMarker) {
+        const [lat, lon] = hoveredStopMarker.geoCode;
+        mapRef.current.setView([lat, lon], mapRef.current.getZoom(), {
+          animate: true,
+          duration: 0.5,
+        });
+        return;
+      }
+
+      // Check unassigned order markers
+      const hoveredUnassignedMarker = unassignedOrderMarkers.find(
+        (marker) => marker.stopId === hoveredStopId
+      );
+      if (hoveredUnassignedMarker) {
+        const [lat, lon] = hoveredUnassignedMarker.geoCode;
         mapRef.current.setView([lat, lon], mapRef.current.getZoom(), {
           animate: true,
           duration: 0.5,
         });
       }
     }
-  }, [hoveredStopId, isExternalHover, orderMarkers, isMultipleView]);
+  }, [hoveredStopId, isExternalHover, stopMarkers, unassignedOrderMarkers]);
 
-  // Create icons and polylines (only for single route view)
   const driverLocationIcon = new Icon({
     iconUrl: CRIcon,
     iconSize: [45, 46],
@@ -626,48 +756,52 @@ const DispatchMap: React.FC<MapProps> = ({
   });
 
   const currentDriverLocation =
-    !isMultipleView && route.driver?.lat && route.driver?.lon
+    !isMultipleView && route?.driver?.lat && route?.driver?.lon
       ? [route.driver.lat, route.driver.lon]
       : null;
 
   const driverTracePositions =
     !isMultipleView &&
     mapControls?.viewMode === "driver-trace" &&
-    route.driver?.locations
+    route?.driver?.locations
       ? route.driver.locations
-          .filter((location) => location.lat && location.lon)
+          .filter((location: any) => location.lat && location.lon)
           .sort(
-            (a, b) =>
+            (a: any, b: any) =>
               new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
           )
-          .map((location) => [location.lat, location.lon])
+          .map((location: any) => [location.lat, location.lon])
       : [];
 
   const routePolylinePositions =
-    !isMultipleView && route.polyline?.values
-      ? route.polyline.values.map((point) => [point.lat, point.lon])
+    !isMultipleView && route?.polyline?.values
+      ? route.polyline.values.map((point: any) => [point.lat, point.lon])
       : [];
 
   const heatmapData =
     !isMultipleView &&
     mapControls?.viewMode === "heatmap" &&
-    route.driver?.locations
+    route?.driver?.locations
       ? route.driver.locations.filter(
-          (location) => location.lat && location.lon
+          (location: any) => location.lat && location.lon
         )
       : [];
 
-  // Calculate map bounds
   const calculateBounds = () => {
     const allPoints = [
-      ...orderMarkers.map((marker) => marker.geoCode),
+      ...stopMarkers.map((marker) => marker.geoCode),
       ...allDriverMarkers.map((marker) => marker.geoCode),
       ...routePolylinePositions,
       ...(mapControls?.viewMode === "driver-trace" ? driverTracePositions : []),
       ...(mapControls?.viewMode === "heatmap"
-        ? heatmapData.map((loc) => [loc.lat, loc.lon])
+        ? heatmapData.map((loc: any) => [loc.lat, loc.lon])
         : []),
       ...(currentDriverLocation ? [currentDriverLocation] : []),
+      ...(currentPolygon && currentPolygon.length > 0
+        ? currentPolygon.map((point) => [point.lat, point.lon])
+        : []),
+      ...(routeStartMarker ? [routeStartMarker.geoCode] : []),
+      ...unassignedOrderMarkers.map((marker) => marker.geoCode),
     ];
 
     return allPoints.length > 0 ? new LatLngBounds(allPoints) : null;
@@ -678,7 +812,6 @@ const DispatchMap: React.FC<MapProps> = ({
     ? mapBounds.getCenter()
     : [40.7540497, -73.9843973];
 
-  // Polyline styling (only for single route view)
   const getPolylineOptions = (status: string) => {
     const colors = {
       completed: "#B2D235",
@@ -696,8 +829,7 @@ const DispatchMap: React.FC<MapProps> = ({
     };
   };
 
-  // Event handlers (only for single route view)
-  const handleMarkerMouseEnter = (stopId: string) => {
+  const handleMarkerMouseEnter = (stopId: string, relatedStopId?: string) => {
     if (!isMultipleView) {
       setInternalHover(stopId);
       onStopHover?.(stopId);
@@ -711,25 +843,22 @@ const DispatchMap: React.FC<MapProps> = ({
     }
   };
 
-  // Event handlers for driver markers (multiple route view)
   const handleDriverMarkerMouseEnter = (routeId: string) => {
     if (isMultipleView) {
       setInternalDriverHover(routeId);
-      onRouteHover?.(routeId); // Notify parent component for sidebar highlighting
+      onRouteHover?.(routeId);
     }
   };
 
   const handleDriverMarkerMouseLeave = () => {
     if (isMultipleView) {
       setInternalDriverHover(null);
-      onRouteHover?.(null); // Notify parent component
+      onRouteHover?.(null);
     }
   };
 
-  // Handle driver marker click to navigate to route
   const handleDriverMarkerClick = (routeId: string) => {
     if (isMultipleView && routeId) {
-      // Navigate to the specific route
       window.location.href = `/dispatch/route/${routeId}`;
     }
   };
@@ -751,15 +880,17 @@ const DispatchMap: React.FC<MapProps> = ({
 
         <Bounds bounds={mapBounds} />
 
-        {/* Heatmap layer (only for single route view) */}
+        {!isMultipleView && currentPolygon && (
+          <ZonePolygon polygon={currentPolygon} />
+        )}
+
         {!isMultipleView &&
           mapControls?.viewMode === "heatmap" &&
           heatmapData.length > 0 && <HeatmapLayer data={heatmapData} />}
 
-        {/* Route polyline (only for single route view) */}
         {!isMultipleView && routePolylinePositions.length > 0 && (
           <Polyline
-            pathOptions={getPolylineOptions(route.status)}
+            pathOptions={getPolylineOptions(route?.status || "default")}
             positions={routePolylinePositions as LatLngExpression[]}
             key={`route-polyline-${routePolylinePositions.length}-${
               mapControls?.viewMode || "default"
@@ -767,7 +898,6 @@ const DispatchMap: React.FC<MapProps> = ({
           />
         )}
 
-        {/* Driver trace polyline (only for single route view) */}
         {!isMultipleView && driverTracePositions.length > 0 && (
           <Polyline
             pathOptions={{
@@ -784,7 +914,6 @@ const DispatchMap: React.FC<MapProps> = ({
           />
         )}
 
-        {/* Current driver location for single route (only for single route view) */}
         {!isMultipleView && currentDriverLocation && (
           <Marker
             position={currentDriverLocation as LatLngExpression}
@@ -793,9 +922,23 @@ const DispatchMap: React.FC<MapProps> = ({
           />
         )}
 
-        {/* Order markers (only for single route view) */}
+        {!isMultipleView && routeStartMarker && (
+          <Marker
+            key={routeStartMarker.id}
+            icon={routeStartMarker.icon}
+            position={[
+              routeStartMarker.geoCode[0],
+              routeStartMarker.geoCode[1],
+            ]}
+            zIndexOffset={routeStartMarker.zIndexOffset}
+            title={`Route Start - ${
+              route.address?.formatted || "Starting location"
+            }`}
+          />
+        )}
+
         {!isMultipleView &&
-          orderMarkers.map(({ geoCode, id, icon, stopId, zIndexOffset }) => (
+          stopMarkers.map(({ geoCode, id, icon, stopId, zIndexOffset }) => (
             <Marker
               key={id}
               icon={icon}
@@ -809,7 +952,36 @@ const DispatchMap: React.FC<MapProps> = ({
             />
           ))}
 
-        {/* Driver circle markers (only for multiple route view) */}
+        {unassignedOrderMarkers.map(
+          ({
+            geoCode,
+            id,
+            icon,
+            order,
+            type,
+            stopId,
+            zIndexOffset,
+            relatedStopId,
+          }) => (
+            <Marker
+              key={id}
+              icon={icon}
+              position={[geoCode[0], geoCode[1]]}
+              zIndexOffset={zIndexOffset}
+              title={`${type === "pickup" ? "Pickup" : "Delivery"}: ${
+                type === "pickup"
+                  ? order.pickup?.name
+                  : order.delivery?.name || "Unknown"
+              } - Order #${order.order_id}`}
+              eventHandlers={{
+                mouseover: () => handleMarkerMouseEnter(stopId, relatedStopId),
+                mouseout: () => handleMarkerMouseLeave(),
+                click: () => onStopClick?.(stopId),
+              }}
+            />
+          )
+        )}
+
         {isMultipleView &&
           allDriverMarkers.map(
             ({ geoCode, id, icon, driver, route, routeId, zIndexOffset }) => (
@@ -828,7 +1000,7 @@ const DispatchMap: React.FC<MapProps> = ({
                     ? {
                         mouseover: () => handleDriverMarkerMouseEnter(routeId),
                         mouseout: () => handleDriverMarkerMouseLeave(),
-                        click: () => handleDriverMarkerClick(routeId), // Add click handler
+                        click: () => handleDriverMarkerClick(routeId),
                       }
                     : {}
                 }

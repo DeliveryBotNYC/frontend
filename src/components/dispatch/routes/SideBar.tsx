@@ -1,7 +1,6 @@
 import SearchIcon from "../../../assets/search.svg";
 import RouteCard from "./RouteCard";
-import CreateRouteModal from "./CreateRouteModal";
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 interface Driver {
   driver_id: number;
@@ -52,7 +51,7 @@ interface SideBarProps {
   onRouteHover?: (routeId: string | null) => void;
   hoveredRouteId?: string | null;
   availableDrivers?: Driver[];
-  unassignedOrders?: any[]; // Add unassigned orders prop
+  unassignedOrders?: any[]; // Keep for compatibility but not used anymore
 }
 
 const SideBar: React.FC<SideBarProps> = ({
@@ -65,11 +64,16 @@ const SideBar: React.FC<SideBarProps> = ({
   availableDrivers = [],
   unassignedOrders = [],
 }) => {
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   // Handle search input change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
+  };
+
+  // Navigate to create route view
+  const handleCreateRoute = () => {
+    navigate("/dispatch/route/create");
   };
 
   return (
@@ -91,7 +95,7 @@ const SideBar: React.FC<SideBarProps> = ({
 
           {/* Create New Route Button - Simple Circle */}
           <button
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={handleCreateRoute}
             className="w-8 h-8 bg-themeOrange text-white rounded-full hover:bg-orange-600 transition-colors duration-200 flex items-center justify-center flex-shrink-0"
             title="Create New Route"
           >
@@ -137,14 +141,6 @@ const SideBar: React.FC<SideBarProps> = ({
           )}
         </div>
       </div>
-
-      {/* Create Route Modal */}
-      <CreateRouteModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        availableDrivers={availableDrivers}
-        unassignedOrders={unassignedOrders}
-      />
     </div>
   );
 };

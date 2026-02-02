@@ -1010,7 +1010,7 @@ export const AddressAutocomplete = forwardRef<
 
     return (
       <div id={`${id}-container`} className="relative w-full">
-        <label className="text-themeDarkGray text-xs">
+        <label className="text-themeDarkGray text-xs block">
           {label} {required && <span className="text-themeRed">*</span>}
         </label>
         <div className="relative">

@@ -92,22 +92,20 @@ export const updateAllAffectedOrders = async (
 };
 
 // Function to remove order from route
-export const removeOrderFromRoute = async (orderId: string, url: string) => {
+export const removeOrderFromRoute = async (
+  orderId: string,
+  url: string,
+  config: any
+) => {
   try {
-    const response = await fetch(`${url}/order/${orderId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    const response = await axios.patch(
+      `${url}/order/${orderId}`,
+      {
         status: "processing",
         route_id: null,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to remove order: ${response.statusText}`);
-    }
+      },
+      config
+    );
 
     return response;
   } catch (error) {
