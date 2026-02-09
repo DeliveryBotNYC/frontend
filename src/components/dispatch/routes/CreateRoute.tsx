@@ -1048,9 +1048,6 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
       if (!formData.distance) {
         newErrors.distance = "Distance is required for advanced routes";
       }
-      if (!formData.time) {
-        newErrors.time = "Time is required for advanced routes";
-      }
       if (!formData.pay) {
         newErrors.pay = "Pay is required for advanced routes";
       }

@@ -222,13 +222,18 @@ const DispatchContent = () => {
 
     params.append("status", "processing");
 
-    // For advanced routes, use the provided timeframe
-    // For instant routes or when no timeframe provided, use today
-    if (routeType === "advanced" && routeStartTime && routeEndTime) {
+    // For single route view (isOrdersView), always use the route's specific timeframe with overlap
+    if (isOrdersView && routeStartTime && routeEndTime) {
       params.append("start_time_overlap", routeStartTime);
       params.append("end_time_overlap", routeEndTime);
-    } else {
-      // Default to today for instant routes
+    }
+    // For creating advanced routes, use the provided timeframe
+    else if (routeType === "advanced" && routeStartTime && routeEndTime) {
+      params.append("start_time_overlap", routeStartTime);
+      params.append("end_time_overlap", routeEndTime);
+    }
+    // For instant routes or when no timeframe provided, use today
+    else {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
