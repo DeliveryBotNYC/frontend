@@ -2,8 +2,7 @@ import moment from "moment";
 
 export const stadia = "fdcd2695-e5e1-4888-b985-4ffc0cccc317";
 //export const stadia = "";
-export const mapStyle =
-  "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=";
+export const mapStyle = `https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=${stadia}`;
 
 export function isCompleted(input) {
   return {
@@ -223,7 +222,7 @@ export const parseClipboardText = (text) => {
     // Address parsing - exclude name and phone parts
     const addressParts = parts.slice(
       1,
-      phoneMatch ? parts.indexOf(phoneMatch) : undefined
+      phoneMatch ? parts.indexOf(phoneMatch) : undefined,
     );
 
     // Remove empty parts and common noise words
@@ -292,7 +291,7 @@ export const parseClipboardText = (text) => {
 
       // Check if it matches apartment patterns
       const matchesAptPattern = aptPatterns.some((pattern) =>
-        pattern.test(part)
+        pattern.test(part),
       );
 
       if (matchesAptPattern) {
@@ -435,7 +434,7 @@ export function handleAuthError(
   error: {
     response: { status: number; data: { message: any } };
   },
-  navigate: (path: string, options?: any) => void // Pass navigate as parameter
+  navigate: (path: string, options?: any) => void, // Pass navigate as parameter
 ) {
   console.log(error);
   if (error.response?.status === 401 || error.response?.status === 403) {
@@ -454,7 +453,7 @@ export function handleAuthError(
 
 export function getRouteStatusText(
   status: string,
-  date?: string | Date
+  date?: string | Date,
 ): { text: string; color: string } {
   const now = moment();
   const start = date ? moment(date) : null;
