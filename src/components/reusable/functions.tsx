@@ -2,7 +2,8 @@ import moment from "moment";
 
 export const stadia = "fdcd2695-e5e1-4888-b985-4ffc0cccc317";
 //export const stadia = "";
-export const mapStyle = `https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=${stadia}`;
+export const mapStyle =
+  "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=";
 
 export function isCompleted(input) {
   return {

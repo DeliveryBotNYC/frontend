@@ -14,6 +14,7 @@ import { StopIcon } from "../reusable/StopIcon";
 import CRIcon from "../../assets/current-loc.svg";
 import { getStatusColor, getStatusPriority } from "./orders/statusUtils";
 import { Stop } from "./orders/types";
+import { stadia } from "../reusable/functions";
 
 // Constants
 const GRID_SIZE = 0.0005;
@@ -23,7 +24,7 @@ const HEAT_COLORS = {
   mediumIntensity: (intensity: number, alpha = 1) => {
     const factor = (intensity - 0.25) / 0.25;
     return `rgba(255, ${Math.round(220 - factor * 80)}, ${Math.round(
-      120 - factor * 120
+      120 - factor * 120,
     )}, ${alpha})`;
   },
   highIntensity: (intensity: number, alpha = 1) => {
@@ -33,7 +34,7 @@ const HEAT_COLORS = {
   veryHighIntensity: (intensity: number, alpha = 1) => {
     const factor = (intensity - 0.75) / 0.25;
     return `rgba(${Math.round(255 - factor * 80)}, ${Math.round(
-      50 - factor * 50
+      50 - factor * 50,
     )}, 0, ${alpha})`;
   },
 };
@@ -77,7 +78,7 @@ const createDriverCircleIcon = (
   firstname: string,
   lastname: string,
   status: "active" | "available",
-  isHovered = false
+  isHovered = false,
 ) => {
   const initials = getDriverInitials(firstname, lastname);
   const backgroundColor = DRIVER_STATUS_COLORS[status];
@@ -160,7 +161,7 @@ const createRouteStartIcon = (status: string, isHovered = false) => {
           hasPickup={false}
           hasDelivery={false}
           bgColor={bgColor}
-        />
+        />,
       )}
     </div>
   `;
@@ -205,7 +206,7 @@ const HeatmapLayer = ({ data }: { data: any[] }) => {
     });
 
     const maxCount = Math.max(
-      ...Array.from(locationGrid.values()).map((cell) => cell.count)
+      ...Array.from(locationGrid.values()).map((cell) => cell.count),
     );
 
     locationGrid.forEach((cell) => {
@@ -231,7 +232,7 @@ const HeatmapLayer = ({ data }: { data: any[] }) => {
 
       if (intensity > 0.6) {
         const [r, g, b] = extractRgbValues(
-          getHeatColor(Math.min(intensity * 1.2, 1))
+          getHeatColor(Math.min(intensity * 1.2, 1)),
         );
         const coreCircle = L.circle([cell.lat, cell.lon], {
           radius: baseRadius * 0.3,
@@ -292,7 +293,10 @@ const DynamicTileLayer = ({ satellite }: { satellite?: boolean }) => {
             "Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community",
         }
       : {
-          url: "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png",
+          url:
+            "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=" +
+            stadia,
+
           attribution:
             '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
         };
@@ -326,7 +330,7 @@ const ZonePolygon = ({
   if (!polygon || polygon.length === 0) return null;
 
   const positions = polygon.map(
-    (point) => [point.lat, point.lon] as LatLngExpression
+    (point) => [point.lat, point.lon] as LatLngExpression,
   );
 
   return (
@@ -416,7 +420,7 @@ const DispatchMap: React.FC<MapProps> = ({
 }) => {
   const [internalHover, setInternalHover] = useState<string | null>(null);
   const [internalDriverHover, setInternalDriverHover] = useState<string | null>(
-    null
+    null,
   );
   const mapRef = useRef<any>(null);
 
@@ -426,7 +430,7 @@ const DispatchMap: React.FC<MapProps> = ({
     hasPickup: boolean,
     hasDelivery: boolean,
     status: string,
-    isHovered = false
+    isHovered = false,
   ) => {
     const bgColor = getStatusColor(status);
     const iconWidth = isHovered ? 62 : 52;
@@ -452,7 +456,7 @@ const DispatchMap: React.FC<MapProps> = ({
             hasPickup={hasPickup}
             hasDelivery={hasDelivery}
             bgColor={bgColor}
-          />
+          />,
         )}
       </div>
     `;
@@ -496,7 +500,7 @@ const DispatchMap: React.FC<MapProps> = ({
         hasPickup,
         hasDelivery,
         stopStatus,
-        isHovered
+        isHovered,
       );
 
       const baseZIndex = getStatusPriority(stopStatus);
@@ -518,7 +522,7 @@ const DispatchMap: React.FC<MapProps> = ({
   // Process unassigned orders to markers with hover support
   const processUnassignedOrdersToMarkers = (
     orders: UnassignedOrder[],
-    hoveredId: string | null
+    hoveredId: string | null,
   ) => {
     const markers: any[] = [];
 
@@ -544,7 +548,7 @@ const DispatchMap: React.FC<MapProps> = ({
           true, // hasPickup
           false, // hasDelivery
           "processing", // status
-          isOrderHovered // Highlight if either pickup or delivery is hovered
+          isOrderHovered, // Highlight if either pickup or delivery is hovered
         );
 
         markers.push({
@@ -567,7 +571,7 @@ const DispatchMap: React.FC<MapProps> = ({
           false, // hasPickup
           true, // hasDelivery
           "processing", // status
-          isOrderHovered // Highlight if either pickup or delivery is hovered
+          isOrderHovered, // Highlight if either pickup or delivery is hovered
         );
 
         markers.push({
@@ -604,7 +608,7 @@ const DispatchMap: React.FC<MapProps> = ({
         route.driver.firstname,
         route.driver.lastname,
         driverStatus,
-        isHovered
+        isHovered,
       );
 
       markers.push({
@@ -633,7 +637,7 @@ const DispatchMap: React.FC<MapProps> = ({
       const driverIcon = createDriverCircleIcon(
         driver.firstname,
         driver.lastname,
-        driverStatus
+        driverStatus,
       );
 
       markers.push({
@@ -654,8 +658,8 @@ const DispatchMap: React.FC<MapProps> = ({
     Array.isArray(routes) && routes.length === 1
       ? routes[0]
       : Array.isArray(routes)
-      ? routes[0]
-      : routes?.data || routes;
+        ? routes[0]
+        : routes?.data || routes;
 
   // Check if route start should be shown
   const showRouteStart = useMemo(() => {
@@ -724,7 +728,7 @@ const DispatchMap: React.FC<MapProps> = ({
     if (hoveredStopId && isExternalHover && mapRef.current) {
       // Check route stop markers first
       const hoveredStopMarker = stopMarkers.find(
-        (marker) => marker.stopId === hoveredStopId
+        (marker) => marker.stopId === hoveredStopId,
       );
       if (hoveredStopMarker) {
         const [lat, lon] = hoveredStopMarker.geoCode;
@@ -737,7 +741,7 @@ const DispatchMap: React.FC<MapProps> = ({
 
       // Check unassigned order markers
       const hoveredUnassignedMarker = unassignedOrderMarkers.find(
-        (marker) => marker.stopId === hoveredStopId
+        (marker) => marker.stopId === hoveredStopId,
       );
       if (hoveredUnassignedMarker) {
         const [lat, lon] = hoveredUnassignedMarker.geoCode;
@@ -768,7 +772,7 @@ const DispatchMap: React.FC<MapProps> = ({
           .filter((location: any) => location.lat && location.lon)
           .sort(
             (a: any, b: any) =>
-              new Date(a.datetime).getTime() - new Date(b.datetime).getTime()
+              new Date(a.datetime).getTime() - new Date(b.datetime).getTime(),
           )
           .map((location: any) => [location.lat, location.lon])
       : [];
@@ -783,7 +787,7 @@ const DispatchMap: React.FC<MapProps> = ({
     mapControls?.viewMode === "heatmap" &&
     route?.driver?.locations
       ? route.driver.locations.filter(
-          (location: any) => location.lat && location.lon
+          (location: any) => location.lat && location.lon,
         )
       : [];
 
@@ -979,7 +983,7 @@ const DispatchMap: React.FC<MapProps> = ({
                 click: () => onStopClick?.(stopId),
               }}
             />
-          )
+          ),
         )}
 
         {isMultipleView &&
@@ -1005,7 +1009,7 @@ const DispatchMap: React.FC<MapProps> = ({
                     : {}
                 }
               />
-            )
+            ),
           )}
       </MapContainer>
     </div>
