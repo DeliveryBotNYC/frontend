@@ -9,7 +9,7 @@ const Payment = ({ token, setStep, orientationData, onUpdateItem }) => {
 
   // Get account item from passed data
   const accountItem = orientationData?.items?.find(
-    (item) => item.id === "account_id"
+    (item) => item.id === "account_id",
   );
 
   // Create account link mutation
@@ -36,7 +36,7 @@ const Payment = ({ token, setStep, orientationData, onUpdateItem }) => {
           },
           {
             headers: { Authorization: `Bearer ${token}` },
-          }
+          },
         )
         .then((res) => {
           console.log("Account link response:", res.data);
@@ -119,8 +119,8 @@ const Payment = ({ token, setStep, orientationData, onUpdateItem }) => {
   const isLoading = createAccountLinkMutation.isPending;
 
   return (
-    <div className="min-h-screen bg-[#404954] text-white">
-      <div className="h-screen flex flex-col">
+    <div className="min-h-h-full bg-[#404954] text-white">
+      <div className="h-h-full flex flex-col">
         {/* Header */}
         <div className="flex-shrink-0 pt-6 px-4 pb-4">
           <button

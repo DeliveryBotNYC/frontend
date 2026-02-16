@@ -1,4 +1,4 @@
-import Logo from "../../assets/logo-01.svg";
+import Logo from "../../assets/logo.png";
 import PlusIcon from "../../assets/plus-icon.svg";
 import { Link } from "react-router-dom";
 
@@ -10,9 +10,9 @@ const PrimaryNav = ({ title }: { title: string }) => {
       {/* left */}
       <div className="flex items-center gap-10">
         {/* Image */}
-        <div className="flex items-end gap-3">
+        <div className="flex items-end gap-3 ml-3">
           {/* Logo */}
-          <img src={Logo} width={"80px"} alt="site_logo" />
+          <img src={Logo} width={"55px"} alt="site_logo" />
         </div>
 
         {/* title */}

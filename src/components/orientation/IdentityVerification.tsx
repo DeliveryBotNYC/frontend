@@ -17,7 +17,7 @@ const IdentityVerification = ({
 
   // Get verification item from passed data
   const verificationItem = orientationData?.items?.find(
-    (item) => item.id === "vs_id"
+    (item) => item.id === "vs_id",
   );
 
   // Mutation to get fresh verification session client secret
@@ -29,7 +29,7 @@ const IdentityVerification = ({
 
       console.log(
         "Getting verification session for:",
-        verificationItem.data.vs_id
+        verificationItem.data.vs_id,
       );
 
       return axios
@@ -37,7 +37,7 @@ const IdentityVerification = ({
           `${url}/stripe/verification-session/${verificationItem.data.vs_id}`,
           {
             headers: { Authorization: `Bearer ${token}` },
-          }
+          },
         )
         .then((res) => {
           console.log("Verification session response:", res.data);
@@ -51,7 +51,7 @@ const IdentityVerification = ({
     onSuccess: (clientSecret) => {
       console.log(
         "Verification session retrieved successfully, client secret:",
-        clientSecret
+        clientSecret,
       );
       setClientSecret(clientSecret);
       setIsLoading(false); // Ensure loading is false
@@ -117,7 +117,7 @@ const IdentityVerification = ({
 
       console.log(
         "Starting identity verification with client secret:",
-        clientSecret
+        clientSecret,
       );
 
       // Use Stripe Identity to verify using client secret
@@ -163,7 +163,7 @@ const IdentityVerification = ({
     !clientSecret && !error?.message && verificationItem?.data?.vs_id;
 
   return (
-    <div className="min-h-screen bg-[#404954] text-white">
+    <div className="min-h-h-full bg-[#404954] text-white">
       <div className="pt-24 px-4 pb-8">
         {/* Error Display */}
         {error?.message && (

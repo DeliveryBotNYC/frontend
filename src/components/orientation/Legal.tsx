@@ -85,7 +85,7 @@ const Legal = ({ token, setStep, orientationData, onUpdateItem }) => {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       console.log("Profile updated successfully:", response.data);
@@ -196,7 +196,7 @@ const Legal = ({ token, setStep, orientationData, onUpdateItem }) => {
   };
 
   return (
-    <div className="h-screen bg-[#404954] text-white flex flex-col">
+    <div className="h-h-full bg-[#404954] text-white flex flex-col">
       {/* Header space for fixed nav */}
       <div className="h-16"></div>
 
