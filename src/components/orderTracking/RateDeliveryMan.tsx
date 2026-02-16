@@ -4,16 +4,16 @@ import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 
 const RateDeliveryMan = ({
-  setRateDriver,
+  setShowRating,
   orderId,
 }: {
-  setRateDriver: React.Dispatch<SetStateAction<boolean>>;
+  setShowRating: React.Dispatch<SetStateAction<boolean>>;
   orderId: string;
 }) => {
   const config = useConfig();
 
   const [selectedRating, setSelectedRating] = useState<"good" | "bad" | null>(
-    null
+    null,
   );
 
   const ratingMutation = useMutation({
@@ -22,7 +22,7 @@ const RateDeliveryMan = ({
     onSuccess: (data) => {
       console.log("Rating submitted successfully:", data);
       setTimeout(() => {
-        setRateDriver(false);
+        setShowRating(false);
       }, 500);
     },
     onError: (error) => {

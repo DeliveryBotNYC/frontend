@@ -215,7 +215,7 @@ const OrderTrackingContent = () => {
       try {
         const response = await axios.get(
           `${url}/driver/all?status=active`,
-          config
+          config,
         );
         return response.data.data;
       } catch (error) {
@@ -249,7 +249,7 @@ const OrderTrackingContent = () => {
       refetchOnWindowFocus: false,
       staleTime: 5000,
     }),
-    [orderId, config]
+    [orderId, config],
   );
 
   const { data, isLoading, refetch } = useQuery(queryOptions);
@@ -260,7 +260,12 @@ const OrderTrackingContent = () => {
       setOrderData(data);
 
       // Show rating component if delivered
-      if (data.status === "delivered" && !data.ratings.user_id && !isAdmin) {
+      if (
+        data.status === "delivered" &&
+        !data.ratings?.user_id &&
+        !isAdmin &&
+        false
+      ) {
         setShowRating(true);
       }
     }

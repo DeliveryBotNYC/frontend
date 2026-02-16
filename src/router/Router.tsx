@@ -32,6 +32,7 @@ import SetupContext from "../components/auth/SetupContext";
 import LoginForm from "../components/auth/LoginForm";
 import ForgotPasswordForm from "../components/auth/ForgotPasswordForm";
 import ResetPasswordForm from "../components/auth/ResetPasswordForm";
+import DriverResetPasswordForm from "../components/auth/Driverresetpasswordform";
 
 import RequireAuth from "../components/auth/RequireAuth";
 
@@ -46,12 +47,17 @@ const Router = () => {
   return (
     <Routes>
       <Route path="/orientation/:token" element={<Orientation />} />
+
       <Route path="/auth" element={<Auth />}>
         <Route path="signup/setup" element={<SetupContext />} />
         <Route path="signup" element={<SignupContext />} />
         <Route path="" element={<LoginContext />}>
           <Route path="login" element={<LoginForm />} />
           <Route path="forgot-password" element={<ForgotPasswordForm />} />
+          <Route
+            path="driver/reset-password/:token"
+            element={<DriverResetPasswordForm />}
+          />
           <Route path="reset-password/:token" element={<ResetPasswordForm />} />
         </Route>
         <Route path="admin" element={<LoginContext />}>

@@ -25,17 +25,12 @@ interface OrderItem {
   last_updated: string;
 }
 
-const TrackingOrderCard = ({ item }: { item: OrderItem }) => {
-  // Getting the pathname from URL bar
-  const { pathname } = useLocation();
-  const pathSegments = pathname.split("/");
-  const orderId = pathSegments[pathSegments.length - 1];
-
+const TrackingOrderCard = ({ item, isActive }) => {
   return (
     <Link to={`/orders/tracking/${item.order_id}`}>
       <div
         className={`${
-          orderId === item.order_id ? "bg-contentBg" : "bg-white"
+          isActive ? "bg-contentBg" : "bg-white"
         } py-1.5 px-themePadding border-b-2 border-b-themeLightGray cursor-pointer`}
       >
         {/* Top  */}
@@ -50,7 +45,10 @@ const TrackingOrderCard = ({ item }: { item: OrderItem }) => {
 
           {/* Status Btn */}
           <div>
-            <StatusBtn type={item.status} />
+            <StatusBtn
+              key={`${item.order_id}-${item.status}`}
+              type={item.status}
+            />
           </div>
         </div>
 

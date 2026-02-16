@@ -6,9 +6,13 @@ interface LogItems extends Array<LogItem> {}
 
 const ProcessingInfo = ({ items }) => {
   const contextValue = useContext(ThemeContext);
+
+  // Reverse the logs array
+  const reversedLogs = items?.logs ? [...items.logs].reverse() : [];
+
   return (
     <div className="w-full">
-      {items?.logs?.map((item, index) =>
+      {reversedLogs?.map((item, index) =>
         contextValue?.activeSwitch ||
         item.log === "processing" ||
         item.log === "assigned" ||
@@ -36,47 +40,51 @@ const ProcessingInfo = ({ items }) => {
                       item.log === "processing"
                         ? "themeOrange font-bold"
                         : item.log == "assigned"
-                        ? "themeBlue font-bold"
-                        : item.log == "picked_up"
-                        ? "black font-bold"
-                        : item.log == "delivered"
-                        ? "themeDarkGreen font-bold"
-                        : "black"
+                          ? "themeBlue font-bold"
+                          : item.log == "picked_up"
+                            ? "black font-bold"
+                            : item.log == "delivered"
+                              ? "themeDarkGreen font-bold"
+                              : "black"
                     }`}
                   >
                     {item.log === "processing"
                       ? "Order created (" + item.by + ")"
                       : item.log == "route_assigned"
-                      ? "Order added to route"
-                      : item.log == "assigned"
-                      ? "Driver assigned"
-                      : item.log == "arrived_at_pickup"
-                      ? "Arrived at pickup"
-                      : item.log == "picked_up"
-                      ? "Order picked-up"
-                      : item.log == "arrived_at_delivery"
-                      ? "Arrived at delivery"
-                      : item.log == "undeliverable"
-                      ? "Driver unable to deliver"
-                      : item.log == "delivered"
-                      ? "Order Delivered"
-                      : item.log == "texted_pickup"
-                      ? "Driver texted pickup"
-                      : item.log == "called_pickup"
-                      ? "Driver called pickup"
-                      : item.log == "texted_delivery"
-                      ? "Driver texted delivery"
-                      : item.log == "called_delivery"
-                      ? "Driver called delivery"
-                      : item.log == "automation_texted_pickup"
-                      ? "Automated text to pickup"
-                      : item.log == "automation_texted_delivery"
-                      ? "Automated text to delivery"
-                      : item.log == "automation_emailed_delivery"
-                      ? "Automated email to delivery"
-                      : item.log == "automation_emailed_pickup"
-                      ? "Automated email to pickup"
-                      : item.log}
+                        ? "Order added to route"
+                        : item.log == "assigned"
+                          ? "Driver assigned"
+                          : item.log == "arrived_at_pickup"
+                            ? "Arrived at pickup"
+                            : item.log == "picked_up"
+                              ? "Order picked-up"
+                              : item.log == "arrived_at_delivery"
+                                ? "Arrived at delivery"
+                                : item.log == "undeliverable"
+                                  ? "Driver unable to deliver"
+                                  : item.log == "delivered"
+                                    ? "Order Delivered"
+                                    : item.log == "texted_pickup"
+                                      ? "Driver texted pickup"
+                                      : item.log == "called_pickup"
+                                        ? "Driver called pickup"
+                                        : item.log == "texted_delivery"
+                                          ? "Driver texted delivery"
+                                          : item.log == "called_delivery"
+                                            ? "Driver called delivery"
+                                            : item.log ==
+                                                "automation_texted_pickup"
+                                              ? "Automated text to pickup"
+                                              : item.log ==
+                                                  "automation_texted_delivery"
+                                                ? "Automated text to delivery"
+                                                : item.log ==
+                                                    "automation_emailed_delivery"
+                                                  ? "Automated email to delivery"
+                                                  : item.log ==
+                                                      "automation_emailed_pickup"
+                                                    ? "Automated email to pickup"
+                                                    : item.log}
                   </p>
                   {item.log == "automation_texted_pickup" ||
                   item.log == "automation_texted_delivery" ||
@@ -105,7 +113,7 @@ const ProcessingInfo = ({ items }) => {
               ></div>
             ) : null}
           </div>
-        ) : null
+        ) : null,
       )}
     </div>
   );

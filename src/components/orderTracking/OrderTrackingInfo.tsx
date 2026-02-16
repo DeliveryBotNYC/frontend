@@ -75,7 +75,7 @@ const OrderTrackingInfo = ({
   // Get current driver info
   const currentDriverId = data?.driver?.driver_id;
   const currentDriver = availableDrivers.find(
-    (d) => d.driver_id === currentDriverId
+    (d) => d.driver_id === currentDriverId,
   );
 
   // Preserve URL parameters when navigating back
@@ -92,6 +92,7 @@ const OrderTrackingInfo = ({
   };
 
   // Handle status change
+  // Handle status change
   const handleStatusChange = async (newStatus: string) => {
     try {
       // Update the status via API
@@ -100,11 +101,12 @@ const OrderTrackingInfo = ({
         {
           status: newStatus,
         },
-        config
+        config,
       );
 
-      // Invalidate and refetch the order data
-      queryClient.invalidateQueries(["order", data.order_id]);
+      // Invalidate BOTH the individual order AND the orders list
+      queryClient.invalidateQueries({ queryKey: ["order", data.order_id] });
+      queryClient.invalidateQueries({ queryKey: ["tracking-orders"] }); // Add this line
 
       // You might also want to show a success toast notification here
     } catch (error) {
@@ -112,7 +114,7 @@ const OrderTrackingInfo = ({
       // Show error notification to user
     }
   };
-
+  // Handle driver change
   // Handle driver change
   const handleDriverChange = async (driver: Driver | null) => {
     try {
@@ -121,11 +123,12 @@ const OrderTrackingInfo = ({
         {
           driver_id: driver?.driver_id || null,
         },
-        config
+        config,
       );
 
-      // Invalidate and refetch the order data
-      queryClient.invalidateQueries(["order", data.order_id]);
+      // Invalidate BOTH queries
+      queryClient.invalidateQueries({ queryKey: ["order", data.order_id] });
+      queryClient.invalidateQueries({ queryKey: ["tracking-orders"] }); // Add this line
 
       setIsDriverDropdownOpen(false);
       setDriverSearchTerm("");
@@ -154,7 +157,7 @@ const OrderTrackingInfo = ({
   const filteredDrivers = availableDrivers.filter((driver) =>
     (driver.firstname + " " + driver.lastname)
       .toLowerCase()
-      .includes(driverSearchTerm.toLowerCase())
+      .includes(driverSearchTerm.toLowerCase()),
   );
 
   const currentDriverName = currentDriver
@@ -183,7 +186,7 @@ const OrderTrackingInfo = ({
 
       // Filter items that have shipping labels
       const itemsWithLabels = deliveryItems.filter(
-        (item: any) => item?.shipping_label?.label_string
+        (item: any) => item?.shipping_label?.label_string,
       );
 
       if (itemsWithLabels.length === 0) {
@@ -200,7 +203,7 @@ const OrderTrackingInfo = ({
       // Helper function to fetch a single label with retry logic
       const fetchLabelPDF = async (
         labelString: string,
-        retries = 3
+        retries = 3,
       ): Promise<ArrayBuffer | null> => {
         for (let attempt = 0; attempt < retries; attempt++) {
           try {
@@ -215,14 +218,14 @@ const OrderTrackingInfo = ({
                   "Content-Type": "application/x-www-form-urlencoded",
                 },
                 body: zplString,
-              }
+              },
             );
 
             if (response.status === 429) {
               // Rate limited - wait longer before retry
               const waitTime = Math.pow(2, attempt) * 1000; // Exponential backoff
               console.log(
-                `Rate limited. Waiting ${waitTime}ms before retry...`
+                `Rate limited. Waiting ${waitTime}ms before retry...`,
               );
               await delay(waitTime);
               continue;
@@ -317,7 +320,7 @@ const OrderTrackingInfo = ({
           const pdf = await PDFDocument.load(pdfBytes);
           const copiedPages = await mergedPdf.copyPages(
             pdf,
-            pdf.getPageIndices()
+            pdf.getPageIndices(),
           );
           copiedPages.forEach((page) => mergedPdf.addPage(page));
         } catch (error) {
@@ -627,6 +630,7 @@ const OrderTrackingInfo = ({
                 <ReportDropdown
                   closeDropdown={() => setIsOpen(false)}
                   orderId={data.order_id}
+                  orderStatus={currentStatus}
                 />
               ) : null}
             </div>

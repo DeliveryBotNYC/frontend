@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import useClickOutside from "../../hooks/useHandleOutsideClick";
 
 interface StatusDropdownProps {
@@ -68,6 +68,11 @@ const StatusDropdown = ({
   const [isUpdating, setIsUpdating] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Sync selectedStatus with currentStatus prop changes
+  useEffect(() => {
+    setSelectedStatus(currentStatus);
+  }, [currentStatus]);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -88,15 +93,20 @@ const StatusDropdown = ({
     };
   }, [isOpen]);
 
-  const getCurrentStatusStyle = (status: string) => {
-    const statusOption = STATUS_OPTIONS.find((opt) => opt.value === status);
+  // Memoize style and label lookups
+  const currentStatusStyle = useMemo(() => {
+    const statusOption = STATUS_OPTIONS.find(
+      (opt) => opt.value === selectedStatus,
+    );
     return statusOption?.style || "bg-gray-100 text-gray-800";
-  };
+  }, [selectedStatus]);
 
-  const getCurrentStatusLabel = (status: string) => {
-    const statusOption = STATUS_OPTIONS.find((opt) => opt.value === status);
-    return statusOption?.label || status;
-  };
+  const currentStatusLabel = useMemo(() => {
+    const statusOption = STATUS_OPTIONS.find(
+      (opt) => opt.value === selectedStatus,
+    );
+    return statusOption?.label || selectedStatus;
+  }, [selectedStatus]);
 
   const handleStatusChange = async (newStatus: string) => {
     if (newStatus === selectedStatus) {
@@ -107,20 +117,17 @@ const StatusDropdown = ({
     setIsUpdating(true);
 
     try {
-      // Call your API to update the status
-      // Example: await axios.patch(`/api/orders/${orderId}/status`, { status: newStatus });
-
-      setSelectedStatus(newStatus);
-
-      // Call the callback if provided
+      // Call the callback if provided (parent handles API call)
       if (onStatusChange) {
-        onStatusChange(newStatus);
+        await onStatusChange(newStatus);
       }
 
+      // Update local state after successful API call
+      setSelectedStatus(newStatus);
       setIsOpen(false);
     } catch (error) {
       console.error("Failed to update order status:", error);
-      // You might want to show an error message to the user here
+      // Don't update local state on error - let it stay at current value
     } finally {
       setIsUpdating(false);
     }
@@ -130,11 +137,9 @@ const StatusDropdown = ({
   if (!isAdmin) {
     return (
       <div
-        className={`w-24 h-7 text-xs rounded-[5px] flex items-center justify-center ${getCurrentStatusStyle(
-          selectedStatus
-        )}`}
+        className={`w-28 h-7 text-xs rounded-[5px] flex items-center justify-center ${currentStatusStyle}`}
       >
-        {getCurrentStatusLabel(selectedStatus)}
+        {currentStatusLabel}
       </div>
     );
   }
@@ -145,17 +150,13 @@ const StatusDropdown = ({
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={isUpdating}
-        className={`w-32 h-7 text-xs rounded-[5px] flex items-center justify-between px-2 ${getCurrentStatusStyle(
-          selectedStatus
-        )} ${
+        className={`w-32 h-7 text-xs rounded-[5px] flex items-center justify-between px-2 ${currentStatusStyle} ${
           isUpdating
             ? "opacity-50 cursor-not-allowed"
             : "cursor-pointer hover:opacity-80"
         }`}
       >
-        <span>
-          {isUpdating ? "Updating..." : getCurrentStatusLabel(selectedStatus)}
-        </span>
+        <span>{isUpdating ? "Updating..." : currentStatusLabel}</span>
         <svg
           className={`w-3 h-3 transition-transform ${
             isOpen ? "rotate-180" : ""
