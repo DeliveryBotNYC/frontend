@@ -110,7 +110,7 @@ const Videos = ({ token, setStep, onUpdateItem }) => {
   };
 
   return (
-    <div className="flex flex-col h-full pt-32 px-4 text-white pb-36">
+    <div className="flex flex-col h-full pt-14 px-4 text-white pb-60">
       {/* Error Display */}
       {error?.message && (
         <div className="mx-4 mb-2 p-2 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
@@ -135,7 +135,7 @@ const Videos = ({ token, setStep, onUpdateItem }) => {
           <div className="w-full aspect-[9/16] max-h-[50vh] bg-black rounded-lg overflow-hidden">
             <video
               ref={videoRef}
-              key={steps[VideoStep]?.videoUrl} // Force re-render when video changes
+              key={steps[VideoStep]?.videoUrl}
               className="w-full h-full object-contain"
               controls
               controlsList="nodownload"
@@ -157,49 +157,53 @@ const Videos = ({ token, setStep, onUpdateItem }) => {
         )}
       </div>
 
-      {/* Pushes the button to the bottom naturally */}
-      <div className="flex items-center gap-4 px-4 pb-6 mt-auto">
-        {VideoStep === 0 ? (
-          <button
-            onClick={handleNext}
-            disabled={isSubmitting}
-            className="bg-[#B2D235] text-white text-center w-full h-12 py-3 rounded-lg font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed"
-          >
-            Let's go
-          </button>
-        ) : VideoStep === 3 ? (
-          <button
-            onClick={handleComplete}
-            disabled={isSubmitting || videoMutation.isPending || !videoWatched}
-            className="bg-themeOrange text-white text-center w-full h-12 py-3 rounded-lg font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            {isSubmitting || videoMutation.isPending ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Completing...
-              </>
-            ) : (
-              "Complete Videos"
-            )}
-          </button>
-        ) : (
-          <>
-            <button
-              onClick={handlePrevious}
-              disabled={isSubmitting}
-              className="w-12 h-12 aspect-square flex items-center justify-center bg-[#B2D235] text-white rounded-full disabled:bg-gray-600 disabled:cursor-not-allowed"
-            >
-              <img src={BackwardIcon} alt="Back" />
-            </button>
+      {/* Fixed button container at bottom with 60px clearance for overlay */}
+      <div className="fixed bottom-24 left-0 right-0 px-8 pb-6">
+        <div className="flex items-center gap-4">
+          {VideoStep === 0 ? (
             <button
               onClick={handleNext}
-              disabled={isSubmitting || !videoWatched}
+              disabled={isSubmitting}
               className="bg-[#B2D235] text-white text-center w-full h-12 py-3 rounded-lg font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed"
             >
-              Continue
+              Let's go
             </button>
-          </>
-        )}
+          ) : VideoStep === 3 ? (
+            <button
+              onClick={handleComplete}
+              disabled={
+                isSubmitting || videoMutation.isPending || !videoWatched
+              }
+              className="bg-themeOrange text-white text-center w-full h-12 py-3 rounded-lg font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              {isSubmitting || videoMutation.isPending ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Completing...
+                </>
+              ) : (
+                "Complete Videos"
+              )}
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={handlePrevious}
+                disabled={isSubmitting}
+                className="w-12 h-12 aspect-square flex items-center justify-center bg-[#B2D235] text-white rounded-full disabled:bg-gray-600 disabled:cursor-not-allowed"
+              >
+                <img src={BackwardIcon} alt="Back" />
+              </button>
+              <button
+                onClick={handleNext}
+                disabled={isSubmitting || !videoWatched}
+                className="bg-[#B2D235] text-white text-center w-full h-12 py-3 rounded-lg font-semibold disabled:bg-gray-600 disabled:cursor-not-allowed"
+              >
+                Continue
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

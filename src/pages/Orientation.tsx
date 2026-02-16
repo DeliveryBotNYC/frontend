@@ -122,7 +122,7 @@ const Orientation = () => {
       {/* Fixed Navbar with high top padding */}
       <nav className="w-full bg-themeOrange fixed top-0 left-0 z-[99]">
         {/* Top padding area */}
-        <div className="h-20 bg-themeOrange"></div>
+        <div className="h-14 bg-themeOrange"></div>
 
         {/* Navigation content */}
         <div className="h-32 flex items-center justify-between px-4">
