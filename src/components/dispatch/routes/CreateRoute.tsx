@@ -122,7 +122,7 @@ interface CreateRouteProps {
   onRouteTypeChange?: (type: "instant" | "advanced") => void;
   onUnassignedOrdersVisibilityChange?: (
     visible: boolean,
-    orders: UnassignedOrder[]
+    orders: UnassignedOrder[],
   ) => void; // NEW
 }
 
@@ -253,7 +253,7 @@ const Button = memo<{
         {children}
       </button>
     );
-  }
+  },
 );
 
 Button.displayName = "Button";
@@ -375,7 +375,7 @@ const DriverSelector: React.FC<{
   const filteredDrivers = availableDrivers.filter((driver) =>
     `${driver.firstname} ${driver.lastname}`
       .toLowerCase()
-      .includes(driverSearchTerm.toLowerCase())
+      .includes(driverSearchTerm.toLowerCase()),
   );
 
   const selectDriver = (driverId: string | null): void => {
@@ -385,7 +385,7 @@ const DriverSelector: React.FC<{
   };
 
   const currentDriver = availableDrivers.find(
-    (d) => d.driver_id.toString() === selectedDriverId
+    (d) => d.driver_id.toString() === selectedDriverId,
   );
 
   const currentDriverName = currentDriver
@@ -531,7 +531,7 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [selectedAddress, setSelectedAddress] = useState<AddressData | null>(
-    null
+    null,
   );
   const [routeStops, setRouteStops] = useState<Stop[]>([]);
   const [routeDetailsOpen, setRouteDetailsOpen] = useState<boolean>(true);
@@ -551,7 +551,7 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
         setErrors((prev) => ({ ...prev, pay: "" }));
       }
     },
-    [errors.pay]
+    [errors.pay],
   );
 
   const handleDistanceChange = useCallback(
@@ -564,7 +564,7 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
         setErrors((prev) => ({ ...prev, distance: "" }));
       }
     },
-    [errors.distance]
+    [errors.distance],
   );
 
   const handleDistanceBlur = useCallback(
@@ -572,7 +572,7 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
       const value = parseFloat(e.target.value || "0").toFixed(1);
       setFormData((prev) => ({ ...prev, distance: value }));
     },
-    []
+    [],
   );
 
   const handlePayBlur = useCallback(
@@ -580,7 +580,7 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
       const value = parseFloat(e.target.value || "0").toFixed(2);
       setFormData((prev) => ({ ...prev, pay: value }));
     },
-    []
+    [],
   );
 
   // Calculate route statistics from stops
@@ -768,7 +768,7 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
       setRouteStops(processedStops);
       onStopsChange?.(processedStops);
     },
-    [routeStops, onStopsChange]
+    [routeStops, onStopsChange],
   );
 
   // Use the drag and drop hook for consistent behavior
@@ -792,7 +792,7 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
     if (isAdvanced && selectedAddress && formData.address_id) {
       // Check if we already have a route address stop
       const hasRouteAddressStop = routeStops.some(
-        (stop) => stop.type === "route_address"
+        (stop) => stop.type === "route_address",
       );
 
       if (!hasRouteAddressStop) {
@@ -816,7 +816,7 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
     } else if (!isAdvanced) {
       // Remove route address stop when switching to instant
       const filteredStops = routeStops.filter(
-        (stop) => stop.type !== "route_address"
+        (stop) => stop.type !== "route_address",
       );
       if (filteredStops.length !== routeStops.length) {
         setRouteStops(filteredStops);
@@ -911,7 +911,7 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
     if (onUnassignedOrdersVisibilityChange) {
       onUnassignedOrdersVisibilityChange(
         unassignedOrdersOpen,
-        availableUnassignedOrders
+        availableUnassignedOrders,
       );
     }
   }, [unassignedOrdersOpen, onUnassignedOrdersVisibilityChange]);
@@ -1017,14 +1017,14 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
 
       setIsOptimizing(false);
       alert(
-        "Route optimized successfully! Review the order and create when ready."
+        "Route optimized successfully! Review the order and create when ready.",
       );
     },
     onError: (error: any) => {
       console.error("Failed to optimize route:", error);
       setIsOptimizing(false);
       alert(
-        "Optimization failed. Please try again or create the route without optimization."
+        "Optimization failed. Please try again or create the route without optimization.",
       );
     },
   });
@@ -1091,7 +1091,7 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
   };
 
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     if (name === "date") {
@@ -1185,7 +1185,7 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
   const handleOptimize = async () => {
     if (
       !window.confirm(
-        "Optimize this route? This will reorganize all stops for better efficiency."
+        "Optimize this route? This will reorganize all stops for better efficiency.",
       )
     ) {
       return;
@@ -1225,14 +1225,25 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
 
     if (formData.driver_id) submitData.driver_id = formData.driver_id;
 
+    // Shared fields for both types
+    if (formData.pay) submitData.pay = dollarsToCents(formData.pay);
+    if (formData.distance) submitData.distance = formData.distance;
+    if (formData.time) submitData.time = formData.time;
+
     if (formData.type === "advanced") {
       if (formData.address_id) submitData.address_id = formData.address_id;
-      if (formData.pay) submitData.pay = dollarsToCents(formData.pay); // Convert to cents
-      if (formData.time) submitData.time = formData.time;
-      if (formData.distance) submitData.distance = formData.distance;
       if (formData.zone_id) submitData.zone_id = Number(formData.zone_id);
       if (formData.start_time) submitData.start_time = formData.start_time;
       if (formData.end_time) submitData.end_time = formData.end_time;
+    }
+
+    if (formData.type === "instant") {
+      const orderIds = new Set<string>();
+      routeStops.forEach((stop) => {
+        stop.pickup?.orders?.forEach((order) => orderIds.add(order.order_id));
+        stop.deliver?.orders?.forEach((order) => orderIds.add(order.order_id));
+      });
+      if (orderIds.size > 0) submitData.order_ids = Array.from(orderIds);
     }
 
     if (formData.type === "instant") {
@@ -1258,7 +1269,7 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
     if (routeStops.length > 0 && formData.type === "instant") {
       if (
         window.confirm(
-          "Route created! Would you like to optimize the stop order now?"
+          "Route created! Would you like to optimize the stop order now?",
         )
       ) {
         const orderIds = new Set<string>();
@@ -1311,10 +1322,10 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
       // Check if order is already in route
       const isAlreadyInRoute = routeStops.some((stop) => {
         const hasInPickup = stop.pickup?.orders?.some(
-          (o) => o.order_id === order.order_id
+          (o) => o.order_id === order.order_id,
         );
         const hasInDeliver = stop.deliver?.orders?.some(
-          (o) => o.order_id === order.order_id
+          (o) => o.order_id === order.order_id,
         );
         return hasInPickup || hasInDeliver;
       });
@@ -1343,7 +1354,7 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
 
   // Get current driver info for stats display
   const currentDriver = availableDrivers.find(
-    (d) => d.driver_id.toString() === formData.driver_id
+    (d) => d.driver_id.toString() === formData.driver_id,
   );
 
   // NEW: Handle unassigned orders section toggle
@@ -1353,7 +1364,7 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
     if (onUnassignedOrdersVisibilityChange) {
       onUnassignedOrdersVisibilityChange(
         newState,
-        newState ? availableUnassignedOrders : []
+        newState ? availableUnassignedOrders : [],
       );
     }
   }, [
@@ -1860,7 +1871,7 @@ const CreateRoute: React.FC<CreateRouteProps> = ({
                           dragAndDrop.handleStopDragStart(
                             e,
                             stopWithOrder,
-                            index
+                            index,
                           )
                         }
                         onDragOver={(e) => dragAndDrop.handleDragOver(e, index)}
