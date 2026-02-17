@@ -29,7 +29,7 @@ const CurrentOrderMap = ({ data }) => {
 
   // Sort remaining stops by stop_number
   const sortedRemainingStops = [...remainingStops].sort(
-    (a, b) => a.stop_number - b.stop_number
+    (a, b) => a.stop_number - b.stop_number,
   );
 
   // Build estimated route polyline based on status
@@ -64,7 +64,7 @@ const CurrentOrderMap = ({ data }) => {
 
       // Add stops before pickup
       const stopsBeforePickup = sortedRemainingStops.filter(
-        (stop) => stop.stop_number < pickupStopNumber
+        (stop) => stop.stop_number < pickupStopNumber,
       );
       stopsBeforePickup.forEach((stop) => {
         if (stop.lat && stop.lon) {
@@ -81,7 +81,7 @@ const CurrentOrderMap = ({ data }) => {
       const stopsAfterPickup = sortedRemainingStops.filter(
         (stop) =>
           stop.stop_number > pickupStopNumber &&
-          stop.stop_number < deliveryStopNumber
+          stop.stop_number < deliveryStopNumber,
       );
       stopsAfterPickup.forEach((stop) => {
         if (stop.lat && stop.lon) {
@@ -257,7 +257,10 @@ const CurrentOrderMap = ({ data }) => {
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url={mapStyle}
+          url={
+            "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png?api_key=" +
+            stadia
+          }
           detectRetina={true}
           maxZoom={18}
           minZoom={10}
