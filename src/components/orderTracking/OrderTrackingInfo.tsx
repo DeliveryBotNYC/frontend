@@ -1,6 +1,7 @@
 import { useContext, useMemo, useState, useRef, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { ThemeContext } from "../../context/ThemeContext";
+import moment from "moment";
 
 import StatusDropdown from "../reusable/StatusDropdown";
 import Progressbar from "../reusable/Progressbar";
@@ -568,12 +569,59 @@ const OrderTrackingInfo = ({
               {/* Status */}
               <>
                 {/* Progressbar */}
-                <div className="pb-3">
-                  <Progressbar
-                    value={currentStatus === "delivered" ? "100%" : "70%"}
-                    status={currentStatus || ""}
-                  />
-                </div>
+                <Progressbar
+                  value={currentStatus === "delivered" ? "100%" : "70%"}
+                  status={currentStatus || ""}
+                />
+
+                {/* ETA Section */}
+                {(data?.pickup?.pickup_time_estimated ||
+                  data?.delivery?.delivery_time_estimated) && (
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    {/* Pickup ETA - only show if not yet picked up */}
+                    {data?.pickup?.pickup_time_estimated &&
+                    currentStatus !== "processing" &&
+                    currentStatus !== "picked_up" &&
+                    currentStatus !== "arrived_at_delivery" &&
+                    currentStatus !== "undeliverable" &&
+                    currentStatus !== "canceled" &&
+                    currentStatus !== "returned" &&
+                    currentStatus !== "delivered" ? (
+                      <div className="flex flex-col gap-0.5">
+                        <p className="text-[10px] text-themeDarkGray uppercase tracking-wide">
+                          Pickup ETA
+                        </p>
+                        <p className="text-xs font-semibold text-themeDarkGray">
+                          {moment(data.pickup.pickup_time_estimated).format(
+                            "h:mm a",
+                          )}
+                        </p>
+                      </div>
+                    ) : (
+                      <div /> // spacer so delivery ETA stays right-aligned
+                    )}
+
+                    {/* Delivery ETA - only show if not yet delivered */}
+                    {data?.delivery?.delivery_time_estimated &&
+                    currentStatus !== "processing" &&
+                    currentStatus !== "undeliverable" &&
+                    currentStatus !== "canceled" &&
+                    currentStatus !== "returned" &&
+                    currentStatus !== "delivered" &&
+                    currentStatus !== "delivered" ? (
+                      <div className="flex flex-col gap-0.5 text-right">
+                        <p className="text-[10px] text-themeDarkGray uppercase tracking-wide">
+                          Delivery ETA
+                        </p>
+                        <p className="text-xs font-semibold text-themeDarkGray">
+                          {moment(data.delivery.delivery_time_estimated).format(
+                            "h:mm a",
+                          )}
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
 
                 {/* Delivery tracking */}
                 <div className="w-full">

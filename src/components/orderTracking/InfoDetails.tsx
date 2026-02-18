@@ -20,9 +20,9 @@ const ProofImages = ({ proofs }: { proofs: Record<string, any> }) => {
   const textEntries = entries.filter(
     ([type, value]) => !isImageUrl(value) && type !== "picture",
   );
+
   return (
-    <div className="ml-6 mt-1.5 mb-1">
-      {/* Image proofs */}
+    <div className="mt-1.5 mb-1">
       {imageEntries.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {imageEntries.map(([type, value]) => (
@@ -41,7 +41,6 @@ const ProofImages = ({ proofs }: { proofs: Record<string, any> }) => {
         </div>
       )}
 
-      {/* Text proofs on their own lines */}
       {textEntries.map(([type, value]) => (
         <p key={type} className="text-[10px] text-themeDarkGray mt-1">
           <span className="capitalize">{type}:</span>{" "}
@@ -49,13 +48,11 @@ const ProofImages = ({ proofs }: { proofs: Record<string, any> }) => {
         </p>
       ))}
 
-      {/* Expanded image overlay */}
       {expandedImage && (
         <div
           className="fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center"
           onClick={() => setExpandedImage(null)}
         >
-          {/* Close button */}
           <button
             className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/40 flex items-center justify-center transition-colors"
             onClick={() => setExpandedImage(null)}
@@ -86,120 +83,124 @@ const ProofImages = ({ proofs }: { proofs: Record<string, any> }) => {
   );
 };
 
+const LOG_LABELS: Record<string, string> = {
+  route_assigned: "Order added to route",
+  assigned: "Driver assigned",
+  arrived_at_pickup: "Arrived at pickup",
+  picked_up: "Order picked-up",
+  arrived_at_delivery: "Arrived at delivery",
+  undeliverable: "Driver unable to deliver",
+  delivered: "Order Delivered",
+  texted_pickup: "Driver texted pickup",
+  called_pickup: "Driver called pickup",
+  texted_delivery: "Driver texted delivery",
+  called_delivery: "Driver called delivery",
+  automation_texted_pickup: "Automated text to pickup",
+  automation_texted_delivery: "Automated text to delivery",
+  automation_emailed_delivery: "Automated email to delivery",
+  automation_emailed_pickup: "Automated email to pickup",
+  canceled: "Order Canceled",
+};
+
+const LOG_COLORS: Record<string, string> = {
+  processing: "text-themeOrange font-bold",
+  assigned: "text-themeBlue font-bold",
+  picked_up: "text-black font-bold",
+  delivered: "text-themeDarkGreen font-bold",
+  canceled: "text-themeLightRed font-bold",
+};
+
+const ALWAYS_VISIBLE = [
+  "processing",
+  "assigned",
+  "picked_up",
+  "delivered",
+  "returned",
+  "undeliverable",
+  "canceled",
+];
+
+const AUTOMATION_LOGS = [
+  "automation_texted_pickup",
+  "automation_texted_delivery",
+  "automation_emailed_pickup",
+  "automation_emailed_delivery",
+];
+
 const ProcessingInfo = ({ items }: { items: any }) => {
   const contextValue = useContext(ThemeContext);
 
   const reversedLogs = items?.logs ? [...items.logs].reverse() : [];
 
+  const visibleLogs = reversedLogs.filter(
+    (item: any) =>
+      contextValue?.activeSwitch || ALWAYS_VISIBLE.includes(item.log),
+  );
+
   return (
     <div className="w-full">
-      {reversedLogs?.map((item: any, index: number) =>
-        contextValue?.activeSwitch ||
-        item.log === "processing" ||
-        item.log === "assigned" ||
-        item.log === "picked_up" ||
-        item.log === "delivered" ||
-        item.log === "returned" ||
-        item.log === "undeliverable" ||
-        item.log === "canceled" ? (
-          <div className="relative w-full" key={index}>
-            <div
-              key={item.log_id}
-              className="flex items-end justify-between gap-2 pt-2.5"
-            >
-              {/* Left Side */}
-              <div className="flex items-start gap-2.5">
-                {/* Dot - z-20 so it renders above the timeline line */}
-                <div className="w-3.5 h-3.5 rounded-full border-2 bg-themeOrange border-white relative z-20"></div>
+      {visibleLogs.map((item: any, index: number) => {
+        const label =
+          item.log === "processing"
+            ? `Order created (${item.by})`
+            : LOG_LABELS[item.log] || item.log;
+
+        const colorClass = LOG_COLORS[item.log] || "text-black";
+        const isFirst = index === 0;
+        const isLast = index === visibleLogs.length - 1;
+
+        return (
+          <div className="flex gap-2.5 w-full" key={item.log_id || index}>
+            {/* Timeline column - no padding, line segments fill gaps */}
+            <div className="flex flex-col items-center w-3.5 shrink-0">
+              {/* Above dot: line connector or spacer */}
+              {isFirst ? (
+                <div className="h-2.5" />
+              ) : (
+                <div className="w-0.5 bg-themeOrange h-2.5 z-10" />
+              )}
+
+              {/* Dot */}
+              <div className="w-3.5 h-3.5 rounded-full border-2 bg-themeOrange border-white shrink-0 z-20" />
+
+              {/* Below dot: line stretches to fill remaining height */}
+              {!isLast && <div className="w-0.5 bg-themeOrange flex-1 z-10" />}
+            </div>
+
+            {/* Content column */}
+            <div className="flex-1 min-w-0 pt-2.5">
+              <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p
-                    className={`text-xs text-${
-                      item.log === "processing"
-                        ? "themeOrange font-bold"
-                        : item.log == "assigned"
-                          ? "themeBlue font-bold"
-                          : item.log == "picked_up"
-                            ? "black font-bold"
-                            : item.log == "delivered"
-                              ? "themeDarkGreen font-bold"
-                              : "black"
-                    }`}
-                  >
-                    {item.log === "processing"
-                      ? "Order created (" + item.by + ")"
-                      : item.log == "route_assigned"
-                        ? "Order added to route"
-                        : item.log == "assigned"
-                          ? "Driver assigned"
-                          : item.log == "arrived_at_pickup"
-                            ? "Arrived at pickup"
-                            : item.log == "picked_up"
-                              ? "Order picked-up"
-                              : item.log == "arrived_at_delivery"
-                                ? "Arrived at delivery"
-                                : item.log == "undeliverable"
-                                  ? "Driver unable to deliver"
-                                  : item.log == "delivered"
-                                    ? "Order Delivered"
-                                    : item.log == "texted_pickup"
-                                      ? "Driver texted pickup"
-                                      : item.log == "called_pickup"
-                                        ? "Driver called pickup"
-                                        : item.log == "texted_delivery"
-                                          ? "Driver texted delivery"
-                                          : item.log == "called_delivery"
-                                            ? "Driver called delivery"
-                                            : item.log ==
-                                                "automation_texted_pickup"
-                                              ? "Automated text to pickup"
-                                              : item.log ==
-                                                  "automation_texted_delivery"
-                                                ? "Automated text to delivery"
-                                                : item.log ==
-                                                    "automation_emailed_delivery"
-                                                  ? "Automated email to delivery"
-                                                  : item.log ==
-                                                      "automation_emailed_pickup"
-                                                    ? "Automated email to pickup"
-                                                    : item.log}
-                  </p>
-                  {item.log == "automation_texted_pickup" ||
-                  item.log == "automation_texted_delivery" ||
-                  item.log == "automation_emailed_pickup" ||
-                  item.log == "automation_emailed_delivery" ? (
+                  <p className={`text-xs ${colorClass}`}>{label}</p>
+                  {AUTOMATION_LOGS.includes(item.log) && (
                     <p className="text-[10px] text-secondaryBtnBorder">
                       {item.value}
                     </p>
-                  ) : null}
+                  )}
+                </div>
+                <div className="shrink-0">
+                  <p className="text-[11px] text-themeDarkGray text-right">
+                    {moment(item.datetime).format("MMM Do")}
+                  </p>
+                  <p className="text-xs text-right">
+                    {moment(item.datetime).format("h:mm a")}
+                  </p>
                 </div>
               </div>
-              <div>
-                <p className="text-[11px] text-themeDarkGray text-right">
-                  {moment(item.datetime).format("MMM Do")}
-                </p>
-                <p className="text-xs">
-                  {moment(item.datetime).format("h:mm a")}
-                </p>
-              </div>
+
+              {item.log === "picked_up" &&
+                items?.pickup?.uploaded_verification && (
+                  <ProofImages proofs={items.pickup.uploaded_verification} />
+                )}
+
+              {item.log === "delivered" &&
+                items?.delivery?.uploaded_verification && (
+                  <ProofImages proofs={items.delivery.uploaded_verification} />
+                )}
             </div>
-
-            {/* Pickup proof under picked_up log */}
-            {item.log === "picked_up" && items?.pickup?.uploaded_proof && (
-              <ProofImages proofs={items.pickup.uploaded_proof} />
-            )}
-
-            {/* Delivery proof under delivered log */}
-            {item.log === "delivered" && items?.delivery?.uploaded_proof && (
-              <ProofImages proofs={items.delivery.uploaded_proof} />
-            )}
-
-            {/* Timeline connector - stretches from top to just above the dot */}
-            {index != 0 && (
-              <div className="border-l-2 border-l-themeOrange border-solid absolute left-1.5 top-0 bottom-[0.85rem] z-10"></div>
-            )}
           </div>
-        ) : null,
-      )}
+        );
+      })}
     </div>
   );
 };

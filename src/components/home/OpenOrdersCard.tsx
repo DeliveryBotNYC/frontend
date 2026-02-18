@@ -55,7 +55,7 @@ const OpenOrdersCard = ({ item }) => {
         <p className="text-sm text-gray-900 truncate">
           {item.timeframe ? (
             `${moment(item.timeframe.start_time).format("h:mm a")}-${moment(
-              item.timeframe.end_time
+              item.timeframe.end_time,
             ).format("h:mm a")}`
           ) : (
             <span className="text-gray-500">-</span>
@@ -76,8 +76,8 @@ const OpenOrdersCard = ({ item }) => {
                     Pickup ETA
                   </p>
                   <p className="text-sm text-gray-900">
-                    {item.pickup.eta ? (
-                      moment(item.pickup.eta).format("h:mm A")
+                    {item.pickup.pickup_time_estimated ? (
+                      moment(item.pickup.pickup_time_estimated).format("h:mm A")
                     ) : (
                       <span className="text-gray-500">-</span>
                     )}
@@ -93,8 +93,10 @@ const OpenOrdersCard = ({ item }) => {
                     Delivery ETA
                   </p>
                   <p className="text-sm text-gray-900">
-                    {item.delivery.eta ? (
-                      moment(item.delivery.eta).format("h:mm A")
+                    {item.delivery.delivery_time_estimated ? (
+                      moment(item.delivery.delivery_time_estimated).format(
+                        "h:mm A",
+                      )
                     ) : (
                       <span className="text-gray-500">-</span>
                     )}
