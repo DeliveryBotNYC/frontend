@@ -42,9 +42,17 @@ interface ControlProps {
   state: StateData | null;
   filters: Filters;
   setFilters: (filters: Filters) => void;
+  onStatClick?: (view: "routes" | "orders" | "drivers") => void;
+  activeSidebarView?: "routes" | "orders" | "drivers";
 }
 
-const Control: React.FC<ControlProps> = ({ state, filters, setFilters }) => {
+const Control: React.FC<ControlProps> = ({
+  state,
+  filters,
+  setFilters,
+  onStatClick,
+  activeSidebarView,
+}) => {
   // ALL HOOKS MUST BE AT THE TOP - BEFORE ANY CONDITIONAL LOGIC
   const [showMarketDropdown, setShowMarketDropdown] = useState(false);
   const [showRouteStatusDropdown, setShowRouteStatusDropdown] = useState(false);
@@ -83,7 +91,7 @@ const Control: React.FC<ControlProps> = ({ state, filters, setFilters }) => {
           item.value !== undefined &&
           item.value !== null &&
           item.value !== "" &&
-          item.value !== 0
+          item.value !== 0,
       )
     );
   };
@@ -298,28 +306,66 @@ const Control: React.FC<ControlProps> = ({ state, filters, setFilters }) => {
         {state &&
           Object.entries(state)
             .filter(([key, value]) => hasArrayMeaningfulData(value))
-            .map(([key, value]) => (
-              <div key={key}>
-                <p className="text-xs text-gray-500 mb-1">{key}</p>
-                <div className="flex gap-6">
-                  {value.map((item: StatItem) => (
-                    <div key={key + "-" + item.title}>
-                      <div className="flex gap-2 items-center mb-1">
-                        <p className="text-xl font-semibold text-gray-900">
-                          {item.value}
-                        </p>
-                        <img
-                          src={ForwardIcon}
-                          alt="forward-icon"
-                          className="w-3 h-3"
-                        />
+            .map(([key, value]) => {
+              // Determine if this stat group is clickable and which view it maps to
+              const viewMap: Record<string, "routes" | "orders" | "drivers"> = {
+                routes: "routes",
+                orders: "orders",
+                drivers: "drivers",
+              };
+              const targetView = viewMap[key.toLowerCase()];
+              const isClickable = !!targetView && !!onStatClick;
+              const isActive = activeSidebarView === targetView;
+
+              return (
+                <div
+                  key={key}
+                  onClick={() => isClickable && onStatClick!(targetView)}
+                  className={`relative transition-all duration-150 rounded-md px-2 py-1 -mx-2 -my-1
+                    ${isClickable ? "cursor-pointer group" : ""}
+                    ${isActive ? "bg-orange-50" : isClickable ? "hover:bg-gray-50" : ""}
+                  `}
+                >
+                  {/* Active underline indicator */}
+                  {isActive && (
+                    <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-themeOrange rounded-full" />
+                  )}
+
+                  <p
+                    className={`text-xs mb-1 transition-colors duration-150
+                    ${isActive ? "text-themeOrange font-semibold" : "text-gray-500"}
+                    ${isClickable && !isActive ? "group-hover:text-gray-700" : ""}
+                  `}
+                  >
+                    {key}
+                  </p>
+
+                  <div className="flex gap-6">
+                    {value.map((item: StatItem) => (
+                      <div key={key + "-" + item.title}>
+                        <div className="flex gap-2 items-center mb-1">
+                          <p
+                            className={`text-xl font-semibold transition-colors duration-150
+                            ${isActive ? "text-themeOrange" : "text-gray-900"}
+                          `}
+                          >
+                            {item.value}
+                          </p>
+                          <img
+                            src={ForwardIcon}
+                            alt="forward-icon"
+                            className={`w-3 h-3 transition-opacity duration-150
+                              ${isActive ? "opacity-100" : isClickable ? "opacity-60 group-hover:opacity-100" : ""}
+                            `}
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500">{item.title}</p>
                       </div>
-                      <p className="text-xs text-gray-500">{item.title}</p>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
       </div>
     </div>
   );

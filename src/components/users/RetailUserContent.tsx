@@ -11,6 +11,7 @@ import moment from "moment";
 import RetailAccountGeneral from "./RetailAccountGeneral";
 import RetailAccountDefaults from "./RetailAccountDefault";
 import RetailAccountBilling from "./RetailAccountBilling";
+import RetailAccountCoverage from "./RetailAccountCoverage";
 
 interface RetailUser {
   id: string;
@@ -21,7 +22,6 @@ interface RetailUser {
   phone?: string;
   phone_formatted?: string;
   created_at: string;
-  // All retail-specific fields from your accounts structure
   user_id: number | null;
   customer_id: number | null;
   firstname: string;
@@ -61,6 +61,8 @@ interface RetailUser {
     city?: string;
     state?: string;
     zip?: string;
+    lat?: number | string;
+    lon?: number | string;
   };
 }
 
@@ -85,24 +87,31 @@ export const useRetailAccountContext = () => {
   const context = useContext(RetailAccountContext);
   if (!context) {
     throw new Error(
-      "useRetailAccountContext must be used within RetailAccountProvider"
+      "useRetailAccountContext must be used within RetailAccountProvider",
     );
   }
   return context;
 };
 
-// These components will be standalone versions that accept props
-// instead of using useOutletContext()
+// ─── Tab config ───────────────────────────────────────────────────────────────
+
+type TabId = "general" | "defaults" | "billing" | "coverage";
+
+const TABS: { id: TabId; name: string; desc: string }[] = [
+  { id: "general", name: "General", desc: "Personal & store info" },
+  { id: "defaults", name: "Defaults", desc: "Default settings" },
+  { id: "billing", name: "Billing", desc: "Payment & billing" },
+  { id: "coverage", name: "Coverage", desc: "Delivery radius maps" },
+];
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 const RetailUserContent: React.FC<RetailUserContentProps> = ({ userId }) => {
   const navigate = useNavigate();
   const config = useConfig();
   const [user, setUser] = useState<RetailUser | null>(null);
-  const [activeTab, setActiveTab] = useState<
-    "general" | "defaults" | "billing"
-  >("general");
+  const [activeTab, setActiveTab] = useState<TabId>("general");
 
-  // Fetch user data
   const {
     isLoading,
     error,
@@ -114,7 +123,6 @@ const RetailUserContent: React.FC<RetailUserContentProps> = ({ userId }) => {
       const res = await axios.get(`${url}/retail/${userId}`, config);
       const userData = res.data.data || res.data || {};
 
-      // Transform API data to component format
       const normalizedUser: RetailUser = {
         id: userData.user_id?.toString() || userId,
         name:
@@ -126,7 +134,6 @@ const RetailUserContent: React.FC<RetailUserContentProps> = ({ userId }) => {
         phone: userData.phone || "",
         phone_formatted: userData.phone_formatted || "",
         created_at: userData.created_at || "",
-        // Include all retail fields with proper mapping
         user_id: userData.user_id || null,
         customer_id: userData.customer_id || null,
         firstname: userData.firstname || "",
@@ -166,6 +173,8 @@ const RetailUserContent: React.FC<RetailUserContentProps> = ({ userId }) => {
           city: "",
           state: "",
           zip: "",
+          lat: undefined,
+          lon: undefined,
         },
       };
 
@@ -217,8 +226,16 @@ const RetailUserContent: React.FC<RetailUserContentProps> = ({ userId }) => {
 
   if (!user) return null;
 
-  // Create the context value that matches what AccountsGeneral expects
   const contextValue: ContextValue = {
+    accountsData: user,
+    setAccountsData: setUser,
+    refetchAccountData: refetch,
+    isLoading: false,
+    isError: false,
+    error: null,
+  };
+
+  const sharedProps = {
     accountsData: user,
     setAccountsData: setUser,
     refetchAccountData: refetch,
@@ -230,49 +247,15 @@ const RetailUserContent: React.FC<RetailUserContentProps> = ({ userId }) => {
   const renderTabContent = () => {
     switch (activeTab) {
       case "general":
-        return (
-          <RetailAccountGeneral
-            accountsData={user}
-            setAccountsData={setUser}
-            refetchAccountData={refetch}
-            isLoading={false}
-            isError={false}
-            error={null}
-          />
-        );
+        return <RetailAccountGeneral {...sharedProps} />;
       case "defaults":
-        return (
-          <RetailAccountDefaults
-            accountsData={user}
-            setAccountsData={setUser}
-            refetchAccountData={refetch}
-            isLoading={false}
-            isError={false}
-            error={null}
-          />
-        );
+        return <RetailAccountDefaults {...sharedProps} />;
       case "billing":
-        return (
-          <RetailAccountBilling
-            accountsData={user}
-            setAccountsData={setUser}
-            refetchAccountData={refetch}
-            isLoading={false}
-            isError={false}
-            error={null}
-          />
-        );
+        return <RetailAccountBilling {...sharedProps} />;
+      case "coverage":
+        return <RetailAccountCoverage {...sharedProps} />;
       default:
-        return (
-          <RetailAccountGeneral
-            accountsData={user}
-            setAccountsData={setUser}
-            refetchAccountData={refetch}
-            isLoading={false}
-            isError={false}
-            error={null}
-          />
-        );
+        return <RetailAccountGeneral {...sharedProps} />;
     }
   };
 
@@ -307,18 +290,10 @@ const RetailUserContent: React.FC<RetailUserContentProps> = ({ userId }) => {
           {/* Tab Navigation */}
           <div className="w-full border-b border-gray-200">
             <nav className="flex space-x-8 px-6" aria-label="Tabs">
-              {[
-                {
-                  id: "general",
-                  name: "General",
-                  desc: "Personal & store info",
-                },
-                { id: "defaults", name: "Defaults", desc: "Default settings" },
-                { id: "billing", name: "Billing", desc: "Payment & billing" },
-              ].map((tab) => (
+              {TABS.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id)}
                   className={`py-4 px-1 border-b-2 font-medium text-sm whitespace-nowrap transition-colors ${
                     activeTab === tab.id
                       ? "border-themeGreen text-themeGreen"

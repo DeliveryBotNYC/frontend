@@ -35,6 +35,8 @@ interface AccountsData {
     city?: string;
     state?: string;
     zip?: string;
+    lat?: number | string;
+    lon?: number | string;
   };
   [key: string]: any;
 }
@@ -95,51 +97,32 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
     fieldErrors: {},
   });
 
-  // Store current form values (combination of original data and updates)
   const currentFormValues = useMemo(() => {
     return { ...accountsData, ...updatedGeneralData };
   }, [accountsData, updatedGeneralData]);
 
   function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) {
     const { id, value } = e.target;
 
-    // Clear field error and status when user starts typing
     if (error.fieldErrors[id]) {
       setError((prev) => {
         const newFieldErrors = { ...prev.fieldErrors };
         delete newFieldErrors[id];
-        return {
-          ...prev,
-          fieldErrors: newFieldErrors,
-        };
+        return { ...prev, fieldErrors: newFieldErrors };
       });
     }
+    if (error.message) setError((prev) => ({ ...prev, message: "" }));
+    if (submitStatus.message) setSubmitStatus({ type: "", message: "" });
 
-    if (error.message) {
-      setError((prev) => ({
-        ...prev,
-        message: "",
-      }));
-    }
-
-    // Clear submit status when user makes changes
-    if (submitStatus.message) {
-      setSubmitStatus({ type: "", message: "" });
-    }
-
-    // Convert to number for numeric fields
     let processedValue: string | number = value;
     if (id === "discount" || id === "estimated_monthly_volume") {
       processedValue = value === "" ? "" : parseFloat(value);
     }
 
     if (accountsData[id] !== processedValue) {
-      setUpdatedGeneralData((prev) => ({
-        ...prev,
-        [id]: processedValue,
-      }));
+      setUpdatedGeneralData((prev) => ({ ...prev, [id]: processedValue }));
     } else {
       const newData = { ...updatedGeneralData };
       delete newData[id];
@@ -148,32 +131,17 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
   }
 
   const saveGeneralMutation = useMutation({
-    mutationFn: (newData: UpdatedGeneralData) => {
-      return axios.patch(
-        url + "/retail/" + accountsData.user_id,
-        newData,
-        config
-      );
-    },
+    mutationFn: (newData: UpdatedGeneralData) =>
+      axios.patch(url + "/retail/" + accountsData.user_id, newData, config),
     onSuccess: (data) => {
       setError({ message: "", fieldErrors: {} });
-      const updatedData: AccountsData = {
-        ...accountsData,
-        ...data.data.data,
-      };
-      setAccountsData(updatedData);
+      setAccountsData({ ...accountsData, ...data.data.data });
       setUpdatedGeneralData({});
-
-      // Show success message
       setSubmitStatus({
         type: "success",
         message: "General information saved successfully!",
       });
-
-      // Clear success message after 5 seconds
-      setTimeout(() => {
-        setSubmitStatus({ type: "", message: "" });
-      }, 5000);
+      setTimeout(() => setSubmitStatus({ type: "", message: "" }), 5000);
     },
     onError: (error: ApiErrorResponse) => {
       const fieldErrors: Record<string, string> = {};
@@ -185,13 +153,10 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
           fieldErrors[err.field] = err.message;
         });
       }
-
       setError({
         message: error.response?.data?.message || "An error occurred",
-        fieldErrors: fieldErrors,
+        fieldErrors,
       });
-
-      // Show error message
       setSubmitStatus({
         type: "error",
         message:
@@ -200,7 +165,6 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
     },
   });
 
-  // Warn user about unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (Object.keys(updatedGeneralData).length > 0) {
@@ -208,12 +172,10 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
         e.returnValue = "";
       }
     };
-
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [updatedGeneralData]);
 
-  // Options for select fields
   const storeTypeOptions: SelectOption[] = [
     { value: "grocery", label: "Grocery" },
     { value: "clothing", label: "Clothing" },
@@ -232,7 +194,7 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
   if (accountsData === undefined) {
     return (
       <div className="w-full h-full bg-white p-themePadding rounded-2xl flex items-center justify-center">
-        <div className="animate-spin h-8 w-8 border-2 border-themeGreen border-t-transparent rounded-full"></div>
+        <div className="animate-spin h-8 w-8 border-2 border-themeGreen border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -242,7 +204,7 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
       <div className="w-full h-full flex flex-col justify-between items-center">
         <div className="w-full h-full">
           <div className="space-y-6">
-            {/* Personal Information Section */}
+            {/* Personal Information */}
             <div>
               <h3 className="text-lg font-semibold mb-4 text-black">
                 Personal Information
@@ -256,7 +218,6 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
                   onChange={handleChange}
                   error={error.fieldErrors?.firstname}
                 />
-
                 <FormInput
                   label="Last Name"
                   id="lastname"
@@ -265,7 +226,6 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
                   onChange={handleChange}
                   error={error.fieldErrors?.lastname}
                 />
-
                 <div className="md:col-span-2">
                   <FormInput
                     label="Email"
@@ -276,7 +236,6 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
                     error={error.fieldErrors?.email}
                   />
                 </div>
-
                 <FormInput
                   label="Phone"
                   id="phone"
@@ -285,7 +244,6 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
                   onChange={handleChange}
                   error={error.fieldErrors?.phone}
                 />
-
                 <FormSelect
                   label="Status"
                   id="status"
@@ -297,7 +255,7 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
               </div>
             </div>
 
-            {/* Store Information Section */}
+            {/* Store Information */}
             <div>
               <h3 className="text-lg font-semibold mb-4 text-black">
                 Store Information
@@ -328,7 +286,6 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
                   onChange={handleChange}
                   error={error.fieldErrors?.account_id}
                 />
-
                 <FormInput
                   label="Estimated Monthly Volume"
                   id="estimated_monthly_volume"
@@ -340,7 +297,6 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
                   onChange={handleChange}
                   error={error.fieldErrors?.estimated_monthly_volume}
                 />
-
                 <FormInput
                   label="Discount (%)"
                   id="discount"
@@ -359,7 +315,7 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
                   label="Address"
                   id="address"
                   required
-                  value={currentFormValues?.address.street_address_1 || ""}
+                  value={currentFormValues?.address?.street_address_1 || ""}
                   onChange={handleChange}
                   error={error.fieldErrors?.address}
                 />
@@ -371,7 +327,6 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
                   onChange={handleChange}
                   error={error.fieldErrors?.apt}
                 />
-
                 <FormInput
                   label="Access Code"
                   id="access_code"
@@ -391,7 +346,6 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
                   onChange={handleChange}
                   error={error.fieldErrors?.default_pickup_note}
                 />
-
                 <FormInput
                   label="Default Delivery Note"
                   id="default_delivery_note"
@@ -422,7 +376,7 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
           >
             {saveGeneralMutation.isPending ? (
               <div className="flex items-center justify-center gap-2">
-                <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
                 Saving Changes...
               </div>
             ) : (
@@ -430,7 +384,6 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
             )}
           </button>
 
-          {/* Success/Error Messages */}
           {submitStatus.message && (
             <div
               className={`mt-3 p-3 rounded-lg text-sm font-medium w-full max-w-sm ${
@@ -474,7 +427,6 @@ const RetailAccountGeneral: React.FC<RetailAccountGeneralProps> = ({
             </div>
           )}
 
-          {/* General Error Message */}
           {error.message && !submitStatus.message && (
             <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg w-full max-w-sm">
               <div className="flex items-center gap-2">

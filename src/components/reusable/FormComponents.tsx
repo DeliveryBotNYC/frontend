@@ -1,4 +1,4 @@
-import { forwardRef, useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useEffect, forwardRef, useRef } from "react";
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import { enforceFormat, formatToPhone } from "./functions";
@@ -211,7 +211,7 @@ export const FormPassword = forwardRef<HTMLInputElement, FormPasswordProps>(
       showMatchIndicator = false,
       ...props
     },
-    ref
+    ref,
   ) => {
     const [showPassword, setShowPassword] = useState(false);
 
@@ -325,7 +325,7 @@ export const FormPassword = forwardRef<HTMLInputElement, FormPasswordProps>(
         )}
       </div>
     );
-  }
+  },
 );
 FormPassword.displayName = "FormPassword";
 
@@ -355,7 +355,7 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
       isPhone = false,
       ...props
     },
-    ref
+    ref,
   ) => {
     // Handle phone formatting
     const handlePhoneKeyUp = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -475,7 +475,7 @@ export const FormInput = forwardRef<HTMLInputElement, FormInputProps>(
         )}
       </div>
     );
-  }
+  },
 );
 
 FormInput.displayName = "FormInput";
@@ -496,7 +496,7 @@ export const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
       placeholder = "Select an option",
       ...props
     },
-    ref
+    ref,
   ) => (
     <div className="w-full">
       <label className="text-themeDarkGray text-xs">
@@ -540,7 +540,7 @@ export const FormSelect = forwardRef<HTMLSelectElement, FormSelectProps>(
         </div>
       )}
     </div>
-  )
+  ),
 );
 
 FormSelect.displayName = "FormSelect";
@@ -558,7 +558,7 @@ export const RadioGroup = forwardRef<HTMLDivElement, RadioGroupProps>(
       required = false,
       className = "",
     },
-    ref
+    ref,
   ) => (
     <div className={`w-full ${className}`} ref={ref}>
       <label className="text-themeDarkGray text-xs">
@@ -605,7 +605,7 @@ export const RadioGroup = forwardRef<HTMLDivElement, RadioGroupProps>(
         </div>
       )}
     </div>
-  )
+  ),
 );
 
 RadioGroup.displayName = "RadioGroup";
@@ -622,7 +622,7 @@ export const CheckboxGroup = forwardRef<HTMLDivElement, CheckboxGroupProps>(
       required = false,
       className = "",
     },
-    ref
+    ref,
   ) => (
     <div className={`w-full ${className}`} ref={ref}>
       <label className="text-themeDarkGray text-xs">
@@ -676,7 +676,7 @@ export const CheckboxGroup = forwardRef<HTMLDivElement, CheckboxGroupProps>(
         </div>
       )}
     </div>
-  )
+  ),
 );
 
 CheckboxGroup.displayName = "CheckboxGroup";
@@ -695,7 +695,7 @@ export const FormCheckbox = forwardRef<HTMLInputElement, FormCheckboxProps>(
       disabled = false,
       className = "",
     },
-    ref
+    ref,
   ) => (
     <div className={`w-full ${className}`}>
       <label className="text-themeDarkGray text-xs">
@@ -733,7 +733,7 @@ export const FormCheckbox = forwardRef<HTMLInputElement, FormCheckboxProps>(
         </div>
       )}
     </div>
-  )
+  ),
 );
 
 FormCheckbox.displayName = "FormCheckbox";
@@ -757,7 +757,7 @@ export const FormTextarea = forwardRef<HTMLTextAreaElement, FormTextareaProps>(
       resizable = false,
       ...props
     },
-    ref
+    ref,
   ) => {
     const currentLength = value?.length || 0;
     const shouldShowCount = showCharacterCount && maxLength;
@@ -813,7 +813,7 @@ export const FormTextarea = forwardRef<HTMLTextAreaElement, FormTextareaProps>(
         )}
       </div>
     );
-  }
+  },
 );
 
 FormTextarea.displayName = "FormTextarea";
@@ -822,7 +822,7 @@ FormTextarea.displayName = "FormTextarea";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function debounce<T extends (...args: any[]) => void>(
   func: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => void {
   let timeout: NodeJS.Timeout;
   return function executedFunction(...args: Parameters<T>) {
@@ -864,8 +864,30 @@ const AddressDropdown: React.FC<AddressDropdownProps> = ({
   );
 };
 
+interface AddressAutocompleteProps {
+  label?: string;
+  id?: string;
+  name?: string;
+  required?: boolean;
+  value?: any;
+  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  error?: string | null;
+  className?: string;
+  placeholder?: string;
+  debounceDelay?: number;
+  minSearchLength?: number;
+  disabled?: boolean;
+}
+
 // Address Autocomplete Component with ref support
-// Address Autocomplete Component with ref support
+// Fixes applied:
+// 1. AbortController to cancel previous in-flight requests
+// 2. Stable mutate ref to fix useCallback dependency bug
+// 3. Cache for previous results (avoids redundant API calls, capped at 50)
+// 4. Stale response guard (latestQueryRef)
+// 5. Smart stale results clearing (clear on substitution, keep on prefix/backspace)
+// 6. UX: spellcheck/autocorrect off, loading state in dropdown, onBlur close
+
 export const AddressAutocomplete = forwardRef<
   HTMLInputElement,
   AddressAutocompleteProps
@@ -881,21 +903,44 @@ export const AddressAutocomplete = forwardRef<
       error,
       className = "",
       placeholder = "",
-      debounceDelay = 300,
+      debounceDelay = 350,
       minSearchLength = 2,
       ...props
     },
-    ref
+    ref,
   ) => {
     const config = useConfig();
     const [autoFillDropdown, setAutoFillDropdown] = useState<AddressData[]>([]);
     const [showAddressDropdown, setShowAddressDropdown] = useState(false);
     const [inputValue, setInputValue] = useState("");
+    const [highlightedIndex, setHighlightedIndex] = useState(-1);
+    const [hasSearched, setHasSearched] = useState(false);
 
-    // Initialize input value when value prop changes
+    // Track whether the last change was a selection (skip search)
+    const justSelectedRef = useRef(false);
+    const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // FIX 1: AbortController to cancel previous requests
+    const abortControllerRef = useRef<AbortController | null>(null);
+
+    // FIX 3: Cache previous results (capped at 50)
+    const cacheRef = useRef<Map<string, AddressData[]>>(new Map());
+
+    // FIX 4: Stale response guard
+    const latestQueryRef = useRef<string>("");
+
+    // FIX 5: Track what query the currently displayed results belong to
+    const displayedQueryRef = useRef<string>("");
+
+    // Sync input value from parent
     useEffect(() => {
+      if (justSelectedRef.current) {
+        justSelectedRef.current = false;
+        return;
+      }
       if (value && typeof value === "object" && "street_address_1" in value) {
-        setInputValue(value.street_address_1);
+        setInputValue(value.street_address_1 || "");
       } else if (typeof value === "string") {
         setInputValue(value);
       } else {
@@ -903,138 +948,244 @@ export const AddressAutocomplete = forwardRef<
       }
     }, [value]);
 
-    // Address autocomplete mutation
+    // Cleanup debounce + abort on unmount
+    useEffect(() => {
+      return () => {
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+        if (abortControllerRef.current) abortControllerRef.current.abort();
+      };
+    }, []);
+
+    // Address search mutation
     const checkAddressExist = useMutation({
-      mutationFn: (address: string) =>
-        axios.get(
-          url + "/address/autocomplete?address=" + encodeURI(address),
-          config
-        ),
-      onSuccess: (response: { data?: { data?: AddressData[] } }) => {
-        if (response?.data?.data) {
-          setAutoFillDropdown(response.data.data);
-          setShowAddressDropdown(true);
+      mutationFn: (address: string) => {
+        // FIX 1: Abort any previous in-flight request
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
         }
+        abortControllerRef.current = new AbortController();
+
+        return axios.get(
+          `${url}/address/autocomplete?address=${encodeURI(address)}`,
+          {
+            ...config,
+            signal: abortControllerRef.current.signal,
+          },
+        );
       },
-      onError: () => {
+      onSuccess: (response, queriedAddress) => {
+        // FIX 4: Ignore stale responses
+        if (queriedAddress !== latestQueryRef.current) return;
+
+        const results = response?.data?.data || [];
+
+        // FIX 3: Cache results (cap at 50 entries)
+        if (cacheRef.current.size >= 50) {
+          const firstKey = cacheRef.current.keys().next().value;
+          if (firstKey) cacheRef.current.delete(firstKey);
+        }
+        cacheRef.current.set(queriedAddress, results);
+
+        // FIX 5: Track what these results are for
+        displayedQueryRef.current = queriedAddress;
+
+        setAutoFillDropdown(results);
+        setShowAddressDropdown(true);
+        setHasSearched(true);
+        setHighlightedIndex(-1);
+      },
+      onError: (error: unknown) => {
+        // FIX 1: Ignore abort errors silently
+        if (axios.isCancel(error)) return;
+
+        setAutoFillDropdown([]);
         setShowAddressDropdown(false);
       },
     });
 
-    // Debounced address search
-    const debouncedAddressSearch = useCallback(
-      debounce((address: string) => {
-        if (address.length > minSearchLength) {
-          checkAddressExist.mutate(address);
-        }
-      }, debounceDelay),
-      [minSearchLength, debounceDelay]
-    );
+    // FIX 2: Stable ref for mutate so useCallback doesn't go stale
+    const mutateRef = useRef(checkAddressExist.mutate);
+    mutateRef.current = checkAddressExist.mutate;
 
-    // Create a synthetic event that can handle both string and object values
-    const createSyntheticEvent = (
-      value: string | AddressData
-    ): React.ChangeEvent<HTMLInputElement> => {
-      return {
-        target: {
-          id: id || "address",
-          value: value,
-        },
-        currentTarget: {
-          id: id || "address",
-          value: value,
-        },
-        nativeEvent: new Event("change"),
-        bubbles: true,
-        cancelable: true,
-        defaultPrevented: false,
-        eventPhase: 0,
-        isTrusted: true,
-        preventDefault: () => {},
-        isDefaultPrevented: () => false,
-        stopPropagation: () => {},
-        isPropagationStopped: () => false,
-        persist: () => {},
-        timeStamp: Date.now(),
-        type: "change",
-      } as React.ChangeEvent<HTMLInputElement>;
-    };
+    const debouncedSearch = useCallback(
+      (address: string) => {
+        if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+
+        debounceTimerRef.current = setTimeout(() => {
+          if (address.length > minSearchLength) {
+            // FIX 4: Track the latest query
+            latestQueryRef.current = address;
+
+            // FIX 5: Clear stale results if the query changed meaningfully
+            // "400 e 74" → "400 e 7" (backspace): keep results, still relevant
+            // "400 e 74" → "400 e 72" (substitution): clear, results are wrong
+            const displayed = displayedQueryRef.current;
+            if (
+              displayed &&
+              !displayed.startsWith(address) &&
+              !address.startsWith(displayed)
+            ) {
+              setAutoFillDropdown([]);
+              setHasSearched(false);
+            }
+
+            // FIX 3: Return cached results instantly if available
+            if (cacheRef.current.has(address)) {
+              const cached = cacheRef.current.get(address)!;
+              displayedQueryRef.current = address;
+              setAutoFillDropdown(cached);
+              setShowAddressDropdown(true);
+              setHasSearched(true);
+              setHighlightedIndex(-1);
+              return;
+            }
+
+            // Show dropdown so "Searching..." is visible immediately
+            setShowAddressDropdown(true);
+
+            // FIX 2: Use stable ref
+            mutateRef.current(address);
+          }
+        }, debounceDelay);
+      },
+      [minSearchLength, debounceDelay],
+    );
 
     const handleAddressInput = (e: React.ChangeEvent<HTMLInputElement>) => {
       const address = e.target.value;
       setInputValue(address);
+      setHasSearched(false);
 
-      // Call the parent onChange with the standard React event
-      if (onChange) {
-        onChange(e);
-      }
+      if (onChange) onChange(e);
 
-      // Trigger search if address is long enough
       if (address.length > minSearchLength) {
-        debouncedAddressSearch(address);
+        debouncedSearch(address);
       } else {
+        // FIX 1: Abort if user clears input while request is in-flight
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
         setShowAddressDropdown(false);
+        setAutoFillDropdown([]);
+        displayedQueryRef.current = "";
       }
     };
 
     const handleAddressSelect = (selectedAddress: AddressData) => {
-      // Update the input field to show the street address
+      justSelectedRef.current = true;
       const addressString = selectedAddress.street_address_1;
       setInputValue(addressString);
+      setShowAddressDropdown(false);
+      setHighlightedIndex(-1);
 
-      // Create a synthetic event with the FULL address object (not just the string)
-      const syntheticEvent = createSyntheticEvent(selectedAddress);
-
-      // Call the parent onChange with the synthetic event containing the full address object
       if (onChange) {
+        const syntheticEvent = {
+          target: { id: id || "address", value: selectedAddress },
+          currentTarget: { id: id || "address", value: selectedAddress },
+        } as unknown as React.ChangeEvent<HTMLInputElement>;
         onChange(syntheticEvent);
       }
-
-      // Close the dropdown
-      setShowAddressDropdown(false);
     };
 
-    // Click outside to close dropdown
+    // Keyboard navigation
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (!showAddressDropdown || autoFillDropdown.length === 0) return;
+
+      switch (e.key) {
+        case "ArrowDown":
+          e.preventDefault();
+          setHighlightedIndex((prev) =>
+            prev < autoFillDropdown.length - 1 ? prev + 1 : 0,
+          );
+          break;
+        case "ArrowUp":
+          e.preventDefault();
+          setHighlightedIndex((prev) =>
+            prev > 0 ? prev - 1 : autoFillDropdown.length - 1,
+          );
+          break;
+        case "Enter":
+          e.preventDefault();
+          if (highlightedIndex >= 0) {
+            handleAddressSelect(autoFillDropdown[highlightedIndex]);
+          }
+          break;
+        case "Escape":
+          setShowAddressDropdown(false);
+          setHighlightedIndex(-1);
+          break;
+      }
+    };
+
+    // Click outside to close
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
-        const target = event.target as Element;
-        if (!target.closest(`#${id}-container`)) {
+        if (
+          containerRef.current &&
+          !containerRef.current.contains(event.target as Node)
+        ) {
           setShowAddressDropdown(false);
         }
       };
-
       document.addEventListener("mousedown", handleClickOutside);
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
-    }, [id]);
+    }, []);
+
+    // Show "no results" only after a search completes with 0 results
+    const showNoResults =
+      showAddressDropdown &&
+      hasSearched &&
+      autoFillDropdown.length === 0 &&
+      !checkAddressExist.isPending;
 
     return (
-      <div id={`${id}-container`} className="relative w-full">
+      <div ref={containerRef} className="relative w-full">
         <label className="text-themeDarkGray text-xs block">
           {label} {required && <span className="text-themeRed">*</span>}
         </label>
         <div className="relative">
           <input
             ref={ref}
-            type="search"
+            type="text"
             id={id}
             name={name}
             value={inputValue}
             onChange={handleAddressInput}
+            onKeyDown={handleKeyDown}
+            onFocus={() => {
+              if (
+                autoFillDropdown.length > 0 &&
+                inputValue.length > minSearchLength
+              ) {
+                setShowAddressDropdown(true);
+              }
+            }}
+            // FIX 6: Close dropdown on blur (with delay for click events)
+            onBlur={() => {
+              setTimeout(() => setShowAddressDropdown(false), 150);
+            }}
             placeholder={placeholder}
-            autoComplete="new-password"
-            className={`w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b outline-none pr-8 ${
+            autoComplete="off"
+            // FIX 6: Prevent mobile autocorrect mangling addresses
+            spellCheck={false}
+            autoCorrect="off"
+            autoCapitalize="off"
+            role="combobox"
+            aria-expanded={showAddressDropdown}
+            aria-controls={`${id}-listbox`}
+            aria-activedescendant={
+              highlightedIndex >= 0
+                ? `${id}-option-${highlightedIndex}`
+                : undefined
+            }
+            className={`w-full text-sm text-themeLightBlack placeholder:text-themeLightBlack pb-1 border-b outline-none ${
               error
                 ? "border-b-red-500 focus:border-b-red-500"
                 : "border-b-contentBg focus:border-b-themeOrange"
             } ${className}`}
             {...props}
           />
-          {checkAddressExist.isPending && (
-            <div className="absolute right-2 top-1">
-              <div className="animate-spin h-4 w-4 border-2 border-themeOrange border-t-transparent rounded-full"></div>
-            </div>
-          )}
         </div>
 
         {error && (
@@ -1050,15 +1201,52 @@ export const AddressAutocomplete = forwardRef<
           </div>
         )}
 
-        <AddressDropdown
-          options={autoFillDropdown}
-          onSelect={handleAddressSelect}
-          show={showAddressDropdown}
-          onClose={() => setShowAddressDropdown(false)}
-        />
+        {/* Dropdown */}
+        {showAddressDropdown && (
+          <ul
+            id={`${id}-listbox`}
+            role="listbox"
+            className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-60 overflow-y-auto"
+          >
+            {/* Loading state - always visible when searching */}
+            {checkAddressExist.isPending && (
+              <li className="px-3 py-2 text-sm text-themeDarkGray flex items-center gap-2">
+                <div className="animate-spin h-3 w-3 border-2 border-themeOrange border-t-transparent rounded-full"></div>
+                Searching...
+              </li>
+            )}
+
+            {autoFillDropdown.map((address, index) => (
+              <li
+                key={address.address_id}
+                id={`${id}-option-${index}`}
+                role="option"
+                aria-selected={highlightedIndex === index}
+                className={`px-3 py-2 cursor-pointer text-sm transition-colors ${
+                  highlightedIndex === index
+                    ? "bg-orange-50"
+                    : "hover:bg-gray-50"
+                }`}
+                onClick={() => handleAddressSelect(address)}
+                onMouseEnter={() => setHighlightedIndex(index)}
+              >
+                <span className="font-medium">{address.street_address_1},</span>
+                <span className="text-themeDarkGray ml-1">
+                  {address.city}, {address.state} {address.zip}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {showNoResults && (
+          <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 px-3 py-2 text-sm text-themeDarkGray">
+            No addresses found
+          </div>
+        )}
       </div>
     );
-  }
+  },
 );
 
 AddressAutocomplete.displayName = "AddressAutocomplete";

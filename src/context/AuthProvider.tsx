@@ -6,16 +6,22 @@ interface ThemeContextProps {
 
 const AuthContext = createContext({});
 export const AuthProvider: React.FC<ThemeContextProps> = ({ children }) => {
-  var storage_values = {};
+  const buildStorageValues = () => {
+    const aT = localStorage.getItem("aT");
+    const roles = localStorage.getItem("roles");
+    const user = localStorage.getItem("user");
+    if (aT && roles) {
+      return {
+        accessToken: aT,
+        roles: JSON.parse(roles),
+        user: user ? JSON.parse(user) : null,
+      };
+    }
+    return {};
+  };
 
-  localStorage.getItem("aT") && localStorage.getItem("roles")
-    ? (storage_values = {
-        accessToken: localStorage.getItem("aT"),
-        roles: JSON.parse(localStorage.getItem("roles")),
-      })
-    : null;
-  const [auth, setAuth] = useState(storage_values);
-  //const [auth, setAuth] = useState({});
+  const [auth, setAuth] = useState(buildStorageValues);
+
   return (
     <AuthContext.Provider value={{ auth, setAuth }}>
       {children}

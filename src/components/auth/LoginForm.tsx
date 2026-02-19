@@ -72,11 +72,23 @@ const LoginForm = () => {
         password: pwd,
       }),
     onSuccess: (data) => {
-      const accessToken = data?.data?.data?.token;
+      const { token, user_id, email, company, phone, identifier_hash } =
+        data?.data?.data;
       const roles = admin ? [2001, 5150] : [2001];
-      setAuth({ user, pwd, roles, accessToken });
-      localStorage.setItem("aT", accessToken);
+
+      const userInfo = {
+        id: user_id,
+        email,
+        company,
+        phone,
+        identifierHash: identifier_hash,
+      };
+
+      setAuth({ roles, accessToken: token, user: userInfo });
+      localStorage.setItem("aT", token);
       localStorage.setItem("roles", JSON.stringify(roles));
+      localStorage.setItem("user", JSON.stringify(userInfo));
+
       setUser("");
       setPwd("");
       navigate(from, { replace: true });

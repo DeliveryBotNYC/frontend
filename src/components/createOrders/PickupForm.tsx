@@ -74,9 +74,9 @@ const createApiService = (config) => ({
   validateAddress: (address) =>
     axios.get(
       `${url}/address/validate?street=${encodeURI(
-        address.street
+        address.street,
       )}&zip=${encodeURI(address.zip)}`,
-      config
+      config,
     ),
 });
 
@@ -94,7 +94,7 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
       canEdit: EDITABLE_STATUSES.includes(state?.status),
       canEditAddress: ADDRESS_EDITABLE_STATUSES.includes(state?.status),
     }),
-    [state?.status]
+    [state?.status],
   );
 
   // Memoized validation
@@ -104,7 +104,7 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
       isFormEmpty: isEmpty(state).pickup,
       isFormCompleted: isCompleted(state).pickup,
     }),
-    [state?.pickup]
+    [state?.pickup],
   );
 
   // API Mutations
@@ -154,14 +154,14 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
         },
       }));
     },
-    [stateChanger]
+    [stateChanger],
   );
 
   const updatePickupField = useCallback(
     (field, value) => {
       updatePickupData({ [field]: value });
     },
-    [updatePickupData]
+    [updatePickupData],
   );
 
   // Event handlers
@@ -200,7 +200,7 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
         checkPhoneExist.mutate(phone); // This will set customer_id if found
       }
     },
-    [data?.autofill, data?.pickup_picture, checkPhoneExist, stateChanger]
+    [data?.autofill, data?.pickup_picture, checkPhoneExist, stateChanger],
   );
 
   const handleNameChange = useCallback(
@@ -210,7 +210,7 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
         name: formatName(e.target.value),
       });
     },
-    [updatePickupData]
+    [updatePickupData],
   );
 
   const handleAddressChange = useCallback(
@@ -249,7 +249,7 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
         });
       }
     },
-    [state?.pickup?.address, updatePickupData]
+    [state?.pickup?.address, updatePickupData],
   );
 
   // Add handler for apt changes
@@ -260,7 +260,7 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
         apt: e.target.value,
       });
     },
-    [updatePickupData]
+    [updatePickupData],
   );
 
   const handleHomeAddressClick = useCallback(() => {
@@ -320,7 +320,7 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
     } catch (error) {
       console.error("Failed to read clipboard:", error);
       alert(
-        "Failed to read clipboard text. Please enable permission and try again."
+        "Failed to read clipboard text. Please enable permission and try again.",
       );
     } finally {
       setIsClipboardLoading(false); // End loading
@@ -362,16 +362,16 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
         },
       });
     },
-    [updatePickupData]
+    [updatePickupData],
   );
 
   // Render address validation error
   const addressError = useMemo(() => {
-    if (state?.pickup?.address?.pickup === false) {
-      return "Pickup address must be in Manhattan.";
-    }
-    return null;
-  }, [state?.pickup?.address?.pickup]);
+    const zoneIds = state?.pickup?.address?.zone_ids;
+    if (!zoneIds) return null;
+    const hasPickupZone = zoneIds.some((id) => [5, 7].includes(id));
+    return !hasPickupZone ? "Pickup address not in service zone." : null;
+  }, [state?.pickup?.address?.zone_ids]);
 
   // Render helpers
   const renderHeaderActions = () => {

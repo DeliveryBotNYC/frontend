@@ -11,7 +11,12 @@ import { useState, useEffect } from "react";
 import PickupIconCompleted from "../../assets/pickupCompletedMapIcon.svg";
 import DeliveryIconCompleted from "../../assets/delivery-bw-filled.svg";
 import { stadia } from "../reusable/functions";
+import { ZONE_DEFAULTS } from "../reusable/zoneDefaults";
+
 const HomeMap = (state) => {
+  const coverageZone = ZONE_DEFAULTS.find((z) => z.zone_id === 7);
+  const samedaypolyline =
+    coverageZone?.polygon.map(({ lat, lon }) => [lat, lon]) ?? [];
   // Delivered Markers
   function Bounds() {
     var map = useMap();
@@ -31,7 +36,7 @@ const HomeMap = (state) => {
                   state?.state?.delivery?.address?.lon,
                 ],
               ],
-              { padding: [50, 50] }
+              { padding: [50, 50] },
             )
           : map.fitBounds([
               [40.84, -73.91],
@@ -52,42 +57,6 @@ const HomeMap = (state) => {
       ],
     ]);
   }
-
-  const samedaypolyline = [
-    [40.7543124, -74.0146939],
-    [40.6987637, -74.0262811],
-    [40.6909546, -74.0063684],
-    [40.6787184, -74.0266244],
-    [40.6654383, -74.0056817],
-    [40.6607506, -73.9854257],
-    [40.6442023, -73.9746124],
-    [40.6516347, -73.9531533],
-    [40.652937, -73.9157312],
-    [40.6849577, -73.9069981],
-    [40.693939, -73.8979001],
-    [40.7047273, -73.8548983],
-    [40.7357146, -73.8542764],
-    [40.7630242, -73.8838021],
-    [40.7818743, -73.8856904],
-    [40.7937017, -73.9085214],
-    [40.7788847, -73.9270608],
-    [40.7799246, -73.9377038],
-    [40.7709549, -73.9387338],
-    [40.7579533, -73.9497201],
-    [40.7468999, -73.9627664],
-    [40.7527519, -73.9617364],
-    [40.772775, -73.9428536],
-    [40.7862936, -73.937103],
-    [40.8024818, -73.9273168],
-    [40.7965042, -73.9108373],
-    [40.8026683, -73.8986508],
-    [40.7979902, -73.8814847],
-    [40.8021485, -73.8468091],
-    [40.8496904, -73.8358228],
-    [40.8670964, -73.8206293],
-    [40.8881147, -73.9230268],
-    [40.7543124, -74.0146939],
-  ];
 
   const customPickupIcon = new Icon({
     iconUrl: PickupIconCompleted,
@@ -116,8 +85,8 @@ const HomeMap = (state) => {
         <Polyline
           pathOptions={{
             color: "rgb(238 182 120",
-            opacity: 0.5,
-            weight: 2,
+            opacity: 0.6,
+            weight: 3,
           }}
           positions={samedaypolyline}
         />

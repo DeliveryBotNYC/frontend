@@ -61,11 +61,11 @@ const ADDRESS_EDITABLE_STATUSES = ["new_order", "processing"];
 
 const ITEM_TYPES = {
   Box: "small",
-  Bag: "small",
+  Bag: "xsmall",
   Plant: "medium",
   Flower: "medium",
   Envelope: "xsmall",
-  hanger: "medium",
+  Hangers: "medium",
 };
 
 const ITEM_SIZES = [
@@ -121,14 +121,14 @@ const createApiService = (config) => ({
   getAddressAutocomplete: (address) =>
     axios.get(
       `${url}/address/autocomplete?address=${encodeURI(address)}`,
-      config
+      config,
     ),
   validateAddress: (address) =>
     axios.get(
       `${url}/address/validate?street=${encodeURI(
-        address.street
+        address.street,
       )}&zip=${encodeURI(address.zip)}`,
-      config
+      config,
     ),
 });
 
@@ -171,7 +171,7 @@ const HeaderActions = memo(
         <img src={RefreshIcon} alt="" />
       </button>
     );
-  }
+  },
 );
 
 const QuantityControls = memo(
@@ -218,7 +218,7 @@ const QuantityControls = memo(
         +
       </span>
     </div>
-  )
+  ),
 );
 
 const ItemRow = memo(
@@ -276,7 +276,7 @@ const ItemRow = memo(
                       onMeasurementUpdate(
                         index,
                         "length",
-                        parseFloat(e.target.value) || ""
+                        parseFloat(e.target.value) || "",
                       )
                     }
                     className="w-full text-xs text-center text-themeLightBlack pb-1 border-b border-b-contentBg outline-none focus:border-b-themeOrange bg-transparent pr-3"
@@ -297,7 +297,7 @@ const ItemRow = memo(
                       onMeasurementUpdate(
                         index,
                         "width",
-                        parseFloat(e.target.value) || ""
+                        parseFloat(e.target.value) || "",
                       )
                     }
                     className="w-full text-xs text-center text-themeLightBlack pb-1 border-b border-b-contentBg outline-none focus:border-b-themeOrange bg-transparent pr-3"
@@ -317,7 +317,7 @@ const ItemRow = memo(
                       onMeasurementUpdate(
                         index,
                         "height",
-                        parseFloat(e.target.value) || ""
+                        parseFloat(e.target.value) || "",
                       )
                     }
                     className="w-full text-xs text-center text-themeLightBlack pb-1 border-b border-b-contentBg outline-none focus:border-b-themeOrange bg-transparent pr-3"
@@ -338,7 +338,7 @@ const ItemRow = memo(
                       onMeasurementUpdate(
                         index,
                         "weight",
-                        parseFloat(e.target.value) || ""
+                        parseFloat(e.target.value) || "",
                       )
                     }
                     className="w-full text-xs text-center text-themeLightBlack pb-1 border-b border-b-contentBg outline-none focus:border-b-themeOrange bg-transparent pr-3"
@@ -371,7 +371,7 @@ const ItemRow = memo(
         </div>
       </div>
     </div>
-  )
+  ),
 );
 const DeliveryForm = memo(({ data, stateChanger, state }) => {
   const config = useConfig();
@@ -385,7 +385,7 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
         (item.length !== undefined && item.length !== null) ||
         (item.width !== undefined && item.width !== null) ||
         (item.height !== undefined && item.height !== null) ||
-        (item.weight !== undefined && item.weight !== null)
+        (item.weight !== undefined && item.weight !== null),
     );
   });
   const [isClipboardLoading, setIsClipboardLoading] = useState(false);
@@ -410,7 +410,7 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
       canEdit: EDITABLE_STATUSES.includes(state?.status),
       canEditAddress: ADDRESS_EDITABLE_STATUSES.includes(state?.status),
     }),
-    [state?.status]
+    [state?.status],
   );
 
   const validation = useMemo(() => {
@@ -424,9 +424,10 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
   }, [state?.delivery]);
 
   const addressError = useMemo(() => {
-    return state?.delivery?.address?.zone_ids === null
-      ? "Delivery address outside of zone."
-      : null;
+    const zoneIds = state?.delivery?.address?.zone_ids;
+    if (!zoneIds) return null; // not yet validated
+    const hasDeliveryZone = zoneIds.some((id) => [4, 6, 7].includes(id));
+    return !hasDeliveryZone ? "Delivery address outside of zone." : null;
   }, [state?.delivery?.address?.zone_ids]);
 
   // API Mutations
@@ -450,18 +451,6 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
     },
   });
 
-  const getAddressAutocomplete = useMutation({
-    mutationFn: apiService.getAddressAutocomplete,
-    onSuccess: (response) => {
-      if (response?.data?.data) {
-        setAutoFillDropdown(response.data.data);
-      }
-    },
-    onError: (error) => {
-      console.error("Address autocomplete error:", error);
-    },
-  });
-
   const validateAddress = useMutation({
     mutationFn: apiService.validateAddress,
     onSuccess: (response) => {
@@ -482,7 +471,7 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
         (item.length !== undefined && item.length !== null) ||
         (item.width !== undefined && item.width !== null) ||
         (item.height !== undefined && item.height !== null) ||
-        (item.weight !== undefined && item.weight !== null)
+        (item.weight !== undefined && item.weight !== null),
     );
 
     // Only set size if items don't have measurements
@@ -496,12 +485,12 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
         delivery: { ...prevState.delivery, ...updates },
       }));
     },
-    [stateChanger]
+    [stateChanger],
   );
 
   const updateDeliveryField = useCallback(
     (field, value) => updateDeliveryData({ [field]: value }),
-    [updateDeliveryData]
+    [updateDeliveryData],
   );
 
   const handleSizeSelect = useCallback(
@@ -509,7 +498,7 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
       setSelectedSize(size);
       updateDeliveryField("size_category", size);
     },
-    [updateDeliveryField]
+    [updateDeliveryField],
   );
 
   // Event handlers
@@ -560,7 +549,7 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
         checkPhoneExist.mutate(phone); // This will set customer_id if found
       }
     },
-    [data, checkPhoneExist, stateChanger]
+    [data, checkPhoneExist, stateChanger],
   );
 
   const handleNameChange = useCallback(
@@ -570,7 +559,7 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
         name: formatName(e.target.value),
       });
     },
-    [updateDeliveryData]
+    [updateDeliveryData],
   );
 
   const handleAddressChange = useCallback(
@@ -605,7 +594,7 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
         });
       }
     },
-    [state?.delivery?.address, updateDeliveryData]
+    [state?.delivery?.address, updateDeliveryData],
   );
 
   // Add handler for apt changes
@@ -616,7 +605,7 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
         apt: e.target.value,
       });
     },
-    [updateDeliveryData]
+    [updateDeliveryData],
   );
 
   const handleHomeAddressClick = useCallback(() => {
@@ -677,7 +666,7 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
     } catch (error) {
       console.error("Failed to read clipboard:", error);
       alert(
-        "Failed to read clipboard text. Please enable permission and try again."
+        "Failed to read clipboard text. Please enable permission and try again.",
       );
     } finally {
       setIsClipboardLoading(false); // End loading
@@ -737,20 +726,32 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
         const items = [...prevState.delivery.items];
         const updatedItem = { ...items[index] };
 
-        // Just update the field directly - no automatic size assignment
         updatedItem[field] = value;
-        items[index] = updatedItem;
 
+        // Auto-assign size when description matches a known item type
+        if (field === "description" && !useMeasurements) {
+          const matchedSize = ITEM_TYPES[value];
+          if (matchedSize) {
+            setSelectedSize(matchedSize);
+            return {
+              ...prevState,
+              delivery: {
+                ...prevState.delivery,
+                items: items.map((it, i) => (i === index ? updatedItem : it)),
+                size_category: matchedSize,
+              },
+            };
+          }
+        }
+
+        items[index] = updatedItem;
         return {
           ...prevState,
-          delivery: {
-            ...prevState.delivery,
-            items,
-          },
+          delivery: { ...prevState.delivery, items },
         };
       });
     },
-    [stateChanger]
+    [stateChanger, useMeasurements],
   );
 
   const updateMeasurement = useCallback(
@@ -773,7 +774,7 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
         };
       });
     },
-    [stateChanger]
+    [stateChanger],
   );
 
   const toggleMeasurements = useCallback(() => {
@@ -829,13 +830,13 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
       items.splice(index, 1);
       updateDeliveryData({ items });
     },
-    [state.delivery.items, updateDeliveryData]
+    [state.delivery.items, updateDeliveryData],
   );
 
   const increaseQuantity = useCallback(
     (index) =>
       updateItem(index, "quantity", state.delivery.items[index].quantity + 1),
-    [updateItem, state.delivery.items]
+    [updateItem, state.delivery.items],
   );
 
   const decreaseQuantity = useCallback(
@@ -844,7 +845,7 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
         updateItem(index, "quantity", state.delivery.items[index].quantity - 1);
       }
     },
-    [updateItem, state.delivery.items]
+    [updateItem, state.delivery.items],
   );
 
   // Tip handlers
@@ -857,7 +858,7 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
       setTip(value);
       updateDeliveryField("tip", valueInCents);
     },
-    [updateDeliveryField]
+    [updateDeliveryField],
   );
 
   // Verification handlers
@@ -870,7 +871,7 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
         },
       });
     },
-    [state.delivery.required_verification, updateDeliveryData]
+    [state.delivery.required_verification, updateDeliveryData],
   );
 
   // Render phone-only form
@@ -1171,7 +1172,7 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
                   <div className="text-left">
                     <div className="text-sm">Medium</div>
                     <div className="text-xs text-gray-500 mt-0.5">
-                      Fits in front seat
+                      Fits in back seat
                     </div>
                   </div>
                 </div>

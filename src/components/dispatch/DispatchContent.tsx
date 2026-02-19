@@ -87,6 +87,10 @@ const DispatchContent = () => {
   const [hoveredStopId, setHoveredStopId] = useState<string | null>(null);
   console.log(hoveredStopId);
   const [isExternalHover, setIsExternalHover] = useState(false);
+  const [sidebarView, setSidebarView] = useState<
+    "routes" | "orders" | "drivers"
+  >("routes");
+
   const [currentPolygon, setCurrentPolygon] = useState<Array<{
     lat: number;
     lon: number;
@@ -164,7 +168,7 @@ const DispatchContent = () => {
       console.log("Polygon updated:", polygon);
       setCurrentPolygon(polygon);
     },
-    []
+    [],
   );
 
   // Available drivers state
@@ -216,7 +220,7 @@ const DispatchContent = () => {
   const buildUnassignedOrdersParams = (
     routeStartTime?: string,
     routeEndTime?: string,
-    routeType?: "instant" | "advanced"
+    routeType?: "instant" | "advanced",
   ) => {
     const params = new URLSearchParams();
 
@@ -361,7 +365,7 @@ const DispatchContent = () => {
   // Handle route updates with API call
   const handleRouteUpdate = async (
     updatedRoute: Route,
-    originalRoute?: Route
+    originalRoute?: Route,
   ) => {
     try {
       const changedFields = getChangedFields(originalRoute || {}, updatedRoute);
@@ -373,7 +377,7 @@ const DispatchContent = () => {
       const response = await axios.patch(
         `${url}/route/${routeId}`,
         changedFields,
-        config
+        config,
       );
 
       if (response.data?.data) {
@@ -389,7 +393,7 @@ const DispatchContent = () => {
 
         queryClient.setQueryData(
           ["route", routeId, ordersFilters],
-          response.data.data
+          response.data.data,
         );
       }
 
@@ -426,13 +430,13 @@ const DispatchContent = () => {
   const handleUpdateRouteLog = async (
     routeId: string,
     logId: number,
-    updatedLog: { driver_id?: number | null; log?: string; datetime?: string }
+    updatedLog: { driver_id?: number | null; log?: string; datetime?: string },
   ) => {
     try {
       const response = await axios.patch(
         `${url}/route/logs/${logId}`,
         updatedLog,
-        config
+        config,
       );
 
       // Invalidate and refetch route data to get updated logs
@@ -491,7 +495,7 @@ const DispatchContent = () => {
         });
       }
     },
-    [currentRoute, queryClient, routeId, ordersFilters]
+    [currentRoute, queryClient, routeId, ordersFilters],
   );
 
   // NEW: Handle creating route stops change - updates map immediately
@@ -506,12 +510,12 @@ const DispatchContent = () => {
       console.log(
         "Unassigned orders visibility changed:",
         visible,
-        orders.length
+        orders.length,
       );
       setShowUnassignedOnMap(visible);
       setVisibleUnassignedOrders(orders);
     },
-    []
+    [],
   );
 
   // Available drivers query
@@ -550,6 +554,42 @@ const DispatchContent = () => {
     refetchOnWindowFocus: true,
   });
 
+  // Orders for sidebar - processing orders for today
+  const { data: sidebarOrdersData, isLoading: isSidebarOrdersLoading } =
+    useQuery({
+      queryKey: ["sidebarOrders", routesFilters.date],
+      queryFn: () => {
+        const date = routesFilters.date || getTodayDate();
+        const startTime = `${date} 00:00:00`;
+        const endTime = `${date} 23:59:00`;
+        return axios
+          .get(
+            `${url}/order/all?status=processing&start_time=${encodeURIComponent(startTime)}&end_time=${encodeURIComponent(endTime)}&sortBy=start_time`,
+            config,
+          )
+          .then((res) => res?.data?.data?.orders || []);
+      },
+      enabled: !isOrdersView && !isCreatingRoute, // Only in routes list view
+      refetchInterval: 60000,
+      refetchOnWindowFocus: true,
+    });
+
+  // Available now drivers for sidebar
+  const {
+    data: availableNowDriversData,
+    isLoading: isAvailableNowDriversLoading,
+  } = useQuery({
+    queryKey: ["availableNowDrivers"],
+    queryFn: () => {
+      return axios
+        .get(`${url}/driver/all?available_now=true`, config)
+        .then((res) => res?.data?.data || []);
+    },
+    enabled: !isOrdersView && !isCreatingRoute, // Only in routes list view
+    refetchInterval: 60000,
+    refetchOnWindowFocus: true,
+  });
+
   // Unassigned orders query
   const {
     data: unassignedOrdersData,
@@ -579,7 +619,7 @@ const DispatchContent = () => {
       const queryString = buildUnassignedOrdersParams(
         startTime,
         endTime,
-        routeType
+        routeType,
       );
       console.log("Unassigned orders query:", queryString);
       return axios
@@ -661,8 +701,8 @@ const DispatchContent = () => {
       const apiUrl = isOrdersView
         ? `${url}/route/${routeId}${queryString ? `?${queryString}` : ""}`
         : queryString
-        ? `${url}/route?${queryString}`
-        : `${url}/route`;
+          ? `${url}/route?${queryString}`
+          : `${url}/route`;
 
       return axios.get(apiUrl, config).then((res) => {
         return res?.data?.data;
@@ -723,10 +763,9 @@ const DispatchContent = () => {
       setShowUnassignedOnMap(false);
       setVisibleUnassignedOrders([]);
       setCreatingRouteStops([]);
+      setSidebarView("routes"); // ← ADD HERE
     } else if (!isCreatingRoute && isOrdersView) {
-      // When switching to orders view, clear creating route states but keep unassigned if they were set
       setCreatingRouteStops([]);
-      // Only clear polygon if it was from route creation, not from route editing
       if (currentPolygon && !currentRoute?.zone_id) {
         setCurrentPolygon(null);
       }
@@ -803,7 +842,7 @@ const DispatchContent = () => {
   useEffect(() => {
     if (expandedStopId && (isOrdersView || isCreatingRoute)) {
       const stopElement = document.querySelector(
-        `[data-stop-id="${expandedStopId}"]`
+        `[data-stop-id="${expandedStopId}"]`,
       );
       if (stopElement) {
         stopElement.scrollIntoView({
@@ -940,6 +979,8 @@ const DispatchContent = () => {
           state={routesValues}
           filters={routesFilters}
           setFilters={setRoutesFilters}
+          onStatClick={setSidebarView} // ← ADD
+          activeSidebarView={sidebarView}
         />
       );
     }
@@ -1007,6 +1048,13 @@ const DispatchContent = () => {
           hoveredRouteId={hoveredRouteId}
           availableDrivers={availableDrivers}
           unassignedOrders={unassignedOrders}
+          sidebarView={sidebarView} // ← ADD
+          onSidebarViewChange={setSidebarView} // ← ADD
+          routesValues={routesValues} // ← ADD
+          activeDrivers={availableNowDriversData ?? []} // ← CHANGED: use available_now drivers
+          sidebarOrders={sidebarOrdersData ?? []} // ← NEW
+          isSidebarOrdersLoading={isSidebarOrdersLoading}
+          isSidebarDriversLoading={isAvailableNowDriversLoading}
         />
       );
     }
