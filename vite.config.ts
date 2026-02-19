@@ -8,6 +8,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
+      workbox: {
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // 4 MiB
+      },
       manifest: {
         name: "DBX Delivery",
         short_name: "DBXDelivery",
@@ -32,6 +35,17 @@ export default defineConfig({
     }),
   ],
   resolve: {
-    extensions: [".tsx", ".ts", ".jsx", ".js"], // Make sure .tsx comes before .js
+    extensions: [".tsx", ".ts", ".jsx", ".js"],
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          turf: ["@turf/turf"],
+          leaflet: ["leaflet", "react-leaflet"],
+          vendor: ["react", "react-dom"],
+        },
+      },
+    },
   },
 });
