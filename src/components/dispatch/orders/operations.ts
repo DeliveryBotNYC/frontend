@@ -1,4 +1,4 @@
-// operations.ts - Fixed to NOT calculate status (trust API)
+// operations.ts - Fixed: use findStopWithOrderByType for correct source stop lookup
 
 import axios from "axios";
 import {
@@ -9,19 +9,19 @@ import {
   getOrderCustomerId,
   isStopEmpty,
 } from "./types";
-import { findStopWithOrder } from "./validation";
+import { findStopWithOrderByType } from "./validation";
 
 // Remove order from stop
 const removeOrderFromStop = (
   stop: Stop,
   orderId: string,
-  orderType: OrderType
+  orderType: OrderType,
 ): Stop => {
   const updatedStop = { ...stop };
 
   if (orderType === "pickup" && updatedStop.pickup?.orders) {
     const filtered = updatedStop.pickup.orders.filter(
-      (o) => o.order_id !== orderId
+      (o) => o.order_id !== orderId,
     );
     updatedStop.pickup = {
       ...updatedStop.pickup,
@@ -30,7 +30,7 @@ const removeOrderFromStop = (
     };
   } else if (orderType === "delivery" && updatedStop.deliver?.orders) {
     const filtered = updatedStop.deliver.orders.filter(
-      (o) => o.order_id !== orderId
+      (o) => o.order_id !== orderId,
     );
     updatedStop.deliver = {
       ...updatedStop.deliver,
@@ -39,9 +39,6 @@ const removeOrderFromStop = (
     };
   }
 
-  // REMOVED: Status calculation - API will provide correct status
-  // updatedStop.status = getStopStatus(updatedStop);
-
   return updatedStop;
 };
 
@@ -49,7 +46,7 @@ const removeOrderFromStop = (
 const addOrderToStop = (
   stop: Stop,
   order: Order,
-  orderType: OrderType
+  orderType: OrderType,
 ): Stop => {
   const updatedStop = { ...stop };
 
@@ -69,9 +66,6 @@ const addOrderToStop = (
     };
   }
 
-  // REMOVED: Status calculation - API will provide correct status
-  // updatedStop.status = getStopStatus(updatedStop);
-
   return updatedStop;
 };
 
@@ -87,7 +81,7 @@ const renumberStops = (stops: Stop[]): Stop[] => {
 const createNewStop = (
   order: Order,
   orderType: OrderType,
-  position: number
+  position: number,
 ): Stop => {
   const customerId = getOrderCustomerId(order, orderType);
   const customerInfo = orderType === "pickup" ? order.pickup : order.delivery;
@@ -97,7 +91,7 @@ const createNewStop = (
     o_order: position,
     name: customerInfo.name,
     phone: customerInfo.phone,
-    status: order.status || "assigned", // Use order status as initial
+    status: order.status || "assigned",
     address: customerInfo.address,
     timeframe: order.timeframe,
     suggested: null,
@@ -112,20 +106,18 @@ const createNewStop = (
     },
   };
 
-  // REMOVED: Status calculation - API will recalculate on next fetch
-  // newStop.status = getStopStatus(newStop);
-
   return newStop;
 };
 
 // Merge order into existing stop
+// FIXED: Use findStopWithOrderByType to find the correct source stop
 export const mergeOrderIntoStop = (
   stops: Stop[],
   draggedOrder: DraggedOrder,
-  targetIndex: number
+  targetIndex: number,
 ): Stop[] => {
   const { order, orderType } = draggedOrder;
-  const sourceIndex = findStopWithOrder(stops, order.order_id);
+  const sourceIndex = findStopWithOrderByType(stops, order.order_id, orderType);
 
   // Adding unassigned order
   if (sourceIndex === -1) {
@@ -133,7 +125,7 @@ export const mergeOrderIntoStop = (
     newStops[targetIndex] = addOrderToStop(
       newStops[targetIndex],
       order,
-      orderType
+      orderType,
     );
     return renumberStops(newStops);
   }
@@ -146,25 +138,26 @@ export const mergeOrderIntoStop = (
   newStops[sourceIndex] = removeOrderFromStop(
     newStops[sourceIndex],
     order.order_id,
-    orderType
+    orderType,
   );
   newStops[targetIndex] = addOrderToStop(
     newStops[targetIndex],
     order,
-    orderType
+    orderType,
   );
 
   return renumberStops(newStops.filter((stop) => !isStopEmpty(stop)));
 };
 
 // Create new stop from order
+// FIXED: Use findStopWithOrderByType to find the correct source stop
 export const createNewStopFromOrder = (
   stops: Stop[],
   draggedOrder: DraggedOrder,
-  targetIndex: number
+  targetIndex: number,
 ): Stop[] => {
   const { order, orderType } = draggedOrder;
-  const sourceIndex = findStopWithOrder(stops, order.order_id);
+  const sourceIndex = findStopWithOrderByType(stops, order.order_id, orderType);
 
   // Adding unassigned order
   if (sourceIndex === -1) {
@@ -184,7 +177,7 @@ export const createNewStopFromOrder = (
   newStops[sourceIndex] = removeOrderFromStop(
     newStops[sourceIndex],
     order.order_id,
-    orderType
+    orderType,
   );
 
   const newStop = createNewStop(order, orderType, targetIndex + 1);
@@ -202,7 +195,7 @@ export const createNewStopFromOrder = (
 export const reorderStops = (
   stops: Stop[],
   sourceIndex: number,
-  targetIndex: number
+  targetIndex: number,
 ): Stop[] => {
   if (sourceIndex === targetIndex) {
     return stops;
@@ -225,7 +218,7 @@ export const reorderStops = (
 // Remove order from route
 export const removeOrderFromRoute = (
   stops: Stop[],
-  orderId: string
+  orderId: string,
 ): Stop[] => {
   const newStops = stops.map((stop) => {
     let updated = { ...stop };
@@ -241,7 +234,7 @@ export const removeOrderFromRoute = (
 
     if (stop.deliver?.orders) {
       const filtered = stop.deliver.orders.filter(
-        (o) => o.order_id !== orderId
+        (o) => o.order_id !== orderId,
       );
       updated.deliver = {
         ...stop.deliver,
@@ -249,9 +242,6 @@ export const removeOrderFromRoute = (
         count: filtered.length,
       };
     }
-
-    // REMOVED: Status calculation - API will provide correct status on refresh
-    // updated.status = getStopStatus(updated);
 
     return updated;
   });
@@ -265,7 +255,7 @@ export const updateOrderPosition = async (
   orderType: OrderType,
   position: number,
   url: string,
-  config: any
+  config: any,
 ): Promise<void> => {
   const field = orderType === "pickup" ? "o_pickup" : "o_delivery";
 
@@ -284,7 +274,7 @@ export const assignOrderToRoute = async (
   orderType: OrderType,
   position: number,
   url: string,
-  config: any
+  config: any,
 ): Promise<void> => {
   const field = orderType === "pickup" ? "o_pickup" : "o_delivery";
 
@@ -295,11 +285,11 @@ export const assignOrderToRoute = async (
         route_id: routeId,
         [field]: position,
       },
-      config
+      config,
     );
     console.log(
       `Assigned order ${orderId} to route ${routeId} at position ${position}`,
-      response.data
+      response.data,
     );
   } catch (error) {
     console.error(`Failed to assign order ${orderId}:`, error);
@@ -312,7 +302,7 @@ export const updateAllOrders = async (
   stops: Stop[],
   url: string,
   config: any,
-  routeId?: string
+  routeId?: string,
 ): Promise<void> => {
   const updates: Promise<void>[] = [];
 
@@ -328,12 +318,12 @@ export const updateAllOrders = async (
             "pickup",
             position,
             url,
-            config
-          )
+            config,
+          ),
         );
       } else {
         updates.push(
-          updateOrderPosition(order.order_id, "pickup", position, url, config)
+          updateOrderPosition(order.order_id, "pickup", position, url, config),
         );
       }
     });
@@ -347,12 +337,18 @@ export const updateAllOrders = async (
             "delivery",
             position,
             url,
-            config
-          )
+            config,
+          ),
         );
       } else {
         updates.push(
-          updateOrderPosition(order.order_id, "delivery", position, url, config)
+          updateOrderPosition(
+            order.order_id,
+            "delivery",
+            position,
+            url,
+            config,
+          ),
         );
       }
     });
@@ -370,7 +366,7 @@ export const updateAllOrders = async (
 export const removeOrderViaAPI = async (
   orderId: string,
   url: string,
-  config: any
+  config: any,
 ): Promise<void> => {
   console.log(`Removing order ${orderId} via API`);
 
@@ -383,7 +379,7 @@ export const removeOrderViaAPI = async (
         o_pickup: 0,
         o_delivery: 0,
       },
-      config
+      config,
     );
     console.log("Order removed successfully");
   } catch (error) {

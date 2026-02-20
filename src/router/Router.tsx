@@ -28,6 +28,7 @@ import RequireAuth from "../components/auth/RequireAuth";
 import Orientation from "../pages/Orientation";
 import UserLayout from "../components/layout/UserLayout";
 import useAuth from "../hooks/useAuth";
+import EarningsPage from "../pages/EarningsPage";
 
 const Router = () => {
   const ROLES = {
@@ -88,6 +89,7 @@ const Router = () => {
           <Route path="" element={<DispatchContent />} />
           <Route path="route/:id" element={<DispatchContent />} />
         </Route>
+        <Route path="earnings" element={<EarningsPage />} />
       </Route>
     </Routes>
   );

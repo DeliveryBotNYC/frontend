@@ -1,4 +1,4 @@
-// validation.ts - Updated validation with new lock logic
+// validation.ts - Fixed: no locking, correct merge simulation with index adjustment
 
 import {
   Stop,
@@ -7,128 +7,71 @@ import {
   DraggedOrder,
   DropValidation,
   getOrderCustomerId,
-  isStopLocked,
-  canDragOrderFromStop,
-  isOrderPickupLocked,
-  isOrderDeliveryLocked,
+  isStopEmpty,
 } from "./types";
 
-// Find stop containing an order
+// Find stop containing an order (in either pickup or delivery)
 export const findStopWithOrder = (stops: Stop[], orderId: string): number => {
   return stops.findIndex(
     (stop) =>
       stop.pickup?.orders?.some((o) => o.order_id === orderId) ||
-      stop.deliver?.orders?.some((o) => o.order_id === orderId)
+      stop.deliver?.orders?.some((o) => o.order_id === orderId),
   );
+};
+
+// Find stop containing an order in a SPECIFIC container (pickup or delivery)
+export const findStopWithOrderByType = (
+  stops: Stop[],
+  orderId: string,
+  orderType: OrderType,
+): number => {
+  return stops.findIndex((stop) => {
+    const orders =
+      orderType === "pickup" ? stop.pickup?.orders : stop.deliver?.orders;
+    return orders?.some((o) => o.order_id === orderId) || false;
+  });
 };
 
 // Find stop with pickup for specific order
 export const findPickupStop = (stops: Stop[], orderId: string): number => {
   return stops.findIndex((stop) =>
-    stop.pickup?.orders?.some((o) => o.order_id === orderId)
+    stop.pickup?.orders?.some((o) => o.order_id === orderId),
   );
 };
 
 // Find stop with delivery for specific order
 export const findDeliveryStop = (stops: Stop[], orderId: string): number => {
   return stops.findIndex((stop) =>
-    stop.deliver?.orders?.some((o) => o.order_id === orderId)
+    stop.deliver?.orders?.some((o) => o.order_id === orderId),
   );
 };
 
-// FIXED: Check if order can be extracted (not locked for the specific operation)
-export const canExtractOrder = (
-  stops: Stop[],
-  orderId: string,
-  orderType: OrderType
-): boolean => {
-  const stopIndex = findStopWithOrder(stops, orderId);
+// canExtractOrder removed — no orders are ever locked
 
-  // Unassigned orders can always be dragged
-  if (stopIndex === -1) {
-    return true;
-  }
-
-  const stop = stops[stopIndex];
-  const orders =
-    orderType === "pickup" ? stop.pickup?.orders : stop.deliver?.orders;
-  const order = orders?.find((o) => o.order_id === orderId);
-
-  return order ? canDragOrderFromStop(order, orderType) : false;
-};
-
-// Validate pickup comes before delivery - FIXED to consider target positions
-export const validatePickupDeliveryOrder = (
-  stops: Stop[],
-  orderId: string,
-  orderType: OrderType,
-  targetIndex: number
-): boolean => {
-  if (orderType === "pickup") {
-    const deliveryIndex = findDeliveryStop(stops, orderId);
-    if (deliveryIndex === -1) return true; // New order or no delivery yet
-
-    // Pickup must come before delivery
-    if (targetIndex >= deliveryIndex) {
-      console.log(
-        `Pickup->Delivery violation: Trying to place pickup at ${
-          targetIndex + 1
-        }, but delivery is at ${deliveryIndex + 1}`
-      );
-      return false;
-    }
-  } else {
-    // Delivery case
-    const pickupIndex = findPickupStop(stops, orderId);
-    if (pickupIndex === -1) return true; // New order or no pickup yet
-
-    // Delivery must come after pickup
-    if (targetIndex <= pickupIndex) {
-      console.log(
-        `Pickup->Delivery violation: Trying to place delivery at ${
-          targetIndex + 1
-        }, but pickup is at ${pickupIndex + 1}`
-      );
-      return false;
-    }
-  }
-  return true;
-};
-
-// FIXED: Validate all orders maintain sequence after a simulated operation
+// FIXED: Validate all orders maintain pickup-before-delivery sequence
 export const validateStopOrders = (
   stops: Stop[],
-  stopIndex: number
+  stopIndex: number,
 ): boolean => {
   if (stopIndex >= stops.length) return true;
 
   const stop = stops[stopIndex];
 
-  // Validate pickup orders
+  // Validate pickup orders - their delivery must come AFTER this stop
   if (stop.pickup?.orders) {
     for (const order of stop.pickup.orders) {
       const deliveryIndex = findDeliveryStop(stops, order.order_id);
       if (deliveryIndex !== -1 && stopIndex >= deliveryIndex) {
-        console.log(
-          `Stop validation failed: Pickup at ${stopIndex + 1} but delivery at ${
-            deliveryIndex + 1
-          } for order ${order.order_id}`
-        );
         return false;
       }
     }
   }
 
-  // Validate delivery orders
+  // Validate delivery orders - their pickup must come BEFORE this stop
   if (stop.deliver?.orders) {
     for (const order of stop.deliver.orders) {
       const pickupIndex = findPickupStop(stops, order.order_id);
       if (pickupIndex !== -1 && stopIndex <= pickupIndex) {
-        console.log(
-          `Stop validation failed: Delivery at ${stopIndex + 1} but pickup at ${
-            pickupIndex + 1
-          } for order ${order.order_id}`
-        );
         return false;
       }
     }
@@ -137,7 +80,7 @@ export const validateStopOrders = (
   return true;
 };
 
-// NEW: Validate all stops in the route maintain proper order
+// Validate all stops in the route maintain proper order
 export const validateAllStops = (stops: Stop[]): boolean => {
   for (let i = 0; i < stops.length; i++) {
     if (!validateStopOrders(stops, i)) {
@@ -151,7 +94,7 @@ export const validateAllStops = (stops: Stop[]): boolean => {
 export const isDropOnSameStop = (
   stops: Stop[],
   orderId: string,
-  targetIndex: number
+  targetIndex: number,
 ): boolean => {
   const sourceIndex = findStopWithOrder(stops, orderId);
   return sourceIndex !== -1 && sourceIndex === targetIndex;
@@ -161,57 +104,34 @@ export const isDropOnSameStop = (
 export const orderExistsInStop = (
   stop: Stop,
   orderId: string,
-  orderType: OrderType
+  orderType: OrderType,
 ): boolean => {
   const orders =
     orderType === "pickup" ? stop.pickup?.orders : stop.deliver?.orders;
   return orders?.some((o) => o.order_id === orderId) || false;
 };
 
-// FIXED: Check if target stop can accept the order type
-const canStopAcceptOrder = (stop: Stop, orderType: OrderType): boolean => {
-  if (orderType === "pickup") {
-    // Check if any pickup orders in this stop have locked pickups
-    const hasLockedPickups = stop.pickup?.orders?.some(isOrderPickupLocked);
-    return !hasLockedPickups;
-  } else {
-    // Check if any delivery orders in this stop have locked deliveries
-    const hasLockedDeliveries = stop.deliver?.orders?.some(
-      isOrderDeliveryLocked
-    );
-    return !hasLockedDeliveries;
-  }
-};
-
-// Main validation for order drop - FIXED to simulate the drop first
+// Main validation for order drop
+// FIXED: No lock checks at all - only pickup-before-delivery constraint matters
 export const validateOrderDrop = (
   stops: Stop[],
   draggedOrder: DraggedOrder,
-  targetIndex: number
+  targetIndex: number,
 ): DropValidation => {
   const { order, orderType } = draggedOrder;
-
-  // Check if order can be extracted
-  if (!canExtractOrder(stops, order.order_id, orderType)) {
-    return { valid: false, reason: "Order is locked" };
-  }
 
   // Check if dropping on same stop
   if (isDropOnSameStop(stops, order.order_id, targetIndex)) {
     return { valid: true, reason: "Same stop" };
   }
 
-  // Check if target stop exists and can accept this order type
-  if (targetIndex < stops.length) {
-    if (!canStopAcceptOrder(stops[targetIndex], orderType)) {
-      return { valid: false, reason: "Target stop has locked orders" };
-    }
-  }
-
   // Determine if merging or creating new stop
+  // FIXED: Use robust customer ID lookup that handles formatted orders
+  const orderCustomerId = getOrderCustomerId(order, orderType);
   const shouldMerge =
     targetIndex < stops.length &&
-    stops[targetIndex].customer_id === getOrderCustomerId(order, orderType);
+    orderCustomerId !== 0 &&
+    stops[targetIndex].customer_id === orderCustomerId;
 
   // Check for duplicates if merging
   if (
@@ -221,89 +141,179 @@ export const validateOrderDrop = (
     return { valid: false, reason: "Order already exists in stop" };
   }
 
-  // CRITICAL FIX: Simulate the operation and validate the entire resulting route
-  // This accounts for ALL orders moving due to renumbering
-  const sourceIndex = findStopWithOrder(stops, order.order_id);
+  // CRITICAL: Simulate the full operation and validate the resulting route
+  // Use findStopWithOrderByType to find the stop that has this order in the correct container
+  const sourceIndex = findStopWithOrderByType(stops, order.order_id, orderType);
+  let simulatedStops = stops.map((s) => ({ ...s }));
 
-  // Create a simulated route with the proposed change
-  let simulatedStops = [...stops];
-
-  // Remove from source if exists
+  // Step 1: Remove from source if exists
   if (sourceIndex !== -1) {
     const sourceStop = { ...simulatedStops[sourceIndex] };
     if (orderType === "pickup" && sourceStop.pickup?.orders) {
       const filtered = sourceStop.pickup.orders.filter(
-        (o) => o.order_id !== order.order_id
+        (o) => o.order_id !== order.order_id,
       );
       sourceStop.pickup = {
         ...sourceStop.pickup,
         orders: filtered,
         count: filtered.length,
       };
-      simulatedStops[sourceIndex] = sourceStop;
     } else if (orderType === "delivery" && sourceStop.deliver?.orders) {
       const filtered = sourceStop.deliver.orders.filter(
-        (o) => o.order_id !== order.order_id
+        (o) => o.order_id !== order.order_id,
       );
       sourceStop.deliver = {
         ...sourceStop.deliver,
         orders: filtered,
         count: filtered.length,
       };
-      simulatedStops[sourceIndex] = sourceStop;
+    }
+    simulatedStops[sourceIndex] = sourceStop;
+
+    // Remove empty stops and track how target index shifts
+    const filteredStops: Stop[] = [];
+    let adjustedTargetIndex = targetIndex;
+
+    for (let i = 0; i < simulatedStops.length; i++) {
+      const s = simulatedStops[i];
+      if (isStopEmpty(s)) {
+        // This empty stop is being removed — adjust target if it was before target
+        if (i < targetIndex) {
+          adjustedTargetIndex--;
+        }
+        continue;
+      }
+      filteredStops.push(s);
     }
 
-    // Remove empty stops
-    simulatedStops = simulatedStops.filter(
-      (s) => (s.pickup?.count || 0) > 0 || (s.deliver?.count || 0) > 0
-    );
-  }
+    simulatedStops = filteredStops;
+    // Use the adjusted target index from here on
+    // But clamp it to valid range
+    adjustedTargetIndex = Math.min(adjustedTargetIndex, simulatedStops.length);
 
-  // Add to target (merge or create new)
-  if (shouldMerge && targetIndex < simulatedStops.length) {
-    const targetStop = { ...simulatedStops[targetIndex] };
-    if (orderType === "pickup") {
-      const currentOrders = targetStop.pickup?.orders || [];
-      targetStop.pickup = {
-        orders: [...currentOrders, order],
-        count: currentOrders.length + 1,
-      };
+    // Step 2: Add to target (merge or create new) using adjusted index
+    if (shouldMerge && adjustedTargetIndex < simulatedStops.length) {
+      // Re-check that the target still has matching customer_id after removal
+      const targetStop = { ...simulatedStops[adjustedTargetIndex] };
+      if (targetStop.customer_id === orderCustomerId) {
+        if (orderType === "pickup") {
+          const currentOrders = targetStop.pickup?.orders || [];
+          targetStop.pickup = {
+            orders: [...currentOrders, order],
+            count: currentOrders.length + 1,
+          };
+        } else {
+          const currentOrders = targetStop.deliver?.orders || [];
+          targetStop.deliver = {
+            orders: [...currentOrders, order],
+            count: currentOrders.length + 1,
+          };
+        }
+        simulatedStops[adjustedTargetIndex] = targetStop;
+      } else {
+        // Customer mismatch after adjustment — create new stop instead
+        const customerId = orderCustomerId;
+        const customerInfo =
+          orderType === "pickup" ? order.pickup : order.delivery;
+        const newStop: Stop = {
+          customer_id: customerId,
+          o_order: 0,
+          name: customerInfo.name,
+          phone: customerInfo.phone || "",
+          status: order.status || "assigned",
+          address: customerInfo.address,
+          timeframe: order.timeframe,
+          suggested: null,
+          eta: null,
+          pickup: {
+            count: orderType === "pickup" ? 1 : 0,
+            orders: orderType === "pickup" ? [order] : [],
+          },
+          deliver: {
+            count: orderType === "delivery" ? 1 : 0,
+            orders: orderType === "delivery" ? [order] : [],
+          },
+        };
+        simulatedStops.splice(adjustedTargetIndex, 0, newStop);
+      }
     } else {
-      const currentOrders = targetStop.deliver?.orders || [];
-      targetStop.deliver = {
-        orders: [...currentOrders, order],
-        count: currentOrders.length + 1,
+      // Create new stop
+      const customerId = orderCustomerId;
+      const customerInfo =
+        orderType === "pickup" ? order.pickup : order.delivery;
+      const newStop: Stop = {
+        customer_id: customerId,
+        o_order: 0,
+        name: customerInfo.name,
+        phone: customerInfo.phone || "",
+        status: order.status || "assigned",
+        address: customerInfo.address,
+        timeframe: order.timeframe,
+        suggested: null,
+        eta: null,
+        pickup: {
+          count: orderType === "pickup" ? 1 : 0,
+          orders: orderType === "pickup" ? [order] : [],
+        },
+        deliver: {
+          count: orderType === "delivery" ? 1 : 0,
+          orders: orderType === "delivery" ? [order] : [],
+        },
       };
+
+      if (adjustedTargetIndex >= simulatedStops.length) {
+        simulatedStops.push(newStop);
+      } else {
+        simulatedStops.splice(adjustedTargetIndex, 0, newStop);
+      }
     }
-    simulatedStops[targetIndex] = targetStop;
   } else {
-    // Create new stop
-    const customerId = getOrderCustomerId(order, orderType);
-    const customerInfo = orderType === "pickup" ? order.pickup : order.delivery;
-    const newStop: Stop = {
-      customer_id: customerId,
-      o_order: 0, // Will be renumbered
-      name: customerInfo.name,
-      phone: customerInfo.phone,
-      status: order.status || "assigned",
-      address: customerInfo.address,
-      timeframe: order.timeframe,
-      suggested: null,
-      eta: null,
-      pickup: {
-        count: orderType === "pickup" ? 1 : 0,
-        orders: orderType === "pickup" ? [order] : [],
-      },
-      deliver: {
-        count: orderType === "delivery" ? 1 : 0,
-        orders: orderType === "delivery" ? [order] : [],
-      },
-    };
-
-    if (targetIndex >= simulatedStops.length) {
-      simulatedStops.push(newStop);
+    // Unassigned order — no source removal needed
+    if (shouldMerge && targetIndex < simulatedStops.length) {
+      const targetStop = { ...simulatedStops[targetIndex] };
+      if (orderType === "pickup") {
+        const currentOrders = targetStop.pickup?.orders || [];
+        targetStop.pickup = {
+          orders: [...currentOrders, order],
+          count: currentOrders.length + 1,
+        };
+      } else {
+        const currentOrders = targetStop.deliver?.orders || [];
+        targetStop.deliver = {
+          orders: [...currentOrders, order],
+          count: currentOrders.length + 1,
+        };
+      }
+      simulatedStops[targetIndex] = targetStop;
     } else {
-      simulatedStops.splice(targetIndex, 0, newStop);
+      const customerId = orderCustomerId;
+      const customerInfo =
+        orderType === "pickup" ? order.pickup : order.delivery;
+      const newStop: Stop = {
+        customer_id: customerId,
+        o_order: 0,
+        name: customerInfo.name,
+        phone: customerInfo.phone || "",
+        status: order.status || "assigned",
+        address: customerInfo.address,
+        timeframe: order.timeframe,
+        suggested: null,
+        eta: null,
+        pickup: {
+          count: orderType === "pickup" ? 1 : 0,
+          orders: orderType === "pickup" ? [order] : [],
+        },
+        deliver: {
+          count: orderType === "delivery" ? 1 : 0,
+          orders: orderType === "delivery" ? [order] : [],
+        },
+      };
+
+      if (targetIndex >= simulatedStops.length) {
+        simulatedStops.push(newStop);
+      } else {
+        simulatedStops.splice(targetIndex, 0, newStop);
+      }
     }
   }
 
@@ -324,24 +334,14 @@ export const validateOrderDrop = (
   return { valid: true, shouldMerge };
 };
 
-// Validate stop move - FIXED to properly simulate and validate
+// Validate stop move - no lock checks
 export const validateStopMove = (
   stops: Stop[],
   sourceIndex: number,
-  targetIndex: number
+  targetIndex: number,
 ): DropValidation => {
   if (sourceIndex === targetIndex) {
     return { valid: true, reason: "Same position" };
-  }
-
-  const stop = stops[sourceIndex];
-
-  if (isStopLocked(stop)) {
-    return { valid: false, reason: "Stop is locked" };
-  }
-
-  if (targetIndex < stops.length && isStopLocked(stops[targetIndex])) {
-    return { valid: false, reason: "Cannot move to locked position" };
   }
 
   // Simulate the move

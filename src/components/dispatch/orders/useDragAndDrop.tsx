@@ -1,7 +1,7 @@
-// useDragAndDrop.tsx - Custom hook for drag and drop functionality
+// useDragAndDrop.tsx - Fixed: no lock checks, all stops/orders are always draggable
 
 import { useState, useCallback, useEffect } from "react";
-import { Stop, DraggedOrder, DraggedStop, isStopLocked } from "./types";
+import { Stop, DraggedOrder, DraggedStop } from "./types";
 import {
   validateOrderDrop,
   validateStopMove,
@@ -22,7 +22,7 @@ interface UseDragAndDropProps {
   url: string;
   config: any;
   routeId?: string;
-  onSuccess?: () => void; // Add callback for successful operations
+  onSuccess?: () => void;
 }
 
 export const useDragAndDrop = ({
@@ -49,7 +49,7 @@ export const useDragAndDrop = ({
       }
       return { valid: false, reason: "No drag data" };
     },
-    [stops, draggedOrder, draggedStop]
+    [stops, draggedOrder, draggedStop],
   );
 
   const handleOrderDragStart = useCallback((order: DraggedOrder) => {
@@ -66,13 +66,9 @@ export const useDragAndDrop = ({
     return () => document.removeEventListener("orderDragStart", handler);
   }, [handleOrderDragStart]);
 
+  // FIXED: No lock check - all stops are draggable
   const handleStopDragStart = useCallback(
     (e: React.DragEvent, stop: Stop, index: number) => {
-      if (isStopLocked(stop)) {
-        e.preventDefault();
-        return;
-      }
-
       setDraggedStop({ item: stop, index });
       e.dataTransfer.effectAllowed = "move";
 
@@ -95,7 +91,7 @@ export const useDragAndDrop = ({
         }
       }, 0);
     },
-    []
+    [],
   );
 
   const handleDragOver = useCallback(
@@ -108,7 +104,7 @@ export const useDragAndDrop = ({
         setIsDraggingOverContainer(false);
       }
     },
-    [dragOverIndex]
+    [dragOverIndex],
   );
 
   const handleDragEnter = useCallback((e: React.DragEvent, index: number) => {
@@ -163,7 +159,6 @@ export const useDragAndDrop = ({
             onStopsChange(newStops);
             await updateAllOrders(newStops, url, config, routeId);
 
-            // Call success callback to invalidate queries
             if (onSuccess) {
               onSuccess();
             }
@@ -174,7 +169,7 @@ export const useDragAndDrop = ({
           const validation = validateStopMove(
             stops,
             draggedStop.index,
-            dropIndex
+            dropIndex,
           );
 
           if (!validation.valid) {
@@ -193,7 +188,6 @@ export const useDragAndDrop = ({
             onStopsChange(newStops);
             await updateAllOrders(newStops, url, config, routeId);
 
-            // Call success callback
             if (onSuccess) {
               onSuccess();
             }
@@ -220,7 +214,7 @@ export const useDragAndDrop = ({
       isProcessing,
       routeId,
       onSuccess,
-    ]
+    ],
   );
 
   const handleContainerDragOver = useCallback((e: React.DragEvent) => {
@@ -259,7 +253,7 @@ export const useDragAndDrop = ({
       await handleDrop(e, stops.length);
       setIsDraggingOverContainer(false);
     },
-    [handleDrop, stops.length]
+    [handleDrop, stops.length],
   );
 
   const handleRemoveOrder = useCallback(
@@ -278,7 +272,6 @@ export const useDragAndDrop = ({
         await removeOrderViaAPI(orderId, url, config);
         await updateAllOrders(newStops, url, config);
 
-        // Call success callback to invalidate queries
         if (onSuccess) {
           onSuccess();
         }
@@ -290,7 +283,7 @@ export const useDragAndDrop = ({
         setIsProcessing(false);
       }
     },
-    [stops, onStopsChange, url, config, isProcessing, onSuccess]
+    [stops, onStopsChange, url, config, isProcessing, onSuccess],
   );
 
   const handleDragEnd = useCallback(() => {
@@ -323,7 +316,7 @@ export const useDragAndDrop = ({
 
       return "";
     },
-    [dragOverIndex, draggedOrder, draggedStop, getDropValidation]
+    [dragOverIndex, draggedOrder, draggedStop, getDropValidation],
   );
 
   const getDropOverlay = useCallback(
@@ -370,7 +363,7 @@ export const useDragAndDrop = ({
 
       return null;
     },
-    [dragOverIndex, draggedOrder, draggedStop, getDropValidation]
+    [dragOverIndex, draggedOrder, draggedStop, getDropValidation],
   );
 
   const getBottomDropZone = useCallback(() => {

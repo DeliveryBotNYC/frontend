@@ -147,20 +147,27 @@ const EditOrderContent = () => {
 
   // Helper function to transform API data to form state
   const transformOrderData = useCallback((orderData, orderIdParam) => {
+    const hasMeasurements = (orderData?.delivery?.items || []).some(
+      (item) =>
+        item.length != null &&
+        item.width != null &&
+        item.height != null &&
+        item.weight != null,
+    );
     return {
       order_id: orderIdParam,
       status: orderData?.status || "delivered",
       user_id: orderData?.user?.user_id,
       pickup: {
-        customer_id: orderData?.pickup?.customer_id || null,
+        customer_id: orderData?.pickup?.customer_id || undefined,
         phone_formatted: orderData?.pickup?.phone_formatted || "",
         phone:
           `(${orderData?.pickup?.phone.slice(
             0,
-            3
+            3,
           )}) ${orderData?.pickup?.phone.slice(
             3,
-            6
+            6,
           )}-${orderData?.pickup?.phone.slice(6)}` || "",
         name: orderData?.pickup?.name || "",
         note: orderData?.pickup?.note || "",
@@ -182,15 +189,15 @@ const EditOrderContent = () => {
         },
       },
       delivery: {
-        customer_id: orderData?.delivery?.customer_id || null,
+        customer_id: orderData?.delivery?.customer_id || undefined,
         phone_formatted: orderData?.delivery?.phone_formatted || "",
         phone:
           `(${orderData?.delivery?.phone.slice(
             0,
-            3
+            3,
           )}) ${orderData?.delivery?.phone.slice(
             3,
-            6
+            6,
           )}-${orderData?.delivery?.phone.slice(6)}` || "",
         name: orderData?.delivery?.name || "",
         note: orderData?.delivery?.note || "",
@@ -198,7 +205,6 @@ const EditOrderContent = () => {
         access_code: orderData?.delivery?.access_code || "",
         external_order_id: orderData?.external_order_id || "",
         tip: orderData?.delivery?.tip || 0,
-        size_category: orderData?.delivery?.size_category || undefined,
         address: {
           address_id: orderData?.delivery?.address?.address_id || "",
           formatted: orderData?.delivery?.address?.formatted || "",
@@ -218,20 +224,23 @@ const EditOrderContent = () => {
           signature:
             orderData?.delivery?.required_verification?.signature || false,
         },
+        size_category: hasMeasurements
+          ? undefined
+          : orderData?.delivery?.size_category || undefined,
         items: (orderData?.delivery?.items || []).map((item) => ({
-          barcode: item.barcode || undefined,
-          barcode_type: item.barcode_type || undefined,
           description: item.description || "",
           quantity: item.quantity || 1,
-          // Only include measurements if they exist in the response
-          ...(item.length !== undefined &&
-            item.length !== null && { length: item.length }),
-          ...(item.width !== undefined &&
-            item.width !== null && { width: item.width }),
-          ...(item.height !== undefined &&
-            item.height !== null && { height: item.height }),
-          ...(item.weight !== undefined &&
-            item.weight !== null && { weight: item.weight }),
+          ...(item.length != null &&
+          item.width != null &&
+          item.height != null &&
+          item.weight != null
+            ? {
+                length: item.length,
+                width: item.width,
+                height: item.height,
+                weight: item.weight,
+              }
+            : {}),
         })),
       },
       timeframe: {
@@ -336,7 +345,7 @@ const EditOrderContent = () => {
         delivery: transformedData.delivery?.address?.address_id,
       });
     },
-    [orderId, transformOrderData]
+    [orderId, transformOrderData],
   );
 
   // Render user dropdown for admins
@@ -367,7 +376,7 @@ const EditOrderContent = () => {
   return (
     <ContentBox2>
       <div className="flex h-[calc(100%-60px)] justify-between gap-2.5 bg-contentBg">
-        <div className="overflow-auto px-themePadding w-3/4">
+        <div className="overflow-auto px-themePadding w-3/4 min-w-[550px]">
           <div className="pt-5 px-2.5 flex justify-between">
             <Link className="my-auto" to={`/orders/tracking/${orderId}`}>
               <p className="text-sm text-secondaryBtnBorder cursor-pointer">

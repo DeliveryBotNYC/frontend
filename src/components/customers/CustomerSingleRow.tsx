@@ -19,7 +19,7 @@ const CustomerSingleRow = ({ item }) => {
       </div>
       <div className="flex-1 py-3 px-themePadding">{item?.name || "—"}</div>
       <div className="flex-1 py-3 px-themePadding">
-        {item?.address?.formatted || "—"}
+        {item?.address?.street_address_1 || "—"}
       </div>
       <div className="flex-1 py-3 px-themePadding">
         {item?.formatted_phone || "—"}

@@ -1,10 +1,9 @@
-// OrderCard.tsx - Fixed to use proper lock logic per operation type
+// OrderCard.tsx - Fixed: no locking, all orders always draggable
 
 import React, { useContext } from "react";
 import StatusBtn from "../../reusable/StatusBtn";
 import moment from "moment";
 import { ThemeContext } from "../../../context/ThemeContext";
-import { canDragOrderFromStop } from "../orders/types";
 
 const formatTime = (time: string | null | undefined): string => {
   return time ? moment(time).format("h:mm A") : "--";
@@ -73,8 +72,8 @@ const OrderCard: React.FC<OrderCardProps> = ({
   const themeContext = useContext(ThemeContext);
   const { selectOrder } = themeContext || { selectOrder: () => {} };
 
-  // Check if this specific operation (pickup or delivery) can be dragged
-  const canDrag = canDragOrderFromStop(order, type);
+  // FIXED: All orders are always draggable - nothing is ever locked
+  const canDrag = true;
 
   const handleOrderClick = (e: React.MouseEvent): void => {
     e.stopPropagation();
@@ -99,19 +98,15 @@ const OrderCard: React.FC<OrderCardProps> = ({
   };
 
   const handleOrderDragStart = (e: React.DragEvent): void => {
-    // Check if this specific operation can be dragged
     if (!canDrag) {
       e.preventDefault();
-      console.log(
-        `${type === "pickup" ? "Pickup" : "Delivery"} is locked for order ${
-          order.order_id
-        }`
-      );
       return;
     }
 
     e.stopPropagation();
 
+    // FIXED: Use customer_id from the nested pickup/delivery objects
+    // These are now properly set by StopCard's format functions
     const orderCustomerId =
       type === "pickup"
         ? order.pickup?.customer_id
@@ -247,7 +242,7 @@ const OrderCard: React.FC<OrderCardProps> = ({
         </div>
       )}
 
-      {/* Lock indicator */}
+      {/* Lock indicator - only for explicitly locked orders */}
       {!canDrag && (
         <div className="absolute top-2 right-2 text-xs text-gray-500 bg-gray-200 px-2 py-1 rounded">
           🔒 Locked

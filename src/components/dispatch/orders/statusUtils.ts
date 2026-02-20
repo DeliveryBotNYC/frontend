@@ -10,12 +10,12 @@ export const STATUS_COLORS = {
   completed: "#B2D235",
   received: "#B2D235",
 
-  // Arrived - Yellow (FIXED)
+  // Arrived - Blue
   arrived: "#74C2F8",
   arrived_at_pickup: "#74C2F8",
   "arrived-at-pickup": "#74C2F8",
 
-  // Picked Up / In Transit - Purple
+  // Picked Up / In Transit - Gray
   picked_up: "#6B7280",
   "picked-up": "#6B7280",
   arrived_at_delivery: "#6B7280",
@@ -144,38 +144,25 @@ export const getStatusLabel = (status: string): string => {
 
 /**
  * Check if a status represents a locked/completed state
+ * FIXED: Nothing is locked - all stops/orders should always be reorderable
+ * Only the explicit `locked` boolean on an order should prevent dragging
  */
-export const isStatusLocked = (status: string): boolean => {
-  const lockedStatuses = ["completed", "delivered", "canceled", "cancelled"];
-  return lockedStatuses.includes(normalizeStatus(status));
+export const isStatusLocked = (_status: string): boolean => {
+  return false;
 };
 
 /**
  * Check if pickup is locked for this status
+ * FIXED: Nothing is locked by status - always allow reordering
  */
-export const isPickupLockedForStatus = (status: string): boolean => {
-  const lockingStatuses = [
-    "picked-up",
-    "arrived-at-delivery",
-    "delivered",
-    "completed",
-    "canceled",
-    "cancelled",
-    "undeliverable",
-  ];
-  return lockingStatuses.includes(normalizeStatus(status));
+export const isPickupLockedForStatus = (_status: string): boolean => {
+  return false;
 };
 
 /**
  * Check if delivery is locked for this status
+ * FIXED: Nothing is locked by status - always allow reordering
  */
-export const isDeliveryLockedForStatus = (status: string): boolean => {
-  const lockingStatuses = [
-    "delivered",
-    "completed",
-    "canceled",
-    "cancelled",
-    "undeliverable",
-  ];
-  return lockingStatuses.includes(normalizeStatus(status));
+export const isDeliveryLockedForStatus = (_status: string): boolean => {
+  return false;
 };

@@ -1,4 +1,4 @@
-// types.ts - Simplified with centralized status logic
+// types.ts - Fixed: no status-based locking, robust customer ID lookup
 
 import {
   isStatusLocked,
@@ -50,6 +50,8 @@ export interface Order {
   delivery_signature?: string;
   delivery_recipient?: string;
   items?: any[];
+  // These may be set during drag from OrderCard
+  customer_id?: number;
 }
 
 export interface OrderContainer {
@@ -102,77 +104,45 @@ export interface DropValidation {
   shouldMerge?: boolean;
 }
 
-// Utility: Get customer ID based on operation type
+// FIXED: Utility to get customer ID based on operation type
+// Handles cases where order was formatted by StopCard (missing nested customer_id)
+// Falls back to top-level customer_id set by OrderCard drag handler
 export const getOrderCustomerId = (
   order: Order,
-  orderType: OrderType
+  orderType: OrderType,
 ): number => {
-  return orderType === "pickup"
-    ? order.pickup.customer_id
-    : order.delivery.customer_id;
-};
-
-// FIXED: Check if order is locked using centralized logic
-export const isOrderLocked = (order: Order): boolean => {
-  if (order.locked === true) return true;
-  return isStatusLocked(order.status);
-};
-
-// FIXED: Check if order's pickup is locked
-export const isOrderPickupLocked = (order: Order): boolean => {
-  if (order.locked === true) return true;
-  return isPickupLockedForStatus(order.status);
-};
-
-// FIXED: Check if order's delivery is locked
-export const isOrderDeliveryLocked = (order: Order): boolean => {
-  if (order.locked === true) return true;
-  return isDeliveryLockedForStatus(order.status);
-};
-
-// FIXED: Simplified - check if stop has locked orders
-export const isStopLocked = (stop: Stop): boolean => {
-  if (!stop) return false;
-
-  // Trust the API status
-  if (isStatusLocked(stop.status)) {
-    return true;
+  if (orderType === "pickup") {
+    return order.pickup?.customer_id || (order as any).customer_id || 0;
   }
+  return order.delivery?.customer_id || (order as any).customer_id || 0;
+};
 
-  // Check if ALL pickup orders have locked pickups
-  const hasAllPickupsLocked =
-    stop.pickup?.orders?.length > 0 &&
-    stop.pickup.orders.every(isOrderPickupLocked);
-
-  // Check if ALL delivery orders have locked deliveries
-  const hasAllDeliveriesLocked =
-    stop.deliver?.orders?.length > 0 &&
-    stop.deliver.orders.every(isOrderDeliveryLocked);
-
-  const hasPickupOrders = (stop.pickup?.count || 0) > 0;
-  const hasDeliveryOrders = (stop.deliver?.count || 0) > 0;
-
-  if (hasPickupOrders && hasDeliveryOrders) {
-    return hasAllPickupsLocked && hasAllDeliveriesLocked;
-  } else if (hasPickupOrders) {
-    return hasAllPickupsLocked;
-  } else if (hasDeliveryOrders) {
-    return hasAllDeliveriesLocked;
-  }
-
+// FIXED: Nothing is ever locked
+export const isOrderLocked = (_order: Order): boolean => {
   return false;
 };
 
-// Check if a specific order can be dragged from a stop
+// FIXED: Nothing is ever locked
+export const isOrderPickupLocked = (_order: Order): boolean => {
+  return false;
+};
+
+// FIXED: Nothing is ever locked
+export const isOrderDeliveryLocked = (_order: Order): boolean => {
+  return false;
+};
+
+// FIXED: Stops are NEVER locked
+export const isStopLocked = (_stop: Stop): boolean => {
+  return false;
+};
+
+// FIXED: All orders can always be dragged
 export const canDragOrderFromStop = (
-  order: Order,
-  orderType: OrderType
+  _order: Order,
+  _orderType: OrderType,
 ): boolean => {
-  if (orderType === "pickup") {
-    return !isOrderPickupLocked(order);
-  } else {
-    return !isOrderDeliveryLocked(order);
-  }
+  return true;
 };
 
 // Utility: Check if stop is empty
@@ -184,6 +154,3 @@ export const isStopEmpty = (stop: Stop): boolean => {
 export const getStopId = (stop: Stop): string => {
   return `${stop.customer_id}-${stop.o_order}`;
 };
-
-// REMOVED: getStopStatus() - we now trust the API status directly
-// The stop.status from API is the single source of truth

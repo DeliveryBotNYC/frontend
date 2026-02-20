@@ -87,6 +87,8 @@ const normalizeDeliveryData = (data) => {
     apt: data.apt || "",
     access_code: data.access_code || "",
     tip: data.tip || 0,
+    size_category: data.size_category || data.delivery?.size_category || "", // add this
+
     address: {
       address_id: data.address?.address_id,
       formatted:
@@ -185,7 +187,7 @@ const QuantityControls = memo(
     onRemove,
     onQuantityChange,
   }) => (
-    <div className="flex items-center justify-between gap-2.5">
+    <div className="flex items-center justify-between gap-1.5 min-w-[80px]">
       {item.quantity <= 1 && itemsLength > 1 ? (
         <span
           className="quantity-btn"
@@ -238,7 +240,11 @@ const ItemRow = memo(
       {/* Single row with all fields */}
       <div className="w-full grid grid-cols-12 gap-2.5">
         {/* Item Name - 4 columns */}
-        <div className={useMeasurements ? "col-span-4" : "col-span-9"}>
+        <div
+          className={
+            useMeasurements ? "col-span-4" : "col-span-8 lg:col-span-9"
+          }
+        >
           <label className="text-themeDarkGray text-xs">
             Item name <span className="text-themeRed">*</span>
           </label>
@@ -354,7 +360,7 @@ const ItemRow = memo(
           ""
         )}
         {/* Quantity - 3 columns */}
-        <div className="col-span-3">
+        <div className={useMeasurements ? "col-span-2" : "col-span-3"}>
           <label className="text-themeDarkGray text-xs">
             Quantity <span className="text-themeRed">*</span>
           </label>
@@ -379,14 +385,23 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
   const [autoFillDropdown, setAutoFillDropdown] = useState([]);
   const [useMeasurements, setUseMeasurements] = useState(() => {
     const items = state?.delivery?.items || [];
-    // Only use measurements mode if items actually have measurement data
     return items.some(
       (item) =>
-        (item.length !== undefined && item.length !== null) ||
-        (item.width !== undefined && item.width !== null) ||
-        (item.height !== undefined && item.height !== null) ||
-        (item.weight !== undefined && item.weight !== null),
+        item.length != null &&
+        item.width != null &&
+        item.height != null &&
+        item.weight != null,
     );
+  });
+  const [selectedSize, setSelectedSize] = useState(() => {
+    const hasMeasurements = (state?.delivery?.items || []).some(
+      (item) =>
+        item.length != null &&
+        item.width != null &&
+        item.height != null &&
+        item.weight != null,
+    );
+    return hasMeasurements ? "" : state?.delivery?.size_category || "";
   });
   const [isClipboardLoading, setIsClipboardLoading] = useState(false);
 
@@ -403,6 +418,29 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
     const tipInCents = state?.delivery?.tip ?? data?.tip ?? 0;
     setTip((tipInCents / 100).toFixed(2));
   }, [state?.delivery?.tip, data?.tip]);
+
+  const initialLoadRef = useRef(true);
+
+  useEffect(() => {
+    const items = state?.delivery?.items || [];
+    const hasMeasurements = items.some(
+      (item) =>
+        item.length != null &&
+        item.width != null &&
+        item.height != null &&
+        item.weight != null,
+    );
+
+    if (initialLoadRef.current && items.length > 0 && items[0].description) {
+      setUseMeasurements(hasMeasurements);
+      if (!hasMeasurements) {
+        setSelectedSize(state?.delivery?.size_category || "");
+      } else {
+        setSelectedSize("");
+      }
+      initialLoadRef.current = false;
+    }
+  }, [state?.delivery?.items, state?.delivery?.size_category]);
 
   // Memoized computations
   const permissions = useMemo(
@@ -463,20 +501,6 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
     },
   });
 
-  // Initialize selectedSize - but only if NOT using measurements
-  const [selectedSize, setSelectedSize] = useState(() => {
-    const items = state?.delivery?.items || [];
-    const hasMeasurements = items.some(
-      (item) =>
-        (item.length !== undefined && item.length !== null) ||
-        (item.width !== undefined && item.width !== null) ||
-        (item.height !== undefined && item.height !== null) ||
-        (item.weight !== undefined && item.weight !== null),
-    );
-
-    // Only set size if items don't have measurements
-    return hasMeasurements ? "" : state?.delivery?.size_category || "";
-  });
   // Optimized state updaters
   const updateDeliveryData = useCallback(
     (updates) => {
@@ -779,33 +803,24 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
 
   const toggleMeasurements = useCallback(() => {
     if (useMeasurements) {
-      // Switching from measurements to size guide
       setUseMeasurements(false);
-      // Clear measurement properties from all items - DO NOT set size_category
-      stateChanger((prevState) => ({
-        ...prevState,
+      stateChanger((prev) => ({
+        ...prev,
         delivery: {
-          ...prevState.delivery,
-          items: prevState.delivery.items.map((item) => {
-            const {
-              length,
-              width,
-              height,
-              weight,
-              ...itemWithoutMeasurements
-            } = item;
-            return itemWithoutMeasurements;
+          ...prev.delivery,
+          items: prev.delivery.items.map((item) => {
+            const { length, width, height, weight, exact, ...rest } = item;
+            return rest;
           }),
         },
       }));
     } else {
-      // Switching from size guide to measurements
       setUseMeasurements(true);
-      // Remove size_category when using measurements
-      stateChanger((prevState) => {
-        const { size_category, ...deliveryWithoutSize } = prevState.delivery;
+      setSelectedSize("");
+      stateChanger((prev) => {
+        const { size_category, ...deliveryWithoutSize } = prev.delivery;
         return {
-          ...prevState,
+          ...prev,
           delivery: deliveryWithoutSize,
         };
       });
@@ -1102,7 +1117,7 @@ const DeliveryForm = memo(({ data, stateChanger, state }) => {
             <label className="block text-themeDarkGray text-xs mb-2">
               Package Size <span className="text-themeRed">*</span>
             </label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2">
               <button
                 type="button"
                 disabled={!permissions.canEdit}

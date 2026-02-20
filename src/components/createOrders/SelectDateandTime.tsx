@@ -24,7 +24,7 @@ const SelectDateandTime = ({
 
   // Check if timeframe can be edited
   const canEditTimeframe = TIMEFRAME_EDITABLE_STATUSES.includes(
-    rest?.state?.status
+    rest?.state?.status,
   );
 
   // Helper function to format service names for display
@@ -90,7 +90,7 @@ const SelectDateandTime = ({
             moment().format("YYYY-MM-DD")) +
           orderParam,
         rest?.state,
-        config
+        config,
       );
     },
     onSuccess: (response) => {
@@ -130,7 +130,7 @@ const SelectDateandTime = ({
     if (rest?.state?.timeframe?.start_time) {
       // For existing orders with timeframe, use the timeframe's date in UTC to preserve calendar date
       const timeframeDate = moment(rest.state.timeframe.start_time).format(
-        "YYYY-MM-DD"
+        "YYYY-MM-DD",
       );
       setSelectedDate(timeframeDate);
     } else if (rest?.state?.status === "new_order" && !selectedDate) {
@@ -318,13 +318,13 @@ const SelectDateandTime = ({
         </div>
       ) : (
         /* Forms Data */
-        <div className="w-full grid grid-cols-3 gap-2.5 px-5 pb-6 mt-4">
+        <div className="w-full grid grid-cols-3 gap-x-6 gap-y-4 px-5 pb-6 mt-4">
           {/* Service Selection */}
           <div className="w-full">
             <label className="text-themeDarkGray text-xs">
               Service <span className="text-themeRed">*</span>
             </label>
-            <div className="flex items-center gap-3 mt-1">
+            <div className="flex items-center gap-4 mt-2 flex-wrap">
               {Array.isArray(timeframes) &&
                 timeframes?.map((item, index) => (
                   <p
@@ -339,10 +339,10 @@ const SelectDateandTime = ({
                       !canEditTimeframe
                         ? "cursor-not-allowed opacity-50"
                         : !item.slots || item.slots.length < 1
-                        ? "text-gray-400 line-through cursor-not-allowed"
-                        : rest?.state?.timeframe?.service === item?.service
-                        ? "font-bold cursor-pointer"
-                        : "cursor-pointer font-normal hover:text-themeOrange transition-color"
+                          ? "text-gray-400 line-through cursor-not-allowed"
+                          : rest?.state?.timeframe?.service === item?.service
+                            ? "font-bold cursor-pointer"
+                            : "cursor-pointer font-normal hover:text-themeOrange transition-color"
                     }`}
                   >
                     {formatServiceName(item?.service)}

@@ -27,7 +27,7 @@ const CustomersContent = () => {
   const headers = [
     { title: "Customer ID", value: "customer_id" },
     { title: "Name", value: "name" },
-    { title: "Address", value: "address.formatted" },
+    { title: "Address", value: "address.street_address_1" },
     { title: "Phone", value: "formatted_phone" },
     { title: "Created At", value: "last_updated" },
   ];
@@ -76,7 +76,7 @@ const CustomersContent = () => {
       exportToCSV(
         data,
         headers,
-        `customers_current_page_${currentActivePage}.csv`
+        `customers_current_page_${currentActivePage}.csv`,
       );
     }
   };

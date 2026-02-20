@@ -306,7 +306,7 @@ const CreateOrderContent = () => {
     const filteredUsers = data.filter((user) =>
       (user.firstname + " " + user.lastname + " " + user.email)
         .toLowerCase()
-        .includes(userSearchTerm.toLowerCase())
+        .includes(userSearchTerm.toLowerCase()),
     );
 
     // Get current selected user
@@ -443,13 +443,13 @@ const CreateOrderContent = () => {
   // Memoize map component
   const mapComponent = useMemo(
     () => <Map state={newOrderValues} />,
-    [newOrderValues]
+    [newOrderValues],
   );
 
   return (
     <ContentBox2>
       <div className="flex h-[calc(100%-60px)] justify-between gap-2.5 bg-contentBg">
-        <div className="overflow-auto px-themePadding w-3/4">
+        <div className="overflow-auto px-themePadding w-3/4 min-w-[550px]">
           <div className="pt-5 px-2.5 flex items-center justify-between gap-2.5">
             <div className="flex items-center gap-4">
               <h1 className="text-2xl text-black font-bold heading">

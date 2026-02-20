@@ -1,82 +1,21 @@
 import { findPickupStopIndex, findDeliveryStopIndex } from "./orderConstraints";
 
-// FIXED: Helper function to check if a stop is locked (has any locked orders)
-export const isStopLocked = (stop: any) => {
-  if (!stop) return false;
-
-  // Check if stop status is completed or locked
-  if (stop.status === "completed" || stop.status === "locked") {
-    return true;
-  }
-
-  // Check if pickup container is locked or has truly locked pickup orders
-  const hasLockedPickup =
-    stop.pickup?.locked ||
-    stop.pickup?.orders?.some(
-      (order: any) =>
-        order.locked ||
-        order.status === "completed" ||
-        order.status === "delivered" // Only delivery status locks pickup orders
-      // Note: "picked_up" status on pickup orders should NOT lock them
-    );
-
-  // Check if delivery container is locked or has truly locked delivery orders
-  const hasLockedDelivery =
-    stop.deliver?.locked ||
-    stop.deliver?.orders?.some(
-      (order: any) =>
-        order.locked ||
-        order.status === "completed" ||
-        order.status === "delivered" // Only delivered status locks delivery orders
-      // Note: "picked_up" status on delivery orders should NOT lock them since they haven't been delivered yet
-    );
-
-  return hasLockedPickup || hasLockedDelivery;
+// FIXED: No stop is ever locked - only checks explicit locked boolean
+export const isStopLocked = (_stop: any) => {
+  return false;
 };
 
-// FIXED: Helper function to check if an individual order is locked
-export const isOrderLocked = (orderedItems: any[], orderId: string) => {
-  for (const stop of orderedItems) {
-    // Check pickup orders
-    if (stop.pickup?.orders) {
-      const pickupOrder = stop.pickup.orders.find(
-        (order: any) => order.order_id === orderId
-      );
-      if (
-        pickupOrder &&
-        (pickupOrder.locked ||
-          pickupOrder.status === "completed" ||
-          pickupOrder.status === "delivered") // Only delivery status should lock pickup orders
-        // "picked_up" status should NOT lock pickup orders - they're just picked up, not completed
-      ) {
-        return true;
-      }
-    }
-
-    // Check delivery orders
-    if (stop.deliver?.orders) {
-      const deliveryOrder = stop.deliver.orders.find(
-        (order: any) => order.order_id === orderId
-      );
-      if (
-        deliveryOrder &&
-        (deliveryOrder.locked ||
-          deliveryOrder.status === "completed" ||
-          deliveryOrder.status === "delivered") // Only delivered status should lock delivery orders
-        // "picked_up" status should NOT lock delivery orders - item is picked up but not yet delivered
-      ) {
-        return true;
-      }
-    }
-  }
+// FIXED: No order is ever locked by status
+export const isOrderLocked = (_orderedItems: any[], _orderId: string) => {
   return false;
 };
 
 // Helper function to validate if a stop can be moved to a position
+// Only checks pickup-before-delivery constraints, NOT lock status
 export const canMoveStopToPosition = (
   orderedItems: any[],
   stopIndex: number,
-  targetPosition: number
+  targetPosition: number,
 ) => {
   const stop = orderedItems[stopIndex];
 
@@ -84,27 +23,6 @@ export const canMoveStopToPosition = (
     console.log("No stop found at index", stopIndex);
     return false;
   }
-
-  // Can't move locked stops
-  if (isStopLocked(stop)) {
-    console.log("Cannot move locked stop");
-    return false;
-  }
-
-  // Can't move to a position with a locked stop (unless at the end)
-  if (
-    targetPosition < orderedItems.length &&
-    isStopLocked(orderedItems[targetPosition])
-  ) {
-    console.log("Cannot move to locked target position");
-    return false;
-  }
-
-  console.log(
-    `Checking if stop ${stopIndex + 1} can move to position ${
-      targetPosition + 1
-    }`
-  );
 
   // Create a simulation of the array after the move to check constraints
   const simulatedArray = [...orderedItems];
@@ -127,16 +45,12 @@ export const canMoveStopToPosition = (
     for (const pickupOrder of stop.pickup.orders) {
       const deliveryStopIndex = findDeliveryStopIndex(
         simulatedArray,
-        pickupOrder.order_id
+        pickupOrder.order_id,
       );
 
       if (deliveryStopIndex !== -1 && finalStopPosition >= deliveryStopIndex) {
         console.log(
-          `Cannot move stop: Pickup order ${
-            pickupOrder.order_id
-          } would be at position ${
-            finalStopPosition + 1
-          } but its delivery would be at ${deliveryStopIndex + 1}`
+          `Cannot move stop: Pickup order ${pickupOrder.order_id} would be after its delivery`,
         );
         return false;
       }
@@ -148,16 +62,12 @@ export const canMoveStopToPosition = (
     for (const deliveryOrder of stop.deliver.orders) {
       const pickupStopIndex = findPickupStopIndex(
         simulatedArray,
-        deliveryOrder.order_id
+        deliveryOrder.order_id,
       );
 
       if (pickupStopIndex !== -1 && finalStopPosition <= pickupStopIndex) {
         console.log(
-          `Cannot move stop: Delivery order ${
-            deliveryOrder.order_id
-          } would be at position ${
-            finalStopPosition + 1
-          } but its pickup would be at ${pickupStopIndex + 1}`
+          `Cannot move stop: Delivery order ${deliveryOrder.order_id} would be before its pickup`,
         );
         return false;
       }

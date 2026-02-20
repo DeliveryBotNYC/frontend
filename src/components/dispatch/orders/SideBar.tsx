@@ -12,7 +12,7 @@ import RouteInfo from "./RouteInfo";
 import { ThemeContext } from "../../../context/ThemeContext";
 import { useConfig, url } from "../../../hooks/useConfig";
 import { useDragAndDrop } from "./useDragAndDrop";
-import { Stop, getStopId, isStopLocked } from "./types";
+import { Stop, getStopId } from "./types";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
@@ -41,7 +41,7 @@ interface SideBarProps {
   onStopExpand: (stopId: string) => void;
   onRouteUpdate: (
     updatedRoute: Route,
-    originalRoute?: Route
+    originalRoute?: Route,
   ) => Promise<{ data: Route }>;
   onFilteredOrdersChange: (orders: Stop[] | null) => void;
   availableDrivers: Driver[];
@@ -58,13 +58,13 @@ interface SideBarProps {
   onUpdateRouteLog?: (
     routeId: string,
     logId: number,
-    updatedLog: any
+    updatedLog: any,
   ) => Promise<any>;
   onDeleteRouteLog?: (routeId: string, logId: number) => Promise<any>;
   onRefetchRoute?: () => Promise<void>;
   onUnassignedOrdersVisibilityChange?: (
     visible: boolean,
-    orders: any[]
+    orders: any[],
   ) => void;
 }
 
@@ -177,7 +177,7 @@ const Button = memo<{
         {children}
       </button>
     );
-  }
+  },
 );
 
 Button.displayName = "Button";
@@ -257,7 +257,7 @@ const SideBar: React.FC<SideBarProps> = ({
   onUpdateRouteLog,
   onDeleteRouteLog,
   onRefetchRoute,
-  onUnassignedOrdersVisibilityChange, // ADD THIS
+  onUnassignedOrdersVisibilityChange,
 }) => {
   const config = useConfig();
   const { clearOrderSelection } = useContext(ThemeContext);
@@ -277,7 +277,7 @@ const SideBar: React.FC<SideBarProps> = ({
         onRouteUpdate(updatedRoute, route);
       }
     },
-    [route, onStopsChange, onRouteUpdate]
+    [route, onStopsChange, onRouteUpdate],
   );
 
   const handleRefetchRoute = useCallback(async () => {
@@ -322,7 +322,7 @@ const SideBar: React.FC<SideBarProps> = ({
           (order) =>
             order.order_id.toLowerCase().includes(searchLower) ||
             order.pickup?.name.toLowerCase().includes(searchLower) ||
-            order.delivery?.name.toLowerCase().includes(searchLower)
+            order.delivery?.name.toLowerCase().includes(searchLower),
         );
 
         if (matches.length > 0) {
@@ -340,7 +340,7 @@ const SideBar: React.FC<SideBarProps> = ({
           (order) =>
             order.order_id.toLowerCase().includes(searchLower) ||
             order.pickup?.name.toLowerCase().includes(searchLower) ||
-            order.delivery?.name.toLowerCase().includes(searchLower)
+            order.delivery?.name.toLowerCase().includes(searchLower),
         );
 
         if (matches.length > 0) {
@@ -404,7 +404,7 @@ const SideBar: React.FC<SideBarProps> = ({
   const handleReoptimize = async (): Promise<void> => {
     if (
       !window.confirm(
-        "Reoptimize this route? This will reorganize all stops for better efficiency."
+        "Reoptimize this route? This will reorganize all stops for better efficiency.",
       )
     ) {
       return;
@@ -415,7 +415,7 @@ const SideBar: React.FC<SideBarProps> = ({
       await axios.post(
         `${url}/batch/reorganize/${route?.route_id}`,
         {},
-        config
+        config,
       );
       await handleRefetchRoute();
       setIsReoptimizing(false);
@@ -430,7 +430,7 @@ const SideBar: React.FC<SideBarProps> = ({
   const handleRemoveOrders = async (): Promise<void> => {
     if (
       !window.confirm(
-        "Remove all orders from this route? This will unassign all not completed orders and they will become available for reassignment."
+        "Remove all orders from this route? This will unassign all not completed orders and they will become available for reassignment.",
       )
     ) {
       return;
@@ -463,24 +463,6 @@ const SideBar: React.FC<SideBarProps> = ({
     }
   };
 
-  const handleCancelRoute = async (): Promise<void> => {
-    if (
-      !window.confirm(
-        "Cancel this route? This will mark it as dropped and remove all orders."
-      )
-    ) {
-      return;
-    }
-
-    try {
-      await axios.post(`${url}/route/${route?.route_id}/cancel`, {}, config);
-      await handleRefetchRoute();
-    } catch (error) {
-      console.error("Failed to cancel route:", error);
-      alert("Failed to cancel route");
-    }
-  };
-
   return (
     <div className="h-full flex flex-col overflow-hidden">
       <div className="flex-shrink-0">
@@ -497,9 +479,9 @@ const SideBar: React.FC<SideBarProps> = ({
           onRefetchRoute={handleRefetchRoute}
           onUnassignedOrdersVisibilityChange={
             onUnassignedOrdersVisibilityChange
-          } // ADD THIS
-          hoveredStopId={hoveredStopId} // ADD THIS
-          onStopHover={onStopHover} // ADD THIS
+          }
+          hoveredStopId={hoveredStopId}
+          onStopHover={onStopHover}
         />
       </div>
 
@@ -628,7 +610,8 @@ const SideBar: React.FC<SideBarProps> = ({
                 )}
               </div>
             </div>
-          ) : filteredStops.length > 1 ? (
+          ) : filteredStops.length >= 1 ? (
+            /* FIXED: was > 1, which hid single-stop routes */
             <>
               {filteredStops.map((stop, index) => {
                 const stopId = getStopId(stop);
@@ -640,7 +623,8 @@ const SideBar: React.FC<SideBarProps> = ({
                 return (
                   <div
                     key={stopId}
-                    draggable={!isStopLocked(stop)}
+                    draggable={true}
+                    /* FIXED: all stops are always draggable */
                     onDragStart={(e) =>
                       dragAndDrop.handleStopDragStart(e, stop, index)
                     }
@@ -651,14 +635,13 @@ const SideBar: React.FC<SideBarProps> = ({
                     onDragEnd={dragAndDrop.handleDragEnd}
                     data-stop-item
                     className={`
-                      relative 
-                      ${isStopLocked(stop) ? "cursor-default" : "cursor-move"}
+                      relative cursor-move
                       ${dragAndDrop.getDropIndicator(index)}
                       ${isDragged ? "opacity-30 scale-95" : ""}
                       transition-all duration-200 ease-in-out
                     `}
                   >
-                    {isDragged && !isStopLocked(stop) && (
+                    {isDragged && (
                       <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold z-20">
                         {index + 1}
                       </div>

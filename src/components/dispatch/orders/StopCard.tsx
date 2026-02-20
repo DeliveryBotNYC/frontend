@@ -1,5 +1,5 @@
 // ========================================
-// StopCard.tsx - Fixed TypeScript errors
+// StopCard.tsx - Fixed: include customer_id in formatted orders
 // ========================================
 
 import React from "react";
@@ -32,10 +32,12 @@ interface PickupOrder {
 
 interface Order {
   pickup: {
+    customer_id?: number;
     name: string;
     address: OrderAddress;
   };
   delivery: {
+    customer_id?: number;
     name: string;
     address: OrderAddress;
   };
@@ -110,7 +112,8 @@ const StopCard: React.FC<StopCardProps> = ({
   const hasDeliveryOrders =
     item.deliver?.orders && item.deliver.orders.length > 0;
 
-  // Convert order data to format expected by OrderCard
+  // FIXED: Include customer_id in pickup and delivery objects
+  // so that when OrderCard creates drag data, getOrderCustomerId can find them
   const formatPickupOrderForCard = (order: Order) => ({
     order_id: order.order_id.toString(),
     status: order.status,
@@ -119,12 +122,14 @@ const StopCard: React.FC<StopCardProps> = ({
       end_time: order.end_time || item.timeframe.end_time,
     },
     pickup: {
+      customer_id: order.pickup?.customer_id || item.customer_id,
       name: order.pickup.name,
       address: {
         street_address_1: order.pickup.address.street_address_1,
       },
     },
     delivery: {
+      customer_id: order.delivery?.customer_id,
       name: order.delivery.name,
       address: {
         street_address_1: order.delivery.address.street_address_1,
@@ -146,12 +151,14 @@ const StopCard: React.FC<StopCardProps> = ({
       end_time: order.end_time || item.timeframe.end_time,
     },
     pickup: {
+      customer_id: order.pickup?.customer_id,
       name: order.pickup.name,
       address: {
         street_address_1: order.pickup.address.street_address_1,
       },
     },
     delivery: {
+      customer_id: order.delivery?.customer_id || item.customer_id,
       name: order.delivery.name,
       address: {
         street_address_1: order.delivery.address.street_address_1,

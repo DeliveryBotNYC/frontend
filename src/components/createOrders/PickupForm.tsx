@@ -41,7 +41,7 @@ const normalizePickupData = (data) => {
   if (!data) return {};
 
   return {
-    customer_id: data.customer_id || null,
+    customer_id: data.customer_id || undefined,
     phone: data.phone_formatted || "",
     name: data.name || "",
     note: data.default_pickup_note || data.pickup_note || "",
@@ -173,7 +173,7 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
       stateChanger((prevState) => ({
         ...prevState,
         pickup: {
-          customer_id: null, // Always clear customer_id on phone change
+          customer_id: undefined, // Always clear customer_id on phone change
           phone,
           name: "",
           note: "",
@@ -206,7 +206,7 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
   const handleNameChange = useCallback(
     (e) => {
       updatePickupData({
-        customer_id: null, // Clear customer_id when name changes
+        customer_id: undefined, // Clear customer_id when name changes
         name: formatName(e.target.value),
       });
     },
@@ -220,7 +220,7 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
       if (typeof value === "object" && value !== null) {
         // Address object from autocomplete
         updatePickupData({
-          customer_id: null, // Clear customer_id when address changes
+          customer_id: undefined, // Clear customer_id when address changes
           address: {
             ...value,
             address_id: value.address_id,
@@ -234,7 +234,7 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
       } else {
         // Manual text input
         updatePickupData({
-          customer_id: null, // Clear customer_id when address changes
+          customer_id: undefined, // Clear customer_id when address changes
           address: {
             ...state.pickup.address,
             address_id: undefined,
@@ -256,7 +256,7 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
   const handleAptChange = useCallback(
     (e) => {
       updatePickupData({
-        customer_id: null, // Clear customer_id when apt changes
+        customer_id: undefined, // Clear customer_id when apt changes
         apt: e.target.value,
       });
     },
@@ -331,7 +331,7 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
     stateChanger((prevState) => ({
       ...prevState,
       pickup: {
-        customer_id: null,
+        customer_id: undefined,
         phone: "",
         name: "",
         note: "",

@@ -8,6 +8,9 @@ import { url, useConfig } from "../../hooks/useConfig";
 const PricePopup = ({ data, stateChanger, ...rest }) => {
   // src/utils/orderUtils.js
   const getOrderChanges = (original, updated) => {
+    const hasMeasurements = (updated?.delivery?.items || []).some(
+      (item) => item.exact === true, // ← add this, was checking length/width/etc
+    );
     const changes = {};
 
     // Helper to normalize phone numbers for comparison
@@ -48,14 +51,14 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
           }
 
           // Compare items while ignoring barcode, barcode_type, and other fields that don't affect pricing
-          const normalizeItem = (item) => {
-            // Only keep the fields that actually affect pricing
-            return {
-              description: item.description,
-              quantity: item.quantity,
-              // Add any other fields that DO affect pricing here
-            };
-          };
+          const normalizeItem = (item) => ({
+            description: item.description,
+            quantity: item.quantity,
+            length: item.length ?? null,
+            width: item.width ?? null,
+            height: item.height ?? null,
+            weight: item.weight ?? null,
+          });
 
           const itemsChanged =
             JSON.stringify(orig[key].map(normalizeItem)) !==
@@ -78,7 +81,7 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
           const nestedChanges = compareObjects(
             orig?.[key] || {},
             upd[key],
-            currentPath
+            currentPath,
           );
           if (Object.keys(nestedChanges).length > 0) {
             result[key] = nestedChanges;
@@ -108,14 +111,22 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
         const sectionChanges = compareObjects(
           original?.[section] || {},
           updated[section],
-          section
+          section,
         );
         if (Object.keys(sectionChanges).length > 0) {
-          changes[section] = sectionChanges;
+          // Always send the complete timeframe if anything changed
+          if (section === "timeframe") {
+            changes[section] = {
+              service: updated[section].service,
+              start_time: updated[section].start_time,
+              end_time: updated[section].end_time,
+            };
+          } else {
+            changes[section] = sectionChanges;
+          }
         }
       }
     });
-
     // Compare top-level fields
     if (
       updated.user_id !== original?.user_id &&
@@ -142,6 +153,8 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
     fee_breakdown: null,
   });
 
+  const [justSaved, setJustSaved] = useState(false);
+
   const [error, setError] = useState({ message: "" });
   const [showBreakdown, setShowBreakdown] = useState(false);
   const navigate = useNavigate();
@@ -164,26 +177,22 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
       const isNewOrder = rest.state?.status == "new_order";
 
       if (isNewOrder) {
-        // For new orders, redirect to tracking page
         const orderId = response.data.data.order_id;
         navigate("/orders/tracking/" + orderId);
       } else {
-        // For updates, call the callback to update parent state
-        if (rest.stateChanger && typeof rest.stateChanger === "function") {
-          // Update the state with the response data
-          const updatedData = response.data.data;
-          console.log("Calling stateChanger with updated data:", updatedData);
-          rest.stateChanger(updatedData);
-        }
-        // Clear patch quote after successful update
+        const updatedData = response.data.data;
+        setJustSaved(true);
+
+        // Clear patch quote immediately so button disappears
         setPatchQuote({
           previous_price: "",
           price: "",
           tip: "",
           fee_breakdown: null,
         });
-        // Optionally show a success message
-        console.log("Order updated successfully");
+
+        // Update parent with full response data
+        stateChanger(updatedData);
       }
     },
     onError: (error) => {
@@ -241,7 +250,7 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
       return axios.post(
         `${url}/order/quote/${data?.order_id}`,
         changes,
-        config
+        config,
       );
     },
     onMutate: () => {
@@ -281,6 +290,10 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
   });
 
   useEffect(() => {
+    if (justSaved) {
+      setJustSaved(false); // reset on next state change
+      return;
+    }
     if (
       isCompleted(rest?.state).pickup &&
       isCompleted(rest?.state).delivery &&
@@ -289,6 +302,7 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
       if (rest.state?.status == "new_order") {
         createQuote.mutate(rest?.state);
       } else if (JSON.stringify(rest?.state) != JSON.stringify(data)) {
+        if (!data?.order_id) return; // ← add this guard
         createPatchQuote.mutate(rest?.state);
       } else {
         setPatchQuote({
@@ -558,10 +572,12 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
 
   const shouldShowActiveButton = () => {
     const isNewOrder = rest.state?.status == "new_order";
+
+    if (justSaved) return false; // ← suppress after save
+
     const hasValidQuote = isNewOrder
       ? givenQuote.price && !isNaN(parseInt(givenQuote.price) / 100)
-      : (patchQuote.price && !isNaN(parseInt(patchQuote.price) / 100)) ||
-        (data && data.price);
+      : patchQuote.price && !isNaN(parseInt(patchQuote.price) / 100);
 
     return (
       isCompleted(rest?.state).pickup &&
