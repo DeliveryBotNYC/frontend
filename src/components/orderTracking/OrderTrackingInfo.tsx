@@ -270,14 +270,14 @@ const OrderTrackingInfo = ({
         }
 
         const blob = new Blob([arrayBuffer], { type: "application/pdf" });
-        const url = window.URL.createObjectURL(blob);
+        const blobUrl = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
-        link.href = url;
+        link.href = blobUrl;
         link.download = `DBX${data?.order_id}_label.pdf`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        window.URL.revokeObjectURL(blobUrl);
         setIsDownloadingLabel(false);
         return;
       }
@@ -334,14 +334,14 @@ const OrderTrackingInfo = ({
       const blob = new Blob([mergedPdfBytes], { type: "application/pdf" });
 
       // Create download link
-      const url = window.URL.createObjectURL(blob);
+      const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
-      link.href = url;
+      link.href = blobUrl;
       link.download = `DBX${data?.order_id}_labels.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(blobUrl);
 
       console.log(`Successfully downloaded ${pdfBlobs.length} labels`);
     } catch (error) {
@@ -607,7 +607,6 @@ const OrderTrackingInfo = ({
                     currentStatus !== "undeliverable" &&
                     currentStatus !== "canceled" &&
                     currentStatus !== "returned" &&
-                    currentStatus !== "delivered" &&
                     currentStatus !== "delivered" ? (
                       <div className="flex flex-col gap-0.5 text-right">
                         <p className="text-[10px] text-themeDarkGray uppercase tracking-wide">
@@ -625,7 +624,15 @@ const OrderTrackingInfo = ({
 
                 {/* Delivery tracking */}
                 <div className="w-full">
-                  <InfoDetails items={data} />
+                  <InfoDetails
+                    items={data}
+                    isAdmin={isAdmin}
+                    onLogsChange={(updatedLogs) => {
+                      queryClient.invalidateQueries({
+                        queryKey: ["order", data.order_id],
+                      });
+                    }}
+                  />
                 </div>
               </>
             </div>
