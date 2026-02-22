@@ -12,6 +12,7 @@ import RetailAccountGeneral from "./RetailAccountGeneral";
 import RetailAccountDefaults from "./RetailAccountDefault";
 import RetailAccountBilling from "./RetailAccountBilling";
 import RetailAccountCoverage from "./RetailAccountCoverage";
+import RetailAccountHours from "./RetailAccountHours";
 
 interface RetailUser {
   id: string;
@@ -95,11 +96,12 @@ export const useRetailAccountContext = () => {
 
 // ─── Tab config ───────────────────────────────────────────────────────────────
 
-type TabId = "general" | "defaults" | "billing" | "coverage";
+type TabId = "general" | "defaults" | "hours" | "billing" | "coverage";
 
 const TABS: { id: TabId; name: string; desc: string }[] = [
   { id: "general", name: "General", desc: "Personal & store info" },
   { id: "defaults", name: "Defaults", desc: "Default settings" },
+  { id: "hours", name: "Hours", desc: "Store opening hours" },
   { id: "billing", name: "Billing", desc: "Payment & billing" },
   { id: "coverage", name: "Coverage", desc: "Delivery radius maps" },
 ];
@@ -250,6 +252,8 @@ const RetailUserContent: React.FC<RetailUserContentProps> = ({ userId }) => {
         return <RetailAccountGeneral {...sharedProps} />;
       case "defaults":
         return <RetailAccountDefaults {...sharedProps} />;
+      case "hours":
+        return <RetailAccountHours {...sharedProps} />;
       case "billing":
         return <RetailAccountBilling {...sharedProps} />;
       case "coverage":

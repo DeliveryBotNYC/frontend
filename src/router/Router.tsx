@@ -29,6 +29,7 @@ import Orientation from "../pages/Orientation";
 import UserLayout from "../components/layout/UserLayout";
 import useAuth from "../hooks/useAuth";
 import EarningsPage from "../pages/EarningsPage";
+import AccountHours from "../pages/AccountHours"; // retail self-serve version
 
 const Router = () => {
   const ROLES = {
@@ -76,6 +77,8 @@ const Router = () => {
           <Route path="accounts" element={<Accounts />}>
             <Route path="general" element={<AccountsGeneral />} />
             <Route path="defaults" element={<AccountsDefault />} />
+            <Route path="hours" element={<AccountHours />} />
+
             <Route path="billing" element={<AccountsBilling />} />
           </Route>
         </Route>
