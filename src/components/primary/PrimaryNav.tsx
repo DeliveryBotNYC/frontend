@@ -6,9 +6,10 @@ const PrimaryNav = ({ title }: { title: string }) => {
   return (
     <>
       <div className="fixed top-0 left-0 right-0 z-[100] bg-red-800 text-white text-center text-sm font-semibold px-10 py-2.5">
-        🚫 We will not be operating on Monday, 2/23, until 12:00 PM due to the
-        travel ban and for the safety of our drivers. After reopening, please
-        expect delays of 1 to 2 hours.
+        🚫 We will not be operating on Monday, 2/23 until 12PM due to a travel
+        ban and for the safety of our drivers. We are planning to reopen at that
+        time, but we will notify you if the closure extends. After reopening,
+        please expect delays of 1 to 2 hours.
       </div>
 
       <nav className="w-full bg-themeOrange h-16 flex items-center justify-between gap-2 fixed top-[41px] left-0 z-[99] px-3 sm:px-0">
