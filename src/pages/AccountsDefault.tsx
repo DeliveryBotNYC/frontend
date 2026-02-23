@@ -24,9 +24,14 @@ interface AccountsData {
   delivery_picture?: boolean;
   delivery_recipient?: boolean;
   delivery_signature?: boolean;
-  delivery_21?: boolean;
-  delivery_pin?: boolean;
-  [key: string]: unknown; // For additional properties
+  // Add these:
+  return_pickup_picture?: boolean;
+  return_delivery_picture?: boolean;
+  return_delivery_recipient?: boolean;
+  return_delivery_signature?: boolean;
+  return_delivery_21?: boolean;
+  return_delivery_pin?: boolean;
+  [key: string]: unknown;
 }
 
 interface OutletContext {
@@ -113,7 +118,7 @@ const AccountsDefault: React.FC = () => {
   }, [accountsData, updatedDefaultsData]);
 
   function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) {
     const { id, value } = e.target;
 
@@ -328,7 +333,8 @@ const AccountsDefault: React.FC = () => {
   const itemTypeOptions: SelectOption[] = [
     { value: "box", label: "Box" },
     { value: "bag", label: "Bag" },
-    { value: "catoon", label: "Catoon" },
+    { value: "hanger", label: "Hangers" },
+    { value: "flower", label: "Flower" },
   ];
 
   const barcodeTypeOptions: SelectOption[] = [
@@ -358,8 +364,12 @@ const AccountsDefault: React.FC = () => {
     { id: "delivery_picture", label: "Picture" },
     { id: "delivery_recipient", label: "Recipient" },
     { id: "delivery_signature", label: "Signature" },
-    { id: "delivery_21", label: "21+" },
-    { id: "delivery_pin", label: "Pin" },
+  ];
+
+  const proofOfReturnOptions: CheckboxOption[] = [
+    { id: "return_delivery_picture", label: "Picture" },
+    { id: "return_delivery_recipient", label: "Recipient" },
+    { id: "return_delivery_signature", label: "Signature" },
   ];
 
   if (accountsData === undefined) {
@@ -393,9 +403,7 @@ const AccountsDefault: React.FC = () => {
           <div className="space-y-6">
             {/* Order Defaults Section */}
             <div>
-              <h3 className="text-lg font-semibold mb-4 text-black">
-                Order Defaults
-              </h3>
+              <h3 className="text-lg font-semibold mb-4 text-black">Order</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <FormInput
                   label="Quantity"
@@ -428,7 +436,7 @@ const AccountsDefault: React.FC = () => {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <FormSelect
                   label="Barcode Type"
                   id="barcode_type"
@@ -447,14 +455,7 @@ const AccountsDefault: React.FC = () => {
                   error={error.fieldErrors?.timeframe}
                 />
               </div>
-            </div>
-
-            {/* Service Preferences Section */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4 text-black">
-                Service Preferences
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <RadioGroup
                   label="Store as Default"
                   name="store_default"
@@ -475,11 +476,17 @@ const AccountsDefault: React.FC = () => {
                   error={error.fieldErrors?.autofill}
                 />
               </div>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="w-full">
+            {/* Delivery Defaults Section */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4 text-black">
+                Delivery
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div>
                   <FormCheckbox
-                    label="Proof of pickup"
+                    label="Proof of Pickup"
                     value="Picture"
                     id="pickup_picture"
                     checked={currentFormValues?.pickup_picture || false}
@@ -500,17 +507,90 @@ const AccountsDefault: React.FC = () => {
                       currentFormValues?.delivery_recipient || false,
                     delivery_signature:
                       currentFormValues?.delivery_signature || false,
-                    delivery_21: currentFormValues?.delivery_21 || false,
-                    delivery_pin: currentFormValues?.delivery_pin || false,
                   }}
                   onChange={handleCheckboxChange}
                   error={
                     error.fieldErrors?.delivery_picture ||
                     error.fieldErrors?.delivery_recipient ||
-                    error.fieldErrors?.delivery_signature ||
-                    error.fieldErrors?.delivery_21 ||
-                    error.fieldErrors?.delivery_pin
+                    error.fieldErrors?.delivery_signature
                   }
+                />
+
+                <FormInput
+                  label="Pickup Extension (min)"
+                  id="pickup_ext"
+                  type="number"
+                  value={currentFormValues?.pickup_ext?.toString() || ""}
+                  onChange={handleChange}
+                  error={error.fieldErrors?.pickup_ext}
+                />
+
+                <FormInput
+                  label="Delivery Extension (min)"
+                  id="delivery_ext"
+                  type="number"
+                  value={currentFormValues?.delivery_ext?.toString() || ""}
+                  onChange={handleChange}
+                  error={error.fieldErrors?.delivery_ext}
+                />
+              </div>
+            </div>
+
+            {/* Return Defaults Section */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4 text-black">Return</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <FormCheckbox
+                    label="Proof of Pickup"
+                    value="Picture"
+                    id="return_pickup_picture"
+                    checked={currentFormValues?.return_pickup_picture || false}
+                    onChange={(e) =>
+                      handleCheckboxChange(
+                        "return_pickup_picture",
+                        e.target.checked,
+                      )
+                    }
+                    error={error.fieldErrors?.return_pickup_picture}
+                  />
+                </div>
+
+                <CheckboxGroup
+                  label="Proof of Delivery"
+                  options={proofOfReturnOptions}
+                  values={{
+                    return_delivery_picture:
+                      currentFormValues?.return_delivery_picture || false,
+                    return_delivery_recipient:
+                      currentFormValues?.return_delivery_recipient || false,
+                    return_delivery_signature:
+                      currentFormValues?.return_delivery_signature || false,
+                  }}
+                  onChange={handleCheckboxChange}
+                  error={
+                    error.fieldErrors?.return_delivery_picture ||
+                    error.fieldErrors?.return_delivery_recipient ||
+                    error.fieldErrors?.return_delivery_signature
+                  }
+                />
+                <FormInput
+                  label="Pickup Extension (min)"
+                  id="return_pickup_ext"
+                  type="number"
+                  value={currentFormValues?.return_pickup_ext?.toString() || ""}
+                  onChange={handleChange}
+                  error={error.fieldErrors?.return_pickup_ext}
+                />
+                <FormInput
+                  label="Delivery Extension (min)"
+                  id="return_delivery_ext"
+                  type="number"
+                  value={
+                    currentFormValues?.return_delivery_ext?.toString() || ""
+                  }
+                  onChange={handleChange}
+                  error={error.fieldErrors?.return_delivery_ext}
                 />
               </div>
             </div>

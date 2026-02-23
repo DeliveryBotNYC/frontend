@@ -120,6 +120,44 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
           apt: customerData.apt || "",
           access_code: customerData.access_code || "",
         });
+        if (customerData?.customer_id == data.customer_id)
+          // Customer is in pickup → apply delivery proof defaults
+          stateChanger((prev) => ({
+            ...prev,
+            pickup: {
+              ...prev.pickup,
+              required_verification: {
+                picture: data?.pickup_picture || false,
+              },
+            },
+            delivery: {
+              ...prev.delivery,
+              required_verification: {
+                picture: data?.delivery_picture || false,
+                recipient: data?.delivery_recipient || false,
+                signature: data?.delivery_signature || false,
+              },
+            },
+          }));
+        else
+          // Customer not in pickup → apply delivery proof defaults
+          stateChanger((prev) => ({
+            ...prev,
+            pickup: {
+              ...prev.pickup,
+              required_verification: {
+                picture: data?.return_pickup_picture || false,
+              },
+            },
+            delivery: {
+              ...prev.delivery,
+              required_verification: {
+                picture: data?.return_delivery_picture || false,
+                recipient: data?.return_delivery_recipient || false,
+                signature: data?.return_delivery_signature || false,
+              },
+            },
+          }));
       }
     },
     onError: (error) => {
@@ -266,7 +304,26 @@ const PickupForm = memo(({ data, stateChanger, state }) => {
   const handleHomeAddressClick = useCallback(() => {
     const defaultData = normalizePickupData(data);
     updatePickupData(defaultData);
-  }, [data, updatePickupData]);
+
+    // Customer going into pickup → apply delivery proof defaults
+    stateChanger((prev) => ({
+      ...prev,
+      pickup: {
+        ...prev.pickup,
+        required_verification: {
+          picture: data?.pickup_picture || false,
+        },
+      },
+      delivery: {
+        ...prev.delivery,
+        required_verification: {
+          picture: data?.delivery_picture || false,
+          recipient: data?.delivery_recipient || false,
+          signature: data?.delivery_signature || false,
+        },
+      },
+    }));
+  }, [data, updatePickupData, stateChanger]);
 
   const handleClipboardPaste = useCallback(async () => {
     setIsClipboardLoading(true); // Start loading

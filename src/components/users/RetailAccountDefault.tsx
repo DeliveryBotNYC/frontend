@@ -25,6 +25,16 @@ interface AccountsData {
   delivery_signature?: boolean;
   delivery_21?: boolean;
   delivery_pin?: boolean;
+  pickup_ext?: number;
+  delivery_ext?: number;
+  return_pickup_picture?: boolean;
+  return_delivery_picture?: boolean;
+  return_delivery_recipient?: boolean;
+  return_delivery_signature?: boolean;
+  return_delivery_21?: boolean;
+  return_delivery_pin?: boolean;
+  return_pickup_ext?: number;
+  return_delivery_ext?: number;
   [key: string]: unknown;
 }
 
@@ -94,73 +104,47 @@ const RetailAccountDefaults: React.FC<RetailAccountDefaultsProps> = ({
     message: "",
     fieldErrors: {},
   });
+  const [tip, setTip] = useState(() => {
+    const tipInCents = accountsData?.tip ?? 0;
+    return (tipInCents / 100).toFixed(2);
+  });
+
+  useEffect(() => {
+    const tipInCents = accountsData?.tip ?? 0;
+    setTip((tipInCents / 100).toFixed(2));
+  }, [accountsData?.tip]);
 
   // Store current form values (combination of original data and updates)
   const currentFormValues = useMemo(() => {
     const combined: AccountsData = { ...accountsData };
-
-    // Apply updates, but handle tip specially
     Object.keys(updatedDefaultsData).forEach((key) => {
-      if (key === "tip") {
-        // If tip is being edited, show the raw dollar value
-        combined[key] =
-          typeof updatedDefaultsData[key] === "number"
-            ? ((updatedDefaultsData[key] as number) / 100).toFixed(2) // Convert cents to dollars
-            : (updatedDefaultsData[key] as string); // Keep raw input while typing
-      } else {
-        combined[key] = updatedDefaultsData[key];
-      }
+      combined[key] = updatedDefaultsData[key];
     });
-
-    // Convert tip from cents to dollars for display (only if not being edited)
-    if (combined.tip !== undefined && !updatedDefaultsData.tip) {
-      combined.tip = parseFloat((combined.tip / 100).toFixed(2));
-    }
-
     return combined;
   }, [accountsData, updatedDefaultsData]);
 
   function handleChange(
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) {
     const { id, value } = e.target;
 
-    // Clear field error and status when user starts typing
     if (error.fieldErrors[id]) {
       setError((prev) => {
         const newFieldErrors = { ...prev.fieldErrors };
         delete newFieldErrors[id];
-        return {
-          ...prev,
-          fieldErrors: newFieldErrors,
-        };
+        return { ...prev, fieldErrors: newFieldErrors };
       });
     }
+    if (error.message) setError((prev) => ({ ...prev, message: "" }));
+    if (submitStatus.message) setSubmitStatus({ type: "", message: "" });
 
-    if (error.message) {
-      setError((prev) => ({
-        ...prev,
-        message: "",
-      }));
+    if (id === "tip") {
+      setTip(value);
+      return;
     }
 
-    // Clear submit status when user makes changes
-    if (submitStatus.message) {
-      setSubmitStatus({ type: "", message: "" });
-    }
-
-    // For tip field, just store the raw dollar value temporarily
-    const processedValue = value;
-    const originalValue =
-      id === "tip"
-        ? ((accountsData[id] as number) / 100).toFixed(2)
-        : accountsData[id];
-
-    if (originalValue !== processedValue) {
-      setUpdatedDefaultsData((prev) => ({
-        ...prev,
-        [id]: processedValue,
-      }));
+    if (accountsData[id] !== value) {
+      setUpdatedDefaultsData((prev) => ({ ...prev, [id]: value }));
     } else {
       const newData = { ...updatedDefaultsData };
       delete newData[id];
@@ -170,21 +154,17 @@ const RetailAccountDefaults: React.FC<RetailAccountDefaultsProps> = ({
 
   // Handle tip field when user finishes typing (onBlur)
   function handleTipBlur(e: React.FocusEvent<HTMLInputElement>) {
-    const { id, value } = e.target;
-
+    const { id } = e.target;
     if (id === "tip") {
-      // Convert to cents when user is done typing
-      const processedValue = Math.round(parseFloat(value || "0") * 100);
-      const originalValue = accountsData[id] as number;
-
-      if (originalValue !== processedValue) {
-        setUpdatedDefaultsData((prev) => ({
-          ...prev,
-          [id]: processedValue,
-        }));
+      const value = parseFloat(tip || "0").toFixed(2);
+      const valueInCents = Math.round(parseFloat(value) * 100);
+      const originalValue = accountsData.tip as number;
+      setTip(value);
+      if (originalValue !== valueInCents) {
+        setUpdatedDefaultsData((prev) => ({ ...prev, tip: valueInCents }));
       } else {
         const newData = { ...updatedDefaultsData };
-        delete newData[id];
+        delete newData.tip;
         setUpdatedDefaultsData(newData);
       }
     }
@@ -271,7 +251,11 @@ const RetailAccountDefaults: React.FC<RetailAccountDefaultsProps> = ({
       if (dataToSend.tip !== undefined && typeof dataToSend.tip === "string") {
         dataToSend.tip = Math.round(parseFloat(dataToSend.tip || "0") * 100);
       }
-      return axios.patch(url + "/retail", dataToSend, config);
+      return axios.patch(
+        url + "/retail/" + accountsData.user_id,
+        dataToSend,
+        config,
+      );
     },
     onSuccess: (data) => {
       setError({ message: "", fieldErrors: {} });
@@ -334,7 +318,20 @@ const RetailAccountDefaults: React.FC<RetailAccountDefaultsProps> = ({
   const itemTypeOptions: SelectOption[] = [
     { value: "box", label: "Box" },
     { value: "bag", label: "Bag" },
-    { value: "catoon", label: "Catoon" },
+    { value: "hanger", label: "Hangers" },
+    { value: "flower", label: "Flower" },
+  ];
+
+  const proofOfDeliveryOptions: CheckboxOption[] = [
+    { id: "delivery_picture", label: "Picture" },
+    { id: "delivery_recipient", label: "Recipient" },
+    { id: "delivery_signature", label: "Signature" },
+  ];
+
+  const proofOfReturnOptions: CheckboxOption[] = [
+    { id: "return_delivery_picture", label: "Picture" },
+    { id: "return_delivery_recipient", label: "Recipient" },
+    { id: "return_delivery_signature", label: "Signature" },
   ];
 
   const barcodeTypeOptions: SelectOption[] = [
@@ -359,15 +356,6 @@ const RetailAccountDefaults: React.FC<RetailAccountDefaultsProps> = ({
     { value: true, label: "On" },
   ];
 
-  // Options for checkbox groups
-  const proofOfDeliveryOptions: CheckboxOption[] = [
-    { id: "delivery_picture", label: "Picture" },
-    { id: "delivery_recipient", label: "Recipient" },
-    { id: "delivery_signature", label: "Signature" },
-    { id: "delivery_21", label: "21+" },
-    { id: "delivery_pin", label: "Pin" },
-  ];
-
   if (accountsData === undefined) {
     return (
       <div className="w-full h-full bg-white p-6 rounded-2xl flex items-center justify-center">
@@ -380,12 +368,26 @@ const RetailAccountDefaults: React.FC<RetailAccountDefaultsProps> = ({
     <div className="w-full h-full">
       <div className="w-full h-full flex flex-col justify-between items-center">
         <div className="w-full h-full">
-          <div className="space-y-6">
-            {/* Order Defaults Section */}
+          {/* Header */}
+          <div className="flex items-center justify-between gap-2.5 mb-6">
             <div>
-              <h3 className="text-lg font-semibold mb-4 text-black">
-                Order Defaults
-              </h3>
+              <h3 className="text-lg font-semibold text-black">Defaults</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Set your default preferences for orders and deliveries
+              </p>
+            </div>
+            {Object.keys(updatedDefaultsData).length > 0 && (
+              <div className="flex items-center gap-2 text-sm text-gray-500">
+                <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse" />
+                <span>Unsaved changes</span>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-6">
+            {/* Order Section */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4 text-black">Order</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <FormInput
                   label="Quantity"
@@ -395,7 +397,6 @@ const RetailAccountDefaults: React.FC<RetailAccountDefaultsProps> = ({
                   onChange={handleChange}
                   error={error.fieldErrors?.item_quantity}
                 />
-
                 <FormSelect
                   label="Item Type"
                   id="item_type"
@@ -404,21 +405,19 @@ const RetailAccountDefaults: React.FC<RetailAccountDefaultsProps> = ({
                   options={itemTypeOptions}
                   error={error.fieldErrors?.item_type}
                 />
-
                 <FormInput
                   label="Tip"
                   id="tip"
                   type="number"
                   step="0.01"
                   prefix="$"
-                  value={currentFormValues?.tip?.toString() || ""}
+                  value={tip}
                   onChange={handleChange}
                   onBlur={handleTipBlur}
                   error={error.fieldErrors?.tip}
                 />
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <FormSelect
                   label="Barcode Type"
                   id="barcode_type"
@@ -427,7 +426,6 @@ const RetailAccountDefaults: React.FC<RetailAccountDefaultsProps> = ({
                   options={barcodeTypeOptions}
                   error={error.fieldErrors?.barcode_type}
                 />
-
                 <RadioGroup
                   label="Timeframe"
                   name="timeframe"
@@ -437,14 +435,7 @@ const RetailAccountDefaults: React.FC<RetailAccountDefaultsProps> = ({
                   error={error.fieldErrors?.timeframe}
                 />
               </div>
-            </div>
-
-            {/* Service Preferences Section */}
-            <div>
-              <h3 className="text-lg font-semibold mb-4 text-black">
-                Service Preferences
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <RadioGroup
                   label="Store as Default"
                   name="store_default"
@@ -455,7 +446,6 @@ const RetailAccountDefaults: React.FC<RetailAccountDefaultsProps> = ({
                   }
                   error={error.fieldErrors?.store_default}
                 />
-
                 <RadioGroup
                   label="Autofill"
                   name="autofill"
@@ -465,11 +455,17 @@ const RetailAccountDefaults: React.FC<RetailAccountDefaultsProps> = ({
                   error={error.fieldErrors?.autofill}
                 />
               </div>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="w-full">
+            {/* Delivery Section */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4 text-black">
+                Delivery
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div>
                   <FormCheckbox
-                    label="Proof of pickup"
+                    label="Proof of Pickup"
                     value="Picture"
                     id="pickup_picture"
                     checked={currentFormValues?.pickup_picture || false}
@@ -479,7 +475,6 @@ const RetailAccountDefaults: React.FC<RetailAccountDefaultsProps> = ({
                     error={error.fieldErrors?.pickup_picture}
                   />
                 </div>
-
                 <CheckboxGroup
                   label="Proof of Delivery"
                   options={proofOfDeliveryOptions}
@@ -490,17 +485,87 @@ const RetailAccountDefaults: React.FC<RetailAccountDefaultsProps> = ({
                       currentFormValues?.delivery_recipient || false,
                     delivery_signature:
                       currentFormValues?.delivery_signature || false,
-                    delivery_21: currentFormValues?.delivery_21 || false,
-                    delivery_pin: currentFormValues?.delivery_pin || false,
                   }}
                   onChange={handleCheckboxChange}
                   error={
                     error.fieldErrors?.delivery_picture ||
                     error.fieldErrors?.delivery_recipient ||
-                    error.fieldErrors?.delivery_signature ||
-                    error.fieldErrors?.delivery_21 ||
-                    error.fieldErrors?.delivery_pin
+                    error.fieldErrors?.delivery_signature
                   }
+                />
+                <FormInput
+                  label="Pickup Extension (min)"
+                  id="pickup_ext"
+                  type="number"
+                  value={currentFormValues?.pickup_ext?.toString() || ""}
+                  onChange={handleChange}
+                  error={error.fieldErrors?.pickup_ext}
+                />
+                <FormInput
+                  label="Delivery Extension (min)"
+                  id="delivery_ext"
+                  type="number"
+                  value={currentFormValues?.delivery_ext?.toString() || ""}
+                  onChange={handleChange}
+                  error={error.fieldErrors?.delivery_ext}
+                />
+              </div>
+            </div>
+
+            {/* Return Section */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4 text-black">Return</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div>
+                  <FormCheckbox
+                    label="Proof of Pickup"
+                    value="Picture"
+                    id="return_pickup_picture"
+                    checked={currentFormValues?.return_pickup_picture || false}
+                    onChange={(e) =>
+                      handleCheckboxChange(
+                        "return_pickup_picture",
+                        e.target.checked,
+                      )
+                    }
+                    error={error.fieldErrors?.return_pickup_picture}
+                  />
+                </div>
+                <CheckboxGroup
+                  label="Proof of Delivery"
+                  options={proofOfReturnOptions}
+                  values={{
+                    return_delivery_picture:
+                      currentFormValues?.return_delivery_picture || false,
+                    return_delivery_recipient:
+                      currentFormValues?.return_delivery_recipient || false,
+                    return_delivery_signature:
+                      currentFormValues?.return_delivery_signature || false,
+                  }}
+                  onChange={handleCheckboxChange}
+                  error={
+                    error.fieldErrors?.return_delivery_picture ||
+                    error.fieldErrors?.return_delivery_recipient ||
+                    error.fieldErrors?.return_delivery_signature
+                  }
+                />
+                <FormInput
+                  label="Pickup Extension (min)"
+                  id="return_pickup_ext"
+                  type="number"
+                  value={currentFormValues?.return_pickup_ext?.toString() || ""}
+                  onChange={handleChange}
+                  error={error.fieldErrors?.return_pickup_ext}
+                />
+                <FormInput
+                  label="Delivery Extension (min)"
+                  id="return_delivery_ext"
+                  type="number"
+                  value={
+                    currentFormValues?.return_delivery_ext?.toString() || ""
+                  }
+                  onChange={handleChange}
+                  error={error.fieldErrors?.return_delivery_ext}
                 />
               </div>
             </div>
@@ -515,11 +580,11 @@ const RetailAccountDefaults: React.FC<RetailAccountDefaultsProps> = ({
               addTodoMutation.isPending
             }
             onClick={() => addTodoMutation.mutate(updatedDefaultsData)}
-            className={`w-full max-w-sm py-3 text-white shadow-lg rounded-lg transition-all duration-200 font-medium ${
+            className={`w-full max-w-sm py-3 text-white shadow-btnShadow rounded-lg transition-all duration-200 font-medium ${
               Object.keys(updatedDefaultsData).length > 0 &&
               !addTodoMutation.isPending
-                ? "bg-green-600 hover:bg-green-700 hover:scale-[0.98] active:scale-95"
-                : "bg-gray-400 cursor-not-allowed"
+                ? "bg-themeGreen hover:bg-green-600 hover:scale-[0.98] active:scale-95"
+                : "bg-themeLightGray cursor-not-allowed"
             }`}
           >
             {addTodoMutation.isPending ? (

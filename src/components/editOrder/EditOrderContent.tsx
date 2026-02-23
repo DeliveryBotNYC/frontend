@@ -247,6 +247,11 @@ const EditOrderContent = () => {
         service: orderData?.timeframe?.service || "one_hour",
         start_time: orderData?.timeframe?.start_time || "",
         end_time: orderData?.timeframe?.end_time || "",
+        // ADD THESE:
+        pickup_ext: orderData?.timeframe?.pickup_ext ?? 0,
+        delivery_ext: orderData?.timeframe?.delivery_ext ?? 0,
+        pickup_ready_by: orderData?.timeframe?.pickup_ready_by ?? null,
+        delivery_deadline: orderData?.timeframe?.delivery_deadline ?? null,
       },
     };
   }, []);

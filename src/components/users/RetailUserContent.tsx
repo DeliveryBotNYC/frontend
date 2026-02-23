@@ -48,6 +48,16 @@ interface RetailUser {
   delivery_signature: boolean;
   delivery_21: boolean;
   delivery_pin: boolean;
+  pickup_ext: number;
+  delivery_ext: number;
+  return_pickup_picture: boolean;
+  return_delivery_picture: boolean;
+  return_delivery_recipient: boolean;
+  return_delivery_signature: boolean;
+  return_delivery_21: boolean;
+  return_delivery_pin: boolean;
+  return_pickup_ext: number;
+  return_delivery_ext: number;
   address_id: number | null;
   apt: string;
   access_code: string | null;
@@ -161,6 +171,16 @@ const RetailUserContent: React.FC<RetailUserContentProps> = ({ userId }) => {
         delivery_signature: userData.delivery_signature || false,
         delivery_21: userData.delivery_21 || false,
         delivery_pin: userData.delivery_pin || false,
+        pickup_ext: userData.pickup_ext || 0,
+        delivery_ext: userData.delivery_ext || 0,
+        return_pickup_picture: userData.return_pickup_picture || false,
+        return_delivery_picture: userData.return_delivery_picture || false,
+        return_delivery_recipient: userData.return_delivery_recipient || false,
+        return_delivery_signature: userData.return_delivery_signature || false,
+        return_delivery_21: userData.return_delivery_21 || false,
+        return_delivery_pin: userData.return_delivery_pin || false,
+        return_pickup_ext: userData.return_pickup_ext || 0,
+        return_delivery_ext: userData.return_delivery_ext || 0,
         address_id: userData.address_id || null,
         apt: userData.apt || "",
         access_code: userData.access_code || null,

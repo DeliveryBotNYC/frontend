@@ -108,7 +108,7 @@ const UsersContent = () => {
       contextValue?.userSearch,
       filters.roles,
       filters.statuses,
-    ]
+    ],
   );
 
   // Handle filter changes from the universal toolbar
@@ -161,14 +161,15 @@ const UsersContent = () => {
         // Additional safety check for duplicates
         const uniqueUsers = users.filter(
           (user: any, index: number, arr: any[]) =>
-            arr.findIndex((u) => u.id === user.id) === index
+            arr.findIndex((u) => u.id === user.id && u.role === user.role) ===
+            index,
         );
 
         if (users.length !== uniqueUsers.length) {
           console.warn(
             `Removed ${
               users.length - uniqueUsers.length
-            } duplicate users from API response`
+            } duplicate users from API response`,
           );
         }
 

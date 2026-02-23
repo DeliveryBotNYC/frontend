@@ -120,6 +120,8 @@ const PricePopup = ({ data, stateChanger, ...rest }) => {
               service: updated[section].service,
               start_time: updated[section].start_time,
               end_time: updated[section].end_time,
+              pickup_ready_by: updated[section].pickup_ready_by ?? null,
+              delivery_deadline: updated[section].delivery_deadline ?? null,
             };
           } else {
             changes[section] = sectionChanges;

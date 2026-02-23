@@ -66,7 +66,7 @@ const RetailAccountHours: React.FC<RetailAccountHoursProps> = ({
     queryKey: ["store-hours", accountsData.user_id],
     queryFn: async () => {
       const res = await axios.get(
-        `${url}/store-hours/${accountsData.user_id}`,
+        `${url}/users/hours/${accountsData.user_id}`,
         config,
       );
       return res.data.data;
@@ -115,7 +115,7 @@ const RetailAccountHours: React.FC<RetailAccountHoursProps> = ({
   const saveMutation = useMutation({
     mutationFn: (hours: UpdatedHour[]) =>
       axios.put(
-        `${url}/store-hours/${accountsData.user_id}`,
+        `${url}/users/hours/${accountsData.user_id}`,
         { hours },
         config,
       ),
@@ -167,58 +167,56 @@ const RetailAccountHours: React.FC<RetailAccountHoursProps> = ({
                 Store Hours
               </h3>
               <p className="text-sm text-gray-500 mb-6">
-                Set the hours your store is open for pickups and deliveries
-                (EST).
+                Set your store’s opening hours to ensure orders are picked up
+                and returned within your business hours.
               </p>
 
-              <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-4 px-1 mb-2">
+                <span className="text-xs text-themeDarkGray">Day</span>
+                <span className="text-xs text-themeDarkGray">Open</span>
+                <span className="text-xs text-themeDarkGray">Close</span>
+              </div>
+              <div className="divide-y divide-gray-100">
                 {currentFormValues.map((hour) => (
                   <div
                     key={hour.day_of_week}
-                    className={`grid grid-cols-3 gap-4 items-center p-4 rounded-lg border transition-colors ${
+                    className={`grid grid-cols-3 gap-4 items-center py-2.5 px-1 rounded-md transition-colors ${
                       updatedHours[hour.day_of_week]
-                        ? "border-themeGreen bg-green-50"
-                        : "border-gray-200 bg-white"
+                        ? "bg-green-50"
+                        : "hover:bg-gray-50"
                     }`}
                   >
-                    {/* Day label */}
-                    <div className="font-medium text-gray-700 text-sm">
+                    <div
+                      className={`text-sm ${updatedHours[hour.day_of_week] ? "text-themeGreen font-medium" : "text-gray-700"}`}
+                    >
                       {DAY_NAMES[hour.day_of_week]}
                     </div>
 
-                    {/* Open time */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs text-gray-500">Open</label>
-                      <input
-                        type="time"
-                        value={hour.open_time?.slice(0, 5) ?? "00:00"}
-                        onChange={(e) =>
-                          handleTimeChange(
-                            hour.day_of_week,
-                            "open_time",
-                            e.target.value,
-                          )
-                        }
-                        className="border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-themeGreen focus:border-transparent"
-                      />
-                    </div>
+                    <input
+                      type="time"
+                      value={hour.open_time?.slice(0, 5) ?? "00:00"}
+                      onChange={(e) =>
+                        handleTimeChange(
+                          hour.day_of_week,
+                          "open_time",
+                          e.target.value,
+                        )
+                      }
+                      className="bg-transparent text-sm text-gray-700 focus:outline-none focus:bg-white focus:ring-1 focus:ring-themeGreen rounded px-1 py-1 w-full"
+                    />
 
-                    {/* Close time */}
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs text-gray-500">Close</label>
-                      <input
-                        type="time"
-                        value={hour.close_time?.slice(0, 5) ?? "23:59"}
-                        onChange={(e) =>
-                          handleTimeChange(
-                            hour.day_of_week,
-                            "close_time",
-                            e.target.value,
-                          )
-                        }
-                        className="border border-gray-200 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-themeGreen focus:border-transparent"
-                      />
-                    </div>
+                    <input
+                      type="time"
+                      value={hour.close_time?.slice(0, 5) ?? "23:59"}
+                      onChange={(e) =>
+                        handleTimeChange(
+                          hour.day_of_week,
+                          "close_time",
+                          e.target.value,
+                        )
+                      }
+                      className="bg-transparent text-sm text-gray-700 focus:outline-none focus:bg-white focus:ring-1 focus:ring-themeGreen rounded px-1 py-1 w-full"
+                    />
                   </div>
                 ))}
               </div>
