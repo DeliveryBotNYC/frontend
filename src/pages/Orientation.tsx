@@ -167,6 +167,14 @@ const Orientation = () => {
                       Email Driver Support
                     </a>
                   </li>
+                  <li>
+                    <a
+                      href="tel:+19292647145"
+                      className="block px-4 py-2 hover:bg-gray-100"
+                    >
+                      (929) 264-7145
+                    </a>
+                  </li>
                 </ul>
               </div>
             )}

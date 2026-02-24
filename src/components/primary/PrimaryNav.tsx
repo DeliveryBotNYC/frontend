@@ -6,9 +6,8 @@ const PrimaryNav = ({ title }: { title: string }) => {
   return (
     <>
       <div className="fixed top-0 left-0 right-0 z-[100] bg-red-800 text-white text-center text-sm font-semibold px-10 py-2.5">
-        ⚠️ Service Alert: Delays in Effect. We have reopened, but due to ongoing
-        conditions, please expect delays of up to 2 hours as we work to return
-        to full capacity.
+        ⚠️ Service Alert: Delays in Effect. Due to ongoing conditions, please
+        expect delays of up to 1 hours as we work to return to full capacity.
       </div>
 
       <nav className="w-full bg-themeOrange h-16 flex items-center justify-between gap-2 fixed top-[41px] left-0 z-[99] px-3 sm:px-0">
