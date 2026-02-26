@@ -164,7 +164,7 @@ const IdentityVerification = ({
 
   return (
     <div className="min-h-h-full bg-[#404954] text-white">
-      <div className="pt-24 px-4 pb-8">
+      <div className="pt-24 px-4 pb-60">
         {/* Error Display */}
         {error?.message && (
           <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">

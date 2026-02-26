@@ -164,7 +164,7 @@ const Orientation = () => {
                       href="mailto:driver@dbx.delivery?subject=Orientation%20Inquiry"
                       className="block px-4 py-2 hover:bg-gray-100"
                     >
-                      Email Driver Support
+                      Email driver@dbx.delivery
                     </a>
                   </li>
                   <li>
@@ -172,7 +172,7 @@ const Orientation = () => {
                       href="tel:+19292647145"
                       className="block px-4 py-2 hover:bg-gray-100"
                     >
-                      (929) 264-7145
+                      Text (929) 264-7145
                     </a>
                   </li>
                 </ul>

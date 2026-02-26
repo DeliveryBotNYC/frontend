@@ -120,7 +120,7 @@ const Payment = ({ token, setStep, orientationData, onUpdateItem }) => {
 
   return (
     <div className="min-h-h-full bg-[#404954] text-white">
-      <div className="h-h-full flex flex-col">
+      <div className="h-h-full flex flex-col pb-60">
         {/* Header */}
         <div className="flex-shrink-0 pt-6 px-4 pb-4">
           <button

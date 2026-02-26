@@ -196,7 +196,7 @@ const Legal = ({ token, setStep, orientationData, onUpdateItem }) => {
   };
 
   return (
-    <div className="h-h-full bg-[#404954] text-white flex flex-col">
+    <div className="h-h-full bg-[#404954] text-white flex flex-col pb-60">
       {/* Header space for fixed nav */}
       <div className="h-16"></div>
 
