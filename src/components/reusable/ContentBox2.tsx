@@ -9,7 +9,7 @@ const ContentBox2 = ({
 }) => {
   return (
     <div //65 to 100 for banner
-      className={`w-full pl-20 pr-[42px] pt-[100px] 3xl:h-screen ${
+      className={`w-full pl-20 pr-[42px] pt-[65px] 3xl:h-screen ${
         isHomePage === true ? "h-[120vh]" : "h-screen"
       }`}
     >
