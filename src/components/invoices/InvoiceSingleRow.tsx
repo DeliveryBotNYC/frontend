@@ -93,9 +93,8 @@ const InvoiceSingleRow = ({ item, isAdmin = false }: InvoiceSingleRowProps) => {
       "Mileage Surcharge ($)",
       "Item Surcharge ($)",
       "Time Surcharge ($)",
-      "Base Discount ($)",
+      "Base Discount (%)",
       "Tip ($)",
-      "Total Amount ($)",
       "Service Timeframe",
       "Window Start",
       "Window End",
@@ -121,9 +120,8 @@ const InvoiceSingleRow = ({ item, isAdmin = false }: InvoiceSingleRowProps) => {
       (Number(order.fee_breakdown?.mileage_surcharge) / 100).toFixed(2),
       (Number(order.fee_breakdown?.item_surcharge) / 100).toFixed(2),
       (Number(order.fee_breakdown?.time_surcharge) / 100).toFixed(2),
-      (Number(order.fee_breakdown?.base_discount) / 100).toFixed(2),
+      order.fee_breakdown?.base_discount,
       (Number(order.tip) / 100).toFixed(2),
-      (Number(order.amount) / 100).toFixed(2),
       order.timeframe?.service || "",
       order.timeframe?.start_time
         ? moment(order.timeframe.start_time).format("MM/DD/YYYY HH:mm")
