@@ -5,9 +5,21 @@ interface OrderItem {
   order_id: string;
   external_id: string;
   status: string;
-  price: number;
+  fee: number;
+  fee_breakdown: {
+    base: number;
+    mileage_surcharge: number;
+    item_surcharge: number;
+    time_surcharge: number;
+    base_discount: number;
+  } | null;
   tip: number;
   amount: number;
+  timeframe: {
+    service: string;
+    start_time: string;
+    end_time: string;
+  } | null;
   pickup: {
     name: string;
     address: {
@@ -76,9 +88,17 @@ const InvoiceSingleRow = ({ item, isAdmin = false }: InvoiceSingleRowProps) => {
       "Order ID",
       "External ID",
       "Status",
-      "Price ($)",
+      "Fee ($)",
+      "Base Fee ($)",
+      "Mileage Surcharge ($)",
+      "Item Surcharge ($)",
+      "Time Surcharge ($)",
+      "Base Discount ($)",
       "Tip ($)",
       "Total Amount ($)",
+      "Service Timeframe",
+      "Window Start",
+      "Window End",
       "Pickup Name",
       "Pickup Address",
       "Pickup City",
@@ -96,9 +116,21 @@ const InvoiceSingleRow = ({ item, isAdmin = false }: InvoiceSingleRowProps) => {
       order.order_id,
       order.external_id || "",
       order.status,
-      (order.price / 100).toFixed(2),
-      (order.tip / 100).toFixed(2),
-      (order.amount / 100).toFixed(2),
+      (Number(order.fee) / 100).toFixed(2),
+      (Number(order.fee_breakdown?.base) / 100).toFixed(2),
+      (Number(order.fee_breakdown?.mileage_surcharge) / 100).toFixed(2),
+      (Number(order.fee_breakdown?.item_surcharge) / 100).toFixed(2),
+      (Number(order.fee_breakdown?.time_surcharge) / 100).toFixed(2),
+      (Number(order.fee_breakdown?.base_discount) / 100).toFixed(2),
+      (Number(order.tip) / 100).toFixed(2),
+      (Number(order.amount) / 100).toFixed(2),
+      order.timeframe?.service || "",
+      order.timeframe?.start_time
+        ? moment(order.timeframe.start_time).format("MM/DD/YYYY HH:mm")
+        : "",
+      order.timeframe?.end_time
+        ? moment(order.timeframe.end_time).format("MM/DD/YYYY HH:mm")
+        : "",
       order.pickup.name,
       order.pickup.address.street_address_1,
       order.pickup.address.city,
